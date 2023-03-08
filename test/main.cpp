@@ -2,13 +2,18 @@
  * Created by switchblade on 2023-01-01.
  */
 
-#ifdef REFLEX_HAS_SEKHMET
-#undef REFLEX_HAS_SEKHMET
+#ifndef REFLEX_HAS_SEKHMET
+#define REFLEX_HAS_SEKHMET
 #endif
 
-#include <reflex/type_name.hpp>
+#include <type_name.hpp>
+
+#include <vector>
+#include <cstdio>
 
 int main()
 {
-	return reflex::type_name<std::string_view>::value == "std::basic_string_view<char>";
+	printf("\"%s\"\n", sek::type_name<int>::value.data());
+	printf("\"%s\"\n", sek::type_name<std::string_view>::value.data());
+	printf("\"%s\"\n", sek::type_name<std::vector<int>>::value.data());
 }

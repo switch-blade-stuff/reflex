@@ -8,7 +8,7 @@
 
 #include <type_traits>
 
-namespace REFLEX_NAMESPACE::detail
+namespace reflex::detail
 {
 	template<auto Value>
 	using auto_constant = std::integral_constant<std::remove_cvref_t<decltype(Value)>, Value>;

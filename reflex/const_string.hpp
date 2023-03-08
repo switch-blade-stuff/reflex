@@ -7,13 +7,13 @@
 #include <string_view>
 #include <cstring>
 
-#include "define.hpp"
+#include "detail/define.hpp"
 
-namespace REFLEX_NAMESPACE
+namespace reflex
 {
-	/** @brief Fixed-size string that can be used for NTTP. */
+	/** @brief Fixed-size string for use with NTTP and constexpr. */
 	template<typename C, std::size_t N, typename Traits = std::char_traits<C>>
-	struct basic_static_string
+	struct basic_const_string
 	{
 	public:
 		typedef Traits traits_type;
@@ -43,7 +43,7 @@ namespace REFLEX_NAMESPACE
 				else if constexpr (std::same_as<C, char8_t>)
 				{
 					const auto ptr = reinterpret_cast<const char *>(std::to_address(str));
-					return static_cast<std::size_t>(strnlen(ptr, static_cast<size_type>(max)));
+					return static_cast<size_type>(strnlen(ptr, static_cast<size_type>(max)));
 				}
 				else if constexpr (std::same_as<C, char16_t> && sizeof(char16_t) == sizeof(wchar_t))
 				{
@@ -60,17 +60,17 @@ namespace REFLEX_NAMESPACE
 		}
 
 	public:
-		constexpr basic_static_string() = default;
-		constexpr basic_static_string(const C (&str)[N]) : basic_static_string(str, N) {}
-		constexpr basic_static_string(const C *str, size_type n) : basic_static_string(str, str + n) {}
+		constexpr basic_const_string() = default;
+		constexpr basic_const_string(const C (&str)[N]) : basic_const_string(str, N) {}
+		constexpr basic_const_string(const C *str, size_type n) : basic_const_string(str, str + std::min(N, n)) {}
 
 		template<std::size_t M>
-		constexpr basic_static_string(const basic_static_string<C, M> &str) requires (M != N) : basic_static_string((str.data(), std::min(M, N))) {}
+		constexpr basic_const_string(const basic_const_string<C, M> &str) requires (M != N) : basic_const_string((str.data(), std::min(M, N))) {}
 
 		template<std::forward_iterator I>
-		constexpr basic_static_string(I first, I last) { std::copy(first, last, value); }
+		constexpr basic_const_string(I first, I last) { std::copy(first, last, value); }
 		template<std::ranges::forward_range R>
-		constexpr basic_static_string(const R &range) : basic_static_string(std::ranges::begin(range), std::ranges::end(range)) {}
+		constexpr basic_const_string(const R &range) : basic_const_string(std::ranges::begin(range), std::ranges::end(range)) {}
 
 		/** Returns iterator to the start of the string. */
 		[[nodiscard]] constexpr iterator begin() noexcept { return iterator{value}; }
@@ -137,7 +137,7 @@ namespace REFLEX_NAMESPACE
 		 * @param c Substring to search for.
 		 * @param pos Position to start the search at. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type find(const S &str, size_type pos = 0) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type find(const S &str, size_type pos = 0) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.find(sv, pos);
@@ -163,7 +163,7 @@ namespace REFLEX_NAMESPACE
 
 		/** Finds right-most location of a substring within the string. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type rfind(const S &str, size_type pos = npos) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type rfind(const S &str, size_type pos = npos) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.rfind(sv, pos);
@@ -191,7 +191,7 @@ namespace REFLEX_NAMESPACE
 		 * @param c Substring containing characters to search for.
 		 * @param pos Position to start the search at. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type find_first_of(const S &str, size_type pos = 0) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type find_first_of(const S &str, size_type pos = 0) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.find_first_of(sv, pos);
@@ -219,7 +219,7 @@ namespace REFLEX_NAMESPACE
 		 * @param c Substring containing characters to search for.
 		 * @param pos Position to start the search at. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type find_last_of(const S &str, size_type pos = npos) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type find_last_of(const S &str, size_type pos = npos) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.find_last_of(sv, pos);
@@ -247,7 +247,7 @@ namespace REFLEX_NAMESPACE
 		 * @param c Substring containing characters to search for.
 		 * @param pos Position to start the search at. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type find_first_not_of(const S &str, size_type pos = 0) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type find_first_not_of(const S &str, size_type pos = 0) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.find_first_not_of(sv, pos);
@@ -275,7 +275,7 @@ namespace REFLEX_NAMESPACE
 		 * @param c Substring containing characters to search for.
 		 * @param pos Position to start the search at. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type find_last_not_of(const S &str, size_type pos = npos) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type find_last_not_of(const S &str, size_type pos = npos) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.find_last_not_of(sv, pos);
@@ -302,7 +302,7 @@ namespace REFLEX_NAMESPACE
 		/** Checks if the string contains a substring.
 		 * @param c Substring to search for. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type contains(const S &str) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type contains(const S &str) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
 		{
 			return find(str) != npos;
 		}
@@ -315,7 +315,7 @@ namespace REFLEX_NAMESPACE
 		/** Checks if the string starts with a substring.
 		 * @param c Substring to search for. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type starts_with(const S &str) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type starts_with(const S &str) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.starts_with(sv);
@@ -335,7 +335,7 @@ namespace REFLEX_NAMESPACE
 		/** Checks if the string ends with a substring.
 		 * @param c Substring to search for. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type ends_with(const S &str) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type ends_with(const S &str) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.ends_with(sv);
@@ -355,7 +355,7 @@ namespace REFLEX_NAMESPACE
 		/** Compares the string with another.
 		 * @param str String to compare with. */
 		template<typename S>
-		[[nodiscard]] constexpr int compare(const S &str) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr int compare(const S &str) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.compare(sv);
@@ -369,7 +369,7 @@ namespace REFLEX_NAMESPACE
 		 * @param pos1 Position of the first character from this string to compare.
 		 * @param count1 Amount of characters from this string to compare. */
 		template<typename S>
-		[[nodiscard]] constexpr int compare(size_type pos1, size_type count1, const S &str) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr int compare(size_type pos1, size_type count1, const S &str) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.compare(pos1, count1, sv);
@@ -383,7 +383,7 @@ namespace REFLEX_NAMESPACE
 		 * @param pos2 Position of the first character from the other string to compare.
 		 * @param count2 Amount of characters from the other string to compare. */
 		template<typename S>
-		[[nodiscard]] constexpr int compare(size_type pos1, size_type count1, size_type pos2, size_type count2, const S &str) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr int compare(size_type pos1, size_type count1, size_type pos2, size_type count2, const S &str) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.compare(pos1, count1, pos2, count2, sv);
@@ -394,11 +394,11 @@ namespace REFLEX_NAMESPACE
 			return std::basic_string_view<C, Traits>{*this}.compare(pos1, count1, pos2, count2, str);
 		}
 
-		[[nodiscard]] friend constexpr auto operator<=>(const basic_static_string &a, const basic_static_string &b) noexcept
+		[[nodiscard]] friend constexpr auto operator<=>(const basic_const_string &a, const basic_const_string &b) noexcept
 		{
 			return std::basic_string_view<C, Traits>{a} <=> std::basic_string_view<C, Traits>{b};
 		}
-		[[nodiscard]] friend constexpr bool operator==(const basic_static_string &a, const basic_static_string &b) noexcept
+		[[nodiscard]] friend constexpr bool operator==(const basic_const_string &a, const basic_const_string &b) noexcept
 		{
 			return std::basic_string_view<C, Traits>{a} == std::basic_string_view<C, Traits>{b};
 		}
@@ -407,65 +407,65 @@ namespace REFLEX_NAMESPACE
 	};
 
 	template<typename C, std::size_t N>
-	basic_static_string(const C (&)[N]) -> basic_static_string<C, N, std::char_traits<C>>;
+	basic_const_string(const C (&)[N]) -> basic_const_string<C,  N, std::char_traits<C>>;
 
 	template<typename To, typename ToT = std::char_traits<To>, typename From, typename FromT = std::char_traits<From>, std::size_t N>
-	[[nodiscard]] constexpr basic_static_string<To, N, ToT> static_string_cast(basic_static_string<From, N, FromT> str) noexcept
+	[[nodiscard]] constexpr basic_const_string<To, N, ToT> const_string_cast(basic_const_string<From, N, FromT> str) noexcept
 	{
-		basic_static_string<To, N, ToT> result;
+		basic_const_string<To, N, ToT> result;
 		for (std::size_t i = 0; i < N; ++i) result[i] = static_cast<To>(str[i]);
 		return result;
 	}
 	template<typename To, typename ToT = std::char_traits<To>, typename From, std::size_t N>
-	[[nodiscard]] constexpr basic_static_string<To, N, ToT> static_string_cast(const From (&str)[N]) noexcept
+	[[nodiscard]] constexpr basic_const_string<To, N, ToT> const_string_cast(const From (&str)[N]) noexcept
 	{
-		return static_string_cast<To, ToT>(basic_static_string<From, N>{str});
+		return const_string_cast<To, ToT>(basic_const_string<From, N>{str});
 	}
 
 	template<typename C, typename T = std::char_traits<C>, std::size_t N, std::size_t M>
-	[[nodiscard]] constexpr basic_static_string<C, N + M, T> operator+(const basic_static_string<C, N, T> &a, const basic_static_string<C, M, T> &b) noexcept
+	[[nodiscard]] constexpr basic_const_string<C, N + M, T> operator+(const basic_const_string<C, N, T> &a, const basic_const_string<C, M, T> &b) noexcept
 	{
-		basic_static_string<C, N + M, T> result;
+		basic_const_string<C, N + M, T> result;
 		std::copy(a.data(), a.data() + a.size(), result.data());
 		std::copy(b.data(), b.data() + b.size(), result.data() + a.size());
 		return result;
 	}
 
 	template<std::size_t I, typename C, std::size_t N, typename T>
-	[[nodiscard]] constexpr auto &get(basic_static_string<C, N, T> &s) noexcept
+	[[nodiscard]] constexpr auto &get(basic_const_string<C, N, T> &s) noexcept
 	{
 		static_assert(I < N);
 		return s.value[I];
 	}
 	template<std::size_t I, typename C, std::size_t N, typename T>
-	[[nodiscard]] constexpr auto &get(const basic_static_string<C, N, T> &s) noexcept
+	[[nodiscard]] constexpr auto &get(const basic_const_string<C, N, T> &s) noexcept
 	{
 		static_assert(I < N);
 		return s.value[I];
 	}
 
 	template<std::size_t N>
-	using static_string = basic_static_string<char, N>;
+	using const_string = basic_const_string<char, N>;
 	template<std::size_t N>
-	using static_wstring = basic_static_string<wchar_t, N>;
+	using static_wstring = basic_const_string<wchar_t, N>;
 	template<std::size_t N>
-	using static_u8string = basic_static_string<char8_t, N>;
+	using static_u8string = basic_const_string<char8_t, N>;
 	template<std::size_t N>
-	using static_u16string = basic_static_string<char16_t, N>;
+	using static_u16string = basic_const_string<char16_t, N>;
 	template<std::size_t N>
-	using static_u32string = basic_static_string<char32_t, N>;
+	using static_u32string = basic_const_string<char32_t, N>;
 }     // namespace sek
 
 template<typename C, std::size_t N, typename T>
-struct std::hash<REFLEX_NAMESPACE::basic_static_string<C, N, T>>
+struct std::hash<reflex::basic_const_string<C, N, T>>
 {
-	[[nodiscard]] constexpr std::size_t operator()(const REFLEX_NAMESPACE::basic_static_string<C, N, T> &s) const noexcept
+	[[nodiscard]] constexpr std::size_t operator()(const reflex::basic_const_string<C, N, T> &s) const noexcept
 	{
 		return std::hash<std::string_view>{}(static_cast<std::string_view>(s));
 	}
 };
 
 template<typename C, std::size_t N, typename T>
-struct std::tuple_size<REFLEX_NAMESPACE::basic_static_string<C, N, T>> : std::integral_constant<std::size_t, N> {};
+struct std::tuple_size<reflex::basic_const_string<C, N, T>> : std::integral_constant<std::size_t, N> {};
 template<std::size_t I, typename C, std::size_t N, typename T>
-struct std::tuple_element<I, REFLEX_NAMESPACE::basic_static_string<C, N, T>> : std::type_identity<C> {};
+struct std::tuple_element<I, reflex::basic_const_string<C, N, T>> : std::type_identity<C> {};
