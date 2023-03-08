@@ -15,8 +15,6 @@
 #endif
 
 #ifdef REFLEX_HAS_SEKHMET
-#define REFLEX_NAMESPACE sek
-#define SEK_PRETTY_FUNC REFLEX_PRETTY_FUNC
-#else
-#define REFLEX_NAMESPACE reflex
+namespace reflex {}
+namespace sek { using namespace reflex; }
 #endif
