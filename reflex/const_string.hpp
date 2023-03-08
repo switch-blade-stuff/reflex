@@ -61,7 +61,8 @@ namespace reflex
 
 	public:
 		constexpr basic_const_string() = default;
-		constexpr basic_const_string(const C (&str)[N]) : basic_const_string(str, N) {}
+		template<std::size_t M = N>
+		constexpr basic_const_string(const C (&str)[M]) : basic_const_string(str, M) {}
 		constexpr basic_const_string(const C *str, size_type n) : basic_const_string(str, str + std::min(N, n)) {}
 
 		template<std::size_t M>
@@ -137,7 +138,7 @@ namespace reflex
 		 * @param c Substring to search for.
 		 * @param pos Position to start the search at. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type find(const S &str, size_type pos = 0) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type find(const S &str, size_type pos = 0) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.find(sv, pos);
@@ -163,7 +164,7 @@ namespace reflex
 
 		/** Finds right-most location of a substring within the string. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type rfind(const S &str, size_type pos = npos) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type rfind(const S &str, size_type pos = npos) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.rfind(sv, pos);
@@ -191,7 +192,7 @@ namespace reflex
 		 * @param c Substring containing characters to search for.
 		 * @param pos Position to start the search at. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type find_first_of(const S &str, size_type pos = 0) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type find_first_of(const S &str, size_type pos = 0) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.find_first_of(sv, pos);
@@ -219,7 +220,7 @@ namespace reflex
 		 * @param c Substring containing characters to search for.
 		 * @param pos Position to start the search at. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type find_last_of(const S &str, size_type pos = npos) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type find_last_of(const S &str, size_type pos = npos) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.find_last_of(sv, pos);
@@ -247,7 +248,7 @@ namespace reflex
 		 * @param c Substring containing characters to search for.
 		 * @param pos Position to start the search at. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type find_first_not_of(const S &str, size_type pos = 0) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type find_first_not_of(const S &str, size_type pos = 0) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.find_first_not_of(sv, pos);
@@ -275,7 +276,7 @@ namespace reflex
 		 * @param c Substring containing characters to search for.
 		 * @param pos Position to start the search at. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type find_last_not_of(const S &str, size_type pos = npos) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type find_last_not_of(const S &str, size_type pos = npos) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.find_last_not_of(sv, pos);
@@ -302,7 +303,7 @@ namespace reflex
 		/** Checks if the string contains a substring.
 		 * @param c Substring to search for. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type contains(const S &str) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type contains(const S &str) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
 		{
 			return find(str) != npos;
 		}
@@ -315,7 +316,7 @@ namespace reflex
 		/** Checks if the string starts with a substring.
 		 * @param c Substring to search for. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type starts_with(const S &str) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type starts_with(const S &str) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.starts_with(sv);
@@ -335,7 +336,7 @@ namespace reflex
 		/** Checks if the string ends with a substring.
 		 * @param c Substring to search for. */
 		template<typename S>
-		[[nodiscard]] constexpr size_type ends_with(const S &str) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr size_type ends_with(const S &str) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.ends_with(sv);
@@ -355,7 +356,7 @@ namespace reflex
 		/** Compares the string with another.
 		 * @param str String to compare with. */
 		template<typename S>
-		[[nodiscard]] constexpr int compare(const S &str) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr int compare(const S &str) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.compare(sv);
@@ -369,7 +370,7 @@ namespace reflex
 		 * @param pos1 Position of the first character from this string to compare.
 		 * @param count1 Amount of characters from this string to compare. */
 		template<typename S>
-		[[nodiscard]] constexpr int compare(size_type pos1, size_type count1, const S &str) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr int compare(size_type pos1, size_type count1, const S &str) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.compare(pos1, count1, sv);
@@ -383,7 +384,7 @@ namespace reflex
 		 * @param pos2 Position of the first character from the other string to compare.
 		 * @param count2 Amount of characters from the other string to compare. */
 		template<typename S>
-		[[nodiscard]] constexpr int compare(size_type pos1, size_type count1, size_type pos2, size_type count2, const S &str) const noexcept requires std::is_convertible_v<const S, std::basic_string_view<C, Traits>>
+		[[nodiscard]] constexpr int compare(size_type pos1, size_type count1, size_type pos2, size_type count2, const S &str) const noexcept requires std::convertible_to<const S, std::basic_string_view<C, Traits>>
 		{
 			const std::basic_string_view<C, Traits> sv = str;
 			return std::basic_string_view<C, Traits>{*this}.compare(pos1, count1, pos2, count2, sv);
@@ -403,11 +404,11 @@ namespace reflex
 			return std::basic_string_view<C, Traits>{a} == std::basic_string_view<C, Traits>{b};
 		}
 
-		C value[N] = {0};
+		C value[N + 1] = {0};
 	};
 
 	template<typename C, std::size_t N>
-	basic_const_string(const C (&)[N]) -> basic_const_string<C,  N, std::char_traits<C>>;
+	basic_const_string(const C (&)[N]) -> basic_const_string<C,  N - 1, std::char_traits<C>>;
 
 	template<typename To, typename ToT = std::char_traits<To>, typename From, typename FromT = std::char_traits<From>, std::size_t N>
 	[[nodiscard]] constexpr basic_const_string<To, N, ToT> const_string_cast(basic_const_string<From, N, FromT> str) noexcept

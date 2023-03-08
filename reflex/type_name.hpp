@@ -34,11 +34,11 @@ namespace reflex
 #if defined(_MSC_VER)
 			constexpr auto first = Name.find('<', Name.find("make_type_name"));
 			constexpr auto last = Name.rfind('>');
-			constexpr auto off = 0;
+			constexpr auto off = 1;
 #elif defined(__clang__) || defined(__GNUC__)
 			constexpr auto first = Name.find('=');
 			constexpr auto last = Name.rfind(']');
-			constexpr auto off = 1;
+			constexpr auto off = 2;
 #else
 			constexpr auto first = decltype(Name)::npos;
 			constexpr auto last = decltype(Name)::npos;
@@ -46,7 +46,7 @@ namespace reflex
 #endif
 			/* Strip slack, whitespace and keywords from the type name. */
 			if constexpr (first != decltype(Name)::npos && last != decltype(Name)::npos)
-				return format_type_name<const_string<last - first + off>{Name.data() + first + off + 1, Name.data() + last}>();
+				return format_type_name<const_string<last - first + off>{Name.data() + first + off, Name.data() + last}>();
 			else if constexpr (Name.contains("struct "))
 				return format_type_name<erase_substr<Name, "struct ">()>();
 			else if constexpr (Name.contains("union "))
@@ -63,7 +63,7 @@ namespace reflex
 				return Name;
 		}
 		template<typename T>
-		[[nodiscard]] constexpr std::basic_string_view<char, std::char_traits<char>> make_type_name() noexcept
+		[[nodiscard]] constexpr std::basic_string_view<char> make_type_name() noexcept
 		{
 			return auto_constant<format_type_name<REFLEX_PRETTY_FUNC>()>::value;
 		}

@@ -14,6 +14,7 @@
 int main()
 {
 	printf("\"%s\"\n", sek::type_name<int>::value.data());
+	printf("\"%s\"\n", sek::type_name<std::nullptr_t>::value.data());
 	printf("\"%s\"\n", sek::type_name<std::string_view>::value.data());
 	printf("\"%s\"\n", sek::type_name<std::vector<int>>::value.data());
 }
