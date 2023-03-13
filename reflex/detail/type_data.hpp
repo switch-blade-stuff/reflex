@@ -21,6 +21,32 @@ namespace reflex::detail
 		IS_CLASS = 0x40,
 	};
 
+	[[nodiscard]] constexpr type_flags operator&(type_flags a, std::size_t b) noexcept
+	{
+		return static_cast<type_flags>(static_cast<std::size_t>(a) & b);
+	}
+	[[nodiscard]] constexpr type_flags operator|(type_flags a, std::size_t b) noexcept
+	{
+		return static_cast<type_flags>(static_cast<std::size_t>(a) | b);
+	}
+	[[nodiscard]] constexpr type_flags operator^(type_flags a, std::size_t b) noexcept
+	{
+		return static_cast<type_flags>(static_cast<std::size_t>(a) ^ b);
+	}
+
+	constexpr type_flags &operator&=(type_flags &a, std::size_t b) noexcept { return a = a & b; }
+	constexpr type_flags &operator|=(type_flags &a, std::size_t b) noexcept { return a = a | b; }
+	constexpr type_flags &operator^=(type_flags &a, std::size_t b) noexcept { return a = a ^ b; }
+
+	struct type_handle
+	{
+		template<typename T>
+		[[nodiscard]] constexpr static type_handle bind() noexcept;
+
+		[[nodiscard]] constexpr const type_data *operator->() const { return get(); }
+		const type_data *(*get)() = +[]() -> const type_data * { return nullptr; };
+	};
+
 	struct type_dtor
 	{
 		/* Destroy the object as-if via placement delete operator. */
@@ -31,27 +57,81 @@ namespace reflex::detail
 
 	struct type_data
 	{
+		template<typename T>
+		[[nodiscard]] constexpr static type_data bind() noexcept;
+
 		std::string_view name;
-		std::size_t extent = 0;
+		type_flags flags = {};
 		std::size_t size;
-		type_flags flags;
 
-		const type_data *add_const = nullptr;
-		const type_data *remove_const = nullptr;
-		const type_data *add_volatile = nullptr;
-		const type_data *remove_volatile = nullptr;
-		const type_data *add_cv = nullptr;
-		const type_data *remove_cv = nullptr;
+		type_handle add_const;
+		type_handle remove_const;
+		type_handle add_volatile;
+		type_handle remove_volatile;
+		type_handle add_cv;
+		type_handle remove_cv;
 
-		const type_data *add_rvalue = nullptr;
-		const type_data *add_lvalue = nullptr;
-		const type_data *remove_ref = nullptr;
-		const type_data *add_pointer = nullptr;
-		const type_data *remove_pointer = nullptr;
-		const type_data *remove_extent = nullptr;
+		type_handle add_rvalue;
+		type_handle add_lvalue;
+		type_handle remove_ref;
+		type_handle add_pointer;
+		type_handle remove_pointer;
 
-		const type_data *decay = nullptr;
+		std::size_t extent = 0;
+		type_handle remove_extent;
+		type_handle decay;
 
 		type_dtor dtor;
 	};
+
+	template<typename T>
+	constexpr type_handle type_handle::bind() noexcept
+	{
+		return +[]()
+		{
+			constexpr auto data = type_data::bind<T>();
+			// TODO: Reflect data with the primary database.
+			// static const auto data_ptr = type_database::primary().reflect(&data);
+			static const auto data_ptr = &data;
+			return data_ptr;
+		};
+	}
+
+	template<typename T>
+	constexpr type_data type_data::bind() noexcept
+	{
+		type_data result;
+
+		result.name = type_name_v<T>;
+		result.size = std::is_empty_v<T> ? 0 : sizeof(T);
+
+		if constexpr (std::is_const_v<T>) result.flags |= type_flags::IS_CONST;
+		if constexpr (std::is_volatile_v<T>) result.flags |= type_flags::IS_VOLATILE;
+
+		result.add_const = type_handle::bind<std::add_const_t<T>>();
+		result.remove_const = type_handle::bind<std::remove_const_t<T>>();
+		result.add_volatile = type_handle::bind<std::add_volatile_t<T>>();
+		result.remove_volatile = type_handle::bind<std::remove_volatile_t<T>>();
+		result.add_cv = type_handle::bind<std::add_cv_t<T>>();
+		result.remove_cv = type_handle::bind<std::remove_cvref_t<T>>();
+
+		if constexpr (std::is_rvalue_reference_v<T>) result.flags |= type_flags::IS_RVALUE;
+		if constexpr (std::is_lvalue_reference_v<T>) result.flags |= type_flags::IS_LVALUE;
+		if constexpr (std::is_pointer_v<T>) result.flags |= type_flags::IS_POINTER;
+
+		result.add_rvalue = type_handle::bind<std::add_rvalue_reference_t<T>>();
+		result.add_lvalue = type_handle::bind<std::add_lvalue_reference_t<T>>();
+		result.remove_ref = type_handle::bind<std::remove_reference_t<T>>();
+		result.add_pointer = type_handle::bind<std::add_pointer_t<T>>();
+		result.remove_pointer = type_handle::bind<std::remove_pointer_t<T>>();
+
+		if constexpr (std::is_enum_v<T>) result.flags |= type_flags::IS_ENUM;
+		if constexpr (std::is_class_v<T>) result.flags |= type_flags::IS_CLASS;
+
+		result.extent = std::extent_v<T>;
+		result.remove_extent = type_handle::bind<std::remove_extent_t<T>>();
+		result.decay = type_handle::bind<std::decay_t<T>>();
+
+		return result;
+	}
 }

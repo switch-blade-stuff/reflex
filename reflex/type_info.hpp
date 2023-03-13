@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "detail/any.hpp"
+#include "detail/facet.hpp"
 
 namespace reflex
 {
@@ -12,7 +12,15 @@ namespace reflex
 	{
 		friend class any;
 
+	public:
+
+		/** Returns type info for type `T`. */
+		template<typename T>
+		[[nodiscard]] static type_info get() noexcept { return detail::type_handle::bind<T>(); }
+
+	private:
 		constexpr type_info(const detail::type_data *data) noexcept : m_data(data) {}
+		constexpr type_info(detail::type_handle handle) noexcept : m_data(handle.get()) {}
 
 	public:
 		/** Initializes an invalid type info. */
