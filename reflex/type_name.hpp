@@ -94,14 +94,6 @@ namespace reflex
 				return rem_str;
 		}
 		template<typename T>
-		[[nodiscard]] constexpr auto make_suffix() noexcept
-		{
-			if constexpr (std::is_const_v<T> || std::is_volatile_v<T>)
-				return basic_const_string{" "};
-			else
-				return basic_const_string{""};
-		}
-		template<typename T>
 		[[nodiscard]] constexpr auto make_array_prefix() noexcept
 		{
 			if constexpr (!(std::is_pointer_v<T> || std::is_reference_v<T>))
