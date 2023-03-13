@@ -3,7 +3,7 @@
  */
 
 #include <type_name.hpp>
-#include <facet.hpp>
+#include "detail/facet.hpp"
 
 #include <vector>
 #include <cstdio>
@@ -28,6 +28,19 @@ static_assert(std::same_as<test_facet::vtable_type, test_vtable>);
 int main()
 {
 	printf("\"%s\"\n", reflex::type_name<int>::value.data());
+	printf("\"%s\"\n", reflex::type_name<int *>::value.data());
+	printf("\"%s\"\n", reflex::type_name<int &>::value.data());
+	printf("\"%s\"\n", reflex::type_name<int *&>::value.data());
+	printf("\"%s\"\n", reflex::type_name<int[]>::value.data());
+	printf("\"%s\"\n", reflex::type_name<int[1]>::value.data());
+	printf("\"%s\"\n", reflex::type_name<int *[1]>::value.data());
+	printf("\"%s\"\n", reflex::type_name<int (&)[1]>::value.data());
+	printf("\"%s\"\n", reflex::type_name<int *(&)[1]>::value.data());
+	printf("\"%s\"\n", reflex::type_name<const int *>::value.data());
+	printf("\"%s\"\n", reflex::type_name<int *const>::value.data());
+	printf("\"%s\"\n", reflex::type_name<int **const>::value.data());
+	printf("\"%s\"\n", reflex::type_name<int *const &>::value.data());
+	printf("\"%s\"\n", reflex::type_name<int *const *const>::value.data());
 	printf("\"%s\"\n", reflex::type_name<std::nullptr_t>::value.data());
 	printf("\"%s\"\n", reflex::type_name<std::string_view>::value.data());
 	printf("\"%s\"\n", reflex::type_name<std::vector<int>>::value.data());

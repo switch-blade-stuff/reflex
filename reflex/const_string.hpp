@@ -65,8 +65,8 @@ namespace reflex
 		constexpr basic_const_string(const C (&str)[M]) : basic_const_string(str, M) {}
 		constexpr basic_const_string(const C *str, size_type n) : basic_const_string(str, str + std::min(N, n)) {}
 
-		template<std::size_t M>
-		constexpr basic_const_string(const basic_const_string<C, M> &str) requires (M != N) : basic_const_string((str.data(), std::min(M, N))) {}
+		template<std::size_t M, typename OtherTraits = Traits>
+		constexpr basic_const_string(const basic_const_string<C, M, OtherTraits> &str) requires (M != N) : basic_const_string((str.data(), std::min(M, N))) {}
 
 		template<std::forward_iterator I>
 		constexpr basic_const_string(I first, I last) { std::copy(first, last, value); }
@@ -119,7 +119,7 @@ namespace reflex
 		/** Returns constant reference to the element at the end of the string. */
 		[[nodiscard]] constexpr const_reference back() const noexcept { return value[size() - 1]; }
 
-		/** Returns size of the string (amount of value_type units). */
+		/** Returns size of the string (amount of `value_type` units). */
 		[[nodiscard]] constexpr size_type size() const noexcept { return str_length(value, N); }
 		/** @copydoc size */
 		[[nodiscard]] constexpr size_type length() const noexcept { return size(); }

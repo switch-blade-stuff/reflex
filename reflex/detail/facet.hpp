@@ -4,12 +4,10 @@
 
 #pragma once
 
-#include <type_traits>
 #include <stdexcept>
-#include <utility>
 #include <tuple>
 
-#include "const_string.hpp"
+#include "../const_string.hpp"
 #include "any.hpp"
 
 namespace reflex
@@ -21,6 +19,13 @@ namespace reflex
 		template<typename Vtable, typename Func, Func *Vtable::*F>
 		struct is_vtable_func<Vtable, F> : std::is_function<Func> {};
 
+		template<auto>
+		struct vtable_func_type;
+		template<typename Vtable, typename Func, Func *Vtable::*F>
+		struct vtable_func_type<F> { using type = Func; };
+		template<auto F>
+		using vtable_func_type_t = typename vtable_func_type<F>::type;
+
 		template<typename>
 		struct is_facet_group_impl : std::false_type {};
 		template<typename... Fs>
@@ -31,59 +36,69 @@ namespace reflex
 		struct facet_instance
 		{
 			constexpr facet_instance() {}
-			constexpr ~facet_instance() { destroy(); }
+			~facet_instance() { destroy(); }
 
 			template<typename... Args>
 			constexpr facet_instance(std::in_place_t, Args &&...args) { construct(std::forward<Args>(args)...); }
 
 			template<typename... Args>
 			constexpr void construct(Args &&...args) { std::construct_at(&value, std::forward<Args>(args)...); }
-			constexpr void destroy() { std::destroy_at(&value); }
+			void destroy() { std::destroy_at(&value); }
 
 			union { any value; };
 		};
 
-		template<basic_const_string Sign>
-		inline static unbound_facet_error make_facet_error();
+		template<auto F, basic_const_string FuncName>
+		inline static facet_function_error make_facet_error();
 	}
 
 	/** Exception type thrown when a function cannot be invoked on a facet. */
-	class REFLEX_PUBLIC unbound_facet_error : public std::runtime_error
+	class REFLEX_PUBLIC facet_function_error : public std::runtime_error
 	{
-		template<basic_const_string Sign>
-		friend inline unbound_facet_error detail::make_facet_error();
+		template<auto F, basic_const_string FuncName>
+		friend inline facet_function_error detail::make_facet_error();
 
 		using std::runtime_error::runtime_error;
 
 	public:
-		/** Initializes the facet error exception from message and signature strings. */
-		unbound_facet_error(const char *msg, std::string_view sign) : std::runtime_error(msg), m_sign(sign) {}
-		/** @copydoc unbound_facet_error */
-		unbound_facet_error(const std::string &msg, std::string_view sign) : std::runtime_error(msg), m_sign(sign) {}
+		/** Initializes the facet error exception from message and function name strings. */
+		facet_function_error(const char *msg, std::string_view name) : std::runtime_error(msg), m_name(name) {}
+		/** @copydoc facet_function_error */
+		facet_function_error(const std::string &msg, std::string_view name) : std::runtime_error(msg), m_name(name) {}
 
-		unbound_facet_error(const unbound_facet_error &) = default;
-		unbound_facet_error &operator=(const unbound_facet_error &) = default;
-		unbound_facet_error(unbound_facet_error &&) = default;
-		unbound_facet_error &operator=(unbound_facet_error &&) = default;
+		facet_function_error(const facet_function_error &) = default;
+		facet_function_error &operator=(const facet_function_error &) = default;
+		facet_function_error(facet_function_error &&) = default;
+		facet_function_error &operator=(facet_function_error &&) = default;
 
 #ifdef REFLEX_HEADER_ONLY
-		~unbound_facet_error() override = default;
+		~facet_function_error() override = default;
 #else
-		~unbound_facet_error() override;
+		facet_function_errorr() override;
 #endif
 
-		/** Returns signature of the offending facet function. */
-		[[nodiscard]] constexpr std::string_view signature() const noexcept { return m_sign; }
+		/** Returns name of the offending facet function. */
+		[[nodiscard]] constexpr std::string_view name() const noexcept { return m_name; }
 
 	private:
-		std::string_view m_sign;
+		std::string_view m_name;
 	};
 
-	template<basic_const_string Sign>
-	[[nodiscard]] unbound_facet_error detail::make_facet_error()
+	template<auto F, basic_const_string FuncName>
+	[[nodiscard]] facet_function_error detail::make_facet_error()
 	{
-		constexpr auto error_msg = basic_const_string{"Failed to invoke an unbound facet function `"} + Sign + basic_const_string{"`"};
-		return unbound_facet_error{error_msg.data(), Sign};
+		constexpr auto signature = type_name<detail::vtable_func_type_t<F>>::value;
+		constexpr auto msg_prefix = basic_const_string{"Failed to invoke facet function `"} + const_string<signature.size()>{signature};
+		if constexpr (FuncName.empty())
+		{
+			const auto msg = auto_constant<msg_prefix + basic_const_string{": "} + FuncName + basic_const_string{"`"}>::value.data();
+			return facet_function_error{msg, FuncName};
+		}
+		else
+		{
+			const auto msg = auto_constant<msg_prefix + basic_const_string{"`"}>::value.data();
+			return facet_function_error{msg, FuncName};
+		}
 	}
 
 	/** Utility trait used to check if type `T` is a facet type. */
@@ -106,7 +121,8 @@ namespace reflex
 	class facet : detail::facet_instance
 	{
 		template<typename...>
-		friend class facet_group;
+		friend
+		class facet_group;
 
 	public:
 		using vtable_type = Vtable;
@@ -117,15 +133,15 @@ namespace reflex
 	public:
 		facet() = delete;
 
-		constexpr facet(const facet &) noexcept = default;
+		facet(const facet &) noexcept = default;
+		facet &operator=(const facet &) noexcept = default;
 		constexpr facet(facet &&) noexcept = default;
-		constexpr facet &operator=(const facet &) noexcept = default;
 		constexpr facet &operator=(facet &&) noexcept = default;
 
 		/** Initializes the facet from a pointer to it's underlying vtable and an instance `any` using copy-construction.
 		 * @param instance `any` containing the instance (or reference thereof) of the underlying object.
 		 * @param vtable Vtable containing function pointers of the facet. */
-		constexpr facet(const any &instance, const Vtable *vtable) : detail::facet_instance{std::in_place, instance}, m_vtable(vtable) {}
+		facet(const any &instance, const Vtable *vtable) : detail::facet_instance{std::in_place, instance}, m_vtable(vtable) {}
 		/** Initializes the facet from a pointer to it's underlying vtable and an instance `any` using move-construction.
 		 * @param instance `any` containing the instance (or reference thereof) of the underlying object.
 		 * @param vtable Vtable containing function pointers of the facet. */
@@ -148,15 +164,14 @@ namespace reflex
 		/** Returns pointer to the underlying vtable. */
 		[[nodiscard]] constexpr const vtable_type *vtable() const noexcept { return m_vtable; }
 
-	protected:
 		/** Invokes vtable function \a F with arguments \a args. Preforms additional safety checks.
 		 * @tparam F Pointer to member function pointer of the underlying vtable.
-		 * @tparam Sign Function signature string used for diagnostics.
+		 * @tparam FuncName Function name string used for diagnostics.
 		 * @param args Arguments passed to the function. */
-		template<auto F, basic_const_string Sign, typename... Args>
+		template<auto F, basic_const_string FuncName = "", typename... Args>
 		[[nodiscard]] constexpr decltype(auto) checked_invoke(Args &&...args) const requires (requires(const vtable_type &vt) { (vt.*F)(std::forward<Args>(args)...); })
 		{
-			if (!is_bound<F>()) [[unlikely]] throw detail::make_facet_error<Sign>();
+			if (!is_bound<F>()) [[unlikely]] throw detail::make_facet_error<F, FuncName>();
 			return (vtable()->*F)(std::forward<Args>(args)...);
 		}
 
@@ -180,15 +195,15 @@ namespace reflex
 	public:
 		facet_group() = delete;
 
-		constexpr facet_group(const facet_group &) noexcept = default;
+		facet_group(const facet_group &) noexcept = default;
+		facet_group &operator=(const facet_group &) noexcept = default;
 		constexpr facet_group(facet_group &&) noexcept = default;
-		constexpr facet_group &operator=(const facet_group &) noexcept = default;
 		constexpr facet_group &operator=(facet_group &&) noexcept = default;
 
 		/** Initializes the facet group from a tuple of pointers to it's underlying vtables and an instance `any` using copy-construction.
 		 * @param instance `any` containing the instance (or reference thereof) of the underlying object.
 		 * @param vtable Tuple of pointers to facet vtables. */
-		constexpr facet_group(const any &instance, vtable_type vtable) : Fs{get_vtable<Fs>(vtable)}... { detail::facet_instance::construct(instance); }
+		facet_group(const any &instance, vtable_type vtable) : Fs{get_vtable<Fs>(vtable)}... { detail::facet_instance::construct(instance); }
 		/** Initializes the facet group from a tuple of pointers to it's underlying vtables and an instance `any` using move-construction.
 		 * @param instance `any` containing the instance (or reference thereof) of the underlying object.
 		 * @param vtable Tuple of pointers to facet vtables. */

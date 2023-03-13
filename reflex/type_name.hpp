@@ -79,4 +79,107 @@ namespace reflex
 		[[nodiscard]] constexpr value_type operator()() noexcept { return value; }
 	};
 #endif
+
+	namespace detail
+	{
+		template<std::integral auto I, basic_const_string Str = "">
+		[[nodiscard]] constexpr auto const_itoa() noexcept
+		{
+			constexpr auto dec = I / decltype(I){10};
+			constexpr auto rem = I % decltype(I){10};
+			constexpr auto rem_str = const_string<1>{{'0' + static_cast<char>(rem)}} + Str;
+			if constexpr (dec != 0)
+				return const_itoa<dec, rem_str>();
+			else
+				return rem_str;
+		}
+		template<typename T>
+		[[nodiscard]] constexpr auto make_suffix() noexcept
+		{
+			if constexpr (std::is_const_v<T> || std::is_volatile_v<T>)
+				return basic_const_string{" "};
+			else
+				return basic_const_string{""};
+		}
+		template<typename T>
+		[[nodiscard]] constexpr auto make_array_prefix() noexcept
+		{
+			if constexpr (!(std::is_pointer_v<T> || std::is_reference_v<T>))
+				return basic_const_string{" "};
+			else
+				return basic_const_string{""};
+		}
+		template<typename T>
+		[[nodiscard]] constexpr auto make_deref_prefix() noexcept
+		{
+			if constexpr (std::is_reference_v<T> || (std::is_pointer_v<T> && !(std::is_const_v<T> || std::is_volatile_v<T>)))
+				return basic_const_string{""};
+			else
+				return basic_const_string{" "};
+		}
+		template<typename T, basic_const_string Name>
+		[[nodiscard]] constexpr auto qualify_type_name() noexcept
+		{
+			if constexpr (std::is_pointer_v<T>) /* Handle qualified pointers separately. */
+			{
+				using value_type = std::remove_pointer_t<T>;
+				constexpr auto ptr_name = qualify_type_name<value_type, Name>() + make_deref_prefix<value_type>() + basic_const_string{"*"};
+
+				if constexpr (std::is_const_v<T>)
+					return ptr_name + basic_const_string{"const"};
+				else if constexpr (std::is_volatile_v<T>)
+					return ptr_name + basic_const_string{"volatile"};
+				else
+					return ptr_name;
+			}
+			else if constexpr (std::is_const_v<T>)
+				return qualify_type_name<std::remove_const_t<T>, basic_const_string{"const "} + Name>();
+			else if constexpr (std::is_volatile_v<T>)
+				return qualify_type_name<std::remove_volatile_t<T>, basic_const_string{"volatile "} + Name>();
+			else if constexpr (std::is_array_v<std::remove_reference_t<T>>) /* Handle array references separately. */
+			{
+				using value_type = std::remove_extent_t<std::remove_reference_t<T>>;
+				constexpr auto ref = std::string_view{std::is_reference_v<T> ? (std::is_rvalue_reference_v<T> == 2 ? "(&&)" : "(&)") : ""};
+				constexpr auto infix = ref.empty() ? ref : std::string_view{auto_constant<make_array_prefix<value_type>() + const_string<ref.size()>{ref}>::value};
+				constexpr auto value_name = qualify_type_name<value_type, Name>() + const_string<infix.size()>{infix};
+
+				constexpr auto extent = std::extent_v<std::remove_reference_t<T>>;
+				if constexpr (extent != 0)
+					return value_name + basic_const_string{"["} + const_itoa<extent>() + basic_const_string{"]"};
+				else
+					return value_name + basic_const_string{"[]"};
+			}
+			else if constexpr (std::is_lvalue_reference_v<T>)
+			{
+				using value_type = std::remove_reference_t<T>;
+				return qualify_type_name<std::remove_reference_t<T>, Name>() + make_deref_prefix<value_type>() + basic_const_string{"&"};
+			}
+			else if constexpr (std::is_rvalue_reference_v<T>)
+			{
+				using value_type = std::remove_reference_t<T>;
+				return qualify_type_name<std::remove_reference_t<T>, Name>() + make_deref_prefix<value_type>() + basic_const_string{"&&"};
+			}
+			else
+			{
+				constexpr auto name = type_name<T>::value;
+				constexpr auto size = name.back() != ' ' ? name.size() : name.size() - 1;
+				return Name + const_string<size>{name};
+			}
+		}
+		template<typename T>
+		[[nodiscard]] constexpr std::string_view qualify_type_name() noexcept
+		{
+			return auto_constant<qualify_type_name<T, "">()>::value;
+		}
+	}
+
+	template<typename T> requires (std::is_pointer_v<T> || std::is_array_v<T> || !std::same_as<T, std::remove_cvref_t<T>>)
+	struct type_name<T>
+	{
+		using value_type = std::string_view;
+		constexpr static value_type value = detail::qualify_type_name<T>();
+
+		[[nodiscard]] constexpr operator value_type() noexcept { return value; }
+		[[nodiscard]] constexpr value_type operator()() noexcept { return value; }
+	};
 }

@@ -4,10 +4,17 @@
 
 #pragma once
 
+#include "../type_name.hpp"
 #include "utility.hpp"
 
 namespace reflex
 {
+	namespace detail
+	{
+		struct type_data;
+	}
+
+	class type_info;
 	class any;
 
 	template<typename Vtable>
@@ -15,5 +22,5 @@ namespace reflex
 	template<typename... Fs>
 	class facet_group;
 
-	class unbound_facet_error;
+	class facet_function_error;
 }
