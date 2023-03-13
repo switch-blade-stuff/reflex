@@ -11,7 +11,7 @@
 
 namespace reflex
 {
-	/** @brief Fixed-size string for use with NTTP and constexpr. */
+	/** Fixed-size string for use with NTTP and constexpr. */
 	template<typename C, std::size_t N, typename Traits = std::char_traits<C>>
 	struct basic_const_string
 	{
@@ -448,13 +448,13 @@ namespace reflex
 	template<std::size_t N>
 	using const_string = basic_const_string<char, N>;
 	template<std::size_t N>
-	using static_wstring = basic_const_string<wchar_t, N>;
+	using const_wstring = basic_const_string<wchar_t, N>;
 	template<std::size_t N>
-	using static_u8string = basic_const_string<char8_t, N>;
+	using const_u8string = basic_const_string<char8_t, N>;
 	template<std::size_t N>
-	using static_u16string = basic_const_string<char16_t, N>;
+	using const_u16string = basic_const_string<char16_t, N>;
 	template<std::size_t N>
-	using static_u32string = basic_const_string<char32_t, N>;
+	using const_u32string = basic_const_string<char32_t, N>;
 }     // namespace sek
 
 template<typename C, std::size_t N, typename T>

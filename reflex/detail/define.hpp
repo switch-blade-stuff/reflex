@@ -18,3 +18,5 @@
 namespace reflex {}
 namespace sek { using namespace reflex; }
 #endif
+
+#define REFLEX_PUBLIC
