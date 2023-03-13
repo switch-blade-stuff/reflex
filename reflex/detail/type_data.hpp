@@ -49,6 +49,16 @@ namespace reflex::detail
 
 	struct type_dtor
 	{
+		template<typename T>
+		[[nodiscard]] constexpr static type_dtor bind() noexcept
+		{
+			return
+			{
+				.destroy_in_place = +[](void *ptr) { std::destroy_at(static_cast<T *>(ptr)); },
+				.destroy_delete = +[](void *ptr) { delete static_cast<T *>(ptr); }
+			};
+		}
+
 		/* Destroy the object as-if via placement delete operator. */
 		void (*destroy_in_place)(void *);
 		/* Destroy the object as-if via deallocating delete operator. */
@@ -131,6 +141,8 @@ namespace reflex::detail
 		result.extent = std::extent_v<T>;
 		result.remove_extent = type_handle::bind<std::remove_extent_t<T>>();
 		result.decay = type_handle::bind<std::decay_t<T>>();
+
+		result.dtor = type_dtor::bind<T>();
 
 		return result;
 	}
