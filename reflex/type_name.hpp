@@ -173,7 +173,7 @@ namespace reflex
 		}
 	}
 
-	template<typename T> requires (std::is_pointer_v<T> || std::is_array_v<T> || !std::same_as<T, std::remove_cvref_t<T>>)
+	template<typename T> requires (std::is_pointer_v<T> || std::is_reference_v<T> || std::is_array_v<T> || std::is_const_v<T> || std::is_volatile_v<T>)
 	struct type_name<T>
 	{
 		using value_type = std::string_view;
