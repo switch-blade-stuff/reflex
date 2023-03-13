@@ -15,6 +15,10 @@ namespace reflex
 	template<typename T>
 	struct type_name;
 
+	/** Alias for `type_name<T>::value`. */
+	template<typename T>
+	inline constexpr auto type_name_v = type_name<T>::value;
+
 #ifdef REFLEX_PRETTY_FUNC
 	namespace detail
 	{
@@ -82,6 +86,8 @@ namespace reflex
 
 	namespace detail
 	{
+		/* Pointer, reference, array & cv-qualified types will not respect specializations of `type_name` for their un-decorated types.
+		 * As such, format such types manually. */
 		template<std::integral auto I, basic_const_string Str = "">
 		[[nodiscard]] constexpr auto const_itoa() noexcept
 		{
@@ -92,14 +98,6 @@ namespace reflex
 				return const_itoa<dec, rem_str>();
 			else
 				return rem_str;
-		}
-		template<typename T>
-		[[nodiscard]] constexpr auto make_suffix() noexcept
-		{
-			if constexpr (std::is_const_v<T> || std::is_volatile_v<T>)
-				return basic_const_string{" "};
-			else
-				return basic_const_string{""};
 		}
 		template<typename T>
 		[[nodiscard]] constexpr auto make_array_prefix() noexcept
@@ -117,13 +115,14 @@ namespace reflex
 			else
 				return basic_const_string{" "};
 		}
-		template<typename T, basic_const_string Name>
-		[[nodiscard]] constexpr auto qualify_type_name() noexcept
+		template<typename T>
+		[[nodiscard]] constexpr auto eval_qualify_type_name() noexcept
 		{
 			if constexpr (std::is_pointer_v<T>) /* Handle qualified pointers separately. */
 			{
 				using value_type = std::remove_pointer_t<T>;
-				constexpr auto ptr_name = qualify_type_name<value_type, Name>() + make_deref_prefix<value_type>() + basic_const_string{"*"};
+				constexpr auto value_name = type_name_v<value_type>;
+				constexpr auto ptr_name = const_string<value_name.size()>{value_name} + make_deref_prefix<value_type>() + basic_const_string{"*"};
 
 				if constexpr (std::is_const_v<T>)
 					return ptr_name + basic_const_string{"const"};
@@ -133,43 +132,48 @@ namespace reflex
 					return ptr_name;
 			}
 			else if constexpr (std::is_const_v<T>)
-				return qualify_type_name<std::remove_const_t<T>, basic_const_string{"const "} + Name>();
+			{
+				constexpr auto value_name = type_name_v<std::remove_const_t<T>>;
+				return basic_const_string{"const "} + const_string<value_name.size()>{value_name};
+			}
 			else if constexpr (std::is_volatile_v<T>)
-				return qualify_type_name<std::remove_volatile_t<T>, basic_const_string{"volatile "} + Name>();
+			{
+				constexpr auto value_name = type_name_v<std::remove_volatile_t<T>>;
+				return basic_const_string{"volatile "} + const_string<value_name.size()>{value_name};
+			}
 			else if constexpr (std::is_array_v<std::remove_reference_t<T>>) /* Handle array references separately. */
 			{
 				using value_type = std::remove_extent_t<std::remove_reference_t<T>>;
+				constexpr auto value_name = type_name_v<value_type>;
 				constexpr auto ref = std::string_view{std::is_reference_v<T> ? (std::is_rvalue_reference_v<T> == 2 ? "(&&)" : "(&)") : ""};
 				constexpr auto infix = ref.empty() ? ref : std::string_view{auto_constant<make_array_prefix<value_type>() + const_string<ref.size()>{ref}>::value};
-				constexpr auto value_name = qualify_type_name<value_type, Name>() + const_string<infix.size()>{infix};
-
-				constexpr auto extent = std::extent_v<std::remove_reference_t<T>>;
-				if constexpr (extent != 0)
-					return value_name + basic_const_string{"["} + const_itoa<extent>() + basic_const_string{"]"};
+				if constexpr (constexpr auto extent = std::extent_v<std::remove_reference_t<T>>; extent != 0)
+					return const_string<value_name.size()>{value_name} + const_string<infix.size()>{infix} + basic_const_string{"["} + const_itoa<extent>() + basic_const_string{"]"};
 				else
-					return value_name + basic_const_string{"[]"};
+					return const_string<value_name.size()>{value_name} + const_string<infix.size()>{infix} + basic_const_string{"[]"};
 			}
 			else if constexpr (std::is_lvalue_reference_v<T>)
 			{
 				using value_type = std::remove_reference_t<T>;
-				return qualify_type_name<std::remove_reference_t<T>, Name>() + make_deref_prefix<value_type>() + basic_const_string{"&"};
+				constexpr auto value_name = type_name_v<value_type>;
+				return const_string<value_name.size()>{value_name} + make_deref_prefix<value_type>() + basic_const_string{"&"};
 			}
 			else if constexpr (std::is_rvalue_reference_v<T>)
 			{
 				using value_type = std::remove_reference_t<T>;
-				return qualify_type_name<std::remove_reference_t<T>, Name>() + make_deref_prefix<value_type>() + basic_const_string{"&&"};
+				constexpr auto value_name = type_name_v<value_type>;
+				return const_string<value_name.size()>{value_name} + make_deref_prefix<value_type>() + basic_const_string{"&&"};
 			}
 			else
 			{
 				constexpr auto name = type_name<T>::value;
-				constexpr auto size = name.back() != ' ' ? name.size() : name.size() - 1;
-				return Name + const_string<size>{name};
+				return const_string<name.size()>{name};
 			}
 		}
 		template<typename T>
 		[[nodiscard]] constexpr std::string_view qualify_type_name() noexcept
 		{
-			return auto_constant<qualify_type_name<T, "">()>::value;
+			return auto_constant<eval_qualify_type_name<T>()>::value;
 		}
 	}
 
