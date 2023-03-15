@@ -14,6 +14,7 @@ namespace reflex
 		struct type_data;
 	}
 
+	class type_database;
 	class type_info;
 	class any;
 

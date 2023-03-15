@@ -24,23 +24,28 @@ public:
 
 static_assert(std::same_as<test_facet::vtable_type, test_vtable>);
 
+static_assert(reflex::type_name_v<int> == "int");
+static_assert(reflex::type_name_v<int *> == "int *");
+static_assert(reflex::type_name_v<int &> == "int &");
+static_assert(reflex::type_name_v<int[]> == "int[]");
+static_assert(reflex::type_name_v<int[1]> == "int[1]");
+static_assert(reflex::type_name_v<int **> == "int **");
+static_assert(reflex::type_name_v<int (&)[]> == "int (&)[]");
+static_assert(reflex::type_name_v<int *(&)[]> == "int *(&)[]");
+static_assert(reflex::type_name_v<const int> == "const int");
+static_assert(reflex::type_name_v<const int *> == "const int *");
+static_assert(reflex::type_name_v<int *const> == "int *const");
+static_assert(reflex::type_name_v<int **const> == "int **const");
+static_assert(reflex::type_name_v<int *const *> == "int *const *");
+
+template<>
+struct reflex::type_name<std::string> { constexpr static std::string_view value = "std::string"; };
+
+static_assert(reflex::type_name_v<std::string> == "std::string");
+static_assert(reflex::type_name_v<std::wstring> != "std::wstring");
+
 int main()
 {
-	printf("\"%s\"\n", reflex::type_name<int>::value.data());
-	printf("\"%s\"\n", reflex::type_name<int *>::value.data());
-	printf("\"%s\"\n", reflex::type_name<int &>::value.data());
-	printf("\"%s\"\n", reflex::type_name<int *&>::value.data());
-	printf("\"%s\"\n", reflex::type_name<int[]>::value.data());
-	printf("\"%s\"\n", reflex::type_name<int[1]>::value.data());
-	printf("\"%s\"\n", reflex::type_name<int *[1]>::value.data());
-	printf("\"%s\"\n", reflex::type_name<int (&)[1]>::value.data());
-	printf("\"%s\"\n", reflex::type_name<int *(&)[1]>::value.data());
-	printf("\"%s\"\n", reflex::type_name<const int *>::value.data());
-	printf("\"%s\"\n", reflex::type_name<int *const>::value.data());
-	printf("\"%s\"\n", reflex::type_name<int **const>::value.data());
-	printf("\"%s\"\n", reflex::type_name<int *const &>::value.data());
-	printf("\"%s\"\n", reflex::type_name<int *const *const>::value.data());
-	printf("\"%s\"\n", reflex::type_name<std::nullptr_t>::value.data());
-	printf("\"%s\"\n", reflex::type_name<std::string_view>::value.data());
-	printf("\"%s\"\n", reflex::type_name<std::vector<int>>::value.data());
+	reflex::type_database db;
+	return reflex::type_info::get<int>(db).size();
 }

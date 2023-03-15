@@ -455,7 +455,7 @@ namespace reflex
 	using const_u16string = basic_const_string<char16_t, N>;
 	template<std::size_t N>
 	using const_u32string = basic_const_string<char32_t, N>;
-}     // namespace sek
+}
 
 template<typename C, std::size_t N, typename T>
 struct std::hash<reflex::basic_const_string<C, N, T>>

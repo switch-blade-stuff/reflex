@@ -74,7 +74,7 @@ namespace reflex
 #ifdef REFLEX_HEADER_ONLY
 		~facet_function_error() override = default;
 #else
-		facet_function_errorr() override;
+		~facet_function_error() override;
 #endif
 
 		/** Returns name of the offending facet function. */

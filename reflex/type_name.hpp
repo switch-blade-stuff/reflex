@@ -50,7 +50,7 @@ namespace reflex
 #endif
 			/* Strip slack, whitespace and keywords from the type name. */
 			if constexpr (first != decltype(Name)::npos && last != decltype(Name)::npos)
-				return format_type_name<const_string<last - first + off>{Name.data() + first + off, Name.data() + last}>();
+				return format_type_name<const_string<last - (first + off)>{Name.data() + first + off, Name.data() + last}>();
 			else if constexpr (Name.contains("struct "))
 				return format_type_name<erase_substr<Name, "struct ">()>();
 			else if constexpr (Name.contains("union "))
