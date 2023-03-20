@@ -11,10 +11,18 @@ namespace reflex
 {
 	namespace detail
 	{
+		template<typename = void, typename = void, typename = void, typename...>
+		class type_ctor;
+
+		struct argument_data;
 		struct type_data;
 	}
 
-	class type_database;
+	class type_constructor_error;
+	class facet_function_error;
+
+	class type_domain;
+	class argument_info;
 	class type_info;
 	class any;
 
@@ -22,6 +30,4 @@ namespace reflex
 	class facet;
 	template<typename... Fs>
 	class facet_group;
-
-	class facet_function_error;
 }

@@ -4,9 +4,6 @@
 
 #include <reflex/type_info.hpp>
 
-#include <vector>
-#include <cstdio>
-
 struct test_vtable
 {
 	int (*get_value)() noexcept;
@@ -39,13 +36,11 @@ static_assert(reflex::type_name_v<int **const> == "int **const");
 static_assert(reflex::type_name_v<int *const *> == "int *const *");
 
 template<>
-struct reflex::type_name<std::string> { constexpr static std::string_view value = "std::string"; };
+struct reflex::type_name<std::string> { static constexpr std::string_view value = "std::string"; };
 
 static_assert(reflex::type_name_v<std::string> == "std::string");
 static_assert(reflex::type_name_v<std::wstring> != "std::wstring");
 
-int main()
-{
-	reflex::type_database db;
-	return reflex::type_info::get<int>(db).size();
-}
+auto test() { return reflex::type_info::get<int>(); }
+
+int main() {}

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <type_traits>
+#include <iterator>
 #include <utility>
 
 #include "define.hpp"
@@ -49,4 +50,34 @@ namespace reflex
 	/** Alias for `is_unique<Ts...>::value`. */
 	template<typename... Ts>
 	inline constexpr auto is_unique_v = is_unique<Ts...>::value;
+
+	namespace detail
+	{
+		/* CLang has issues with std::ranges::subrange. As such, define our own. */
+		template<typename Iter, typename Sent = Iter>
+		class subrange
+		{
+		public:
+			constexpr subrange(const Iter &iter, const Sent &sent) : m_iter(iter), m_sent(sent) {}
+			constexpr subrange(Iter &&iter, Sent &&sent) : m_iter(std::forward<Iter>(iter)), m_sent(std::forward<Sent>(sent)) {}
+
+			[[nodiscard]] constexpr Iter begin() const { return m_iter; }
+			[[nodiscard]] constexpr Sent end() const { return m_sent; }
+
+			[[nodiscard]] constexpr decltype(auto) front() const { return *m_iter; }
+			[[nodiscard]] constexpr decltype(auto) back() const { return *std::prev(m_sent); }
+			[[nodiscard]] constexpr decltype(auto) operator[](std::iter_difference_t<Iter> i) const { return m_iter[i]; }
+
+			[[nodiscard]] constexpr bool empty() const { return m_iter == m_sent; }
+			[[nodiscard]] constexpr auto size() const
+			{
+				const auto diff = std::distance(m_iter, m_sent);
+				return static_cast<std::make_unsigned_t<std::remove_cvref_t<decltype(diff)>>>(diff);
+			}
+
+		private:
+			Iter m_iter;
+			Sent m_sent;
+		};
+	}
 }

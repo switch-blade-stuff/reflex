@@ -4,6 +4,7 @@
 
 #pragma once
 
+#ifndef REFLEX_HEADER_ONLY
 #if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
 #define REFLEX_API_HIDDEN
 #if defined(_MSC_VER)
@@ -29,3 +30,6 @@
 #define REFLEX_PUBLIC REFLEX_API_IMPORT
 #endif
 #define REFLEX_PRIVATE REFLEX_API_HIDDEN
+#else
+#define REFLEX_PRIVATE inline
+#endif

@@ -3,5 +3,5 @@
  */
 
 #ifndef REFLEX_HEADER_ONLY
-#include "type_db_impl.hpp"
+#include "type_domain_impl.hpp"
 #endif

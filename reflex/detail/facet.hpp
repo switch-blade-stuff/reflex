@@ -61,15 +61,15 @@ namespace reflex
 		using std::runtime_error::runtime_error;
 
 	public:
-		/** Initializes the facet error exception from message and function name strings. */
-		facet_function_error(const char *msg, std::string_view name) : std::runtime_error(msg), m_name(name) {}
-		/** @copydoc facet_function_error */
-		facet_function_error(const std::string &msg, std::string_view name) : std::runtime_error(msg), m_name(name) {}
-
 		facet_function_error(const facet_function_error &) = default;
 		facet_function_error &operator=(const facet_function_error &) = default;
 		facet_function_error(facet_function_error &&) = default;
 		facet_function_error &operator=(facet_function_error &&) = default;
+
+		/** Initializes the facet error exception from message and function name strings. */
+		facet_function_error(const char *msg, std::string_view name) : std::runtime_error(msg), m_name(name) {}
+		/** @copydoc facet_function_error */
+		facet_function_error(const std::string &msg, std::string_view name) : std::runtime_error(msg), m_name(name) {}
 
 #ifdef REFLEX_HEADER_ONLY
 		~facet_function_error() override = default;
@@ -101,7 +101,7 @@ namespace reflex
 		}
 	}
 
-	/** Utility trait used to check if type `T` is a facet type. */
+	/** Utility trait used to check if type \a T is a facet type. */
 	template<typename T>
 	using is_facet = std::is_base_of<detail::facet_instance, T>;
 	/** Alias for `is_facet<T>::value`. */
@@ -190,7 +190,7 @@ namespace reflex
 		using vtable_type = std::tuple<const typename Fs::vtable_type *...>;
 
 		template<typename F>
-		constexpr static decltype(auto) get_vtable(auto &&vt) noexcept { return std::get<const typename F::vtable_type *>(std::forward<decltype(vt)>(vt)); }
+		static constexpr decltype(auto) get_vtable(auto &&vt) noexcept { return std::get<const typename F::vtable_type *>(std::forward<decltype(vt)>(vt)); }
 
 	public:
 		facet_group() = delete;

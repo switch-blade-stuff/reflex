@@ -77,7 +77,7 @@ namespace reflex
 	struct type_name
 	{
 		using value_type = std::string_view;
-		constexpr static value_type value = detail::make_type_name<T>();
+		static constexpr value_type value = detail::make_type_name<T>();
 
 		[[nodiscard]] constexpr operator value_type() noexcept { return value; }
 		[[nodiscard]] constexpr value_type operator()() noexcept { return value; }
@@ -181,7 +181,7 @@ namespace reflex
 	struct type_name<T>
 	{
 		using value_type = std::string_view;
-		constexpr static value_type value = detail::qualify_type_name<T>();
+		static constexpr value_type value = detail::qualify_type_name<T>();
 
 		[[nodiscard]] constexpr operator value_type() noexcept { return value; }
 		[[nodiscard]] constexpr value_type operator()() noexcept { return value; }

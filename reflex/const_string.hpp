@@ -29,10 +29,10 @@ namespace reflex
 		typedef std::size_t size_type;
 		typedef std::ptrdiff_t difference_type;
 
-		constexpr static size_type npos = std::basic_string_view<C, Traits>::npos;
+		static constexpr size_type npos = std::basic_string_view<C, Traits>::npos;
 
 	private:
-		[[nodiscard]] constexpr static size_type str_length(const C *str, std::size_t max) noexcept
+		[[nodiscard]] static constexpr size_type str_length(const C *str, std::size_t max) noexcept
 		{
 			if (!std::is_constant_evaluated())
 			{
