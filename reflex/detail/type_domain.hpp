@@ -5,6 +5,7 @@
 #pragma once
 
 #define TPP_STL_HASH_ALL
+
 #include <tpp/stable_map.hpp>
 #include <tpp/stl_hash.hpp>
 
@@ -41,6 +42,9 @@ namespace reflex
 				std::atomic_thread_fence(std::memory_order_release);
 			}
 
+			[[nodiscard]] bool is_reading() const { return m_writer == std::thread::id{} && m_reader_ctr; }
+			[[nodiscard]] bool is_writing(std::thread::id writer) const { return m_writer == writer && m_writer_ctr; }
+
 			std::atomic_flag m_busy_flag = {};
 			std::atomic<std::thread::id> m_writer = {};
 			std::atomic<std::size_t> m_writer_ctr = {};
@@ -56,12 +60,10 @@ namespace reflex
 				bool try_lock_shared() { return true; }
 #endif
 		};
-
-		struct domain_lock_base { mutable detail::domain_lock m_lock; };
 	}
 
 	/** Database of reflected type information. */
-	class type_domain : guarded_instance<type_domain, detail::domain_lock>, detail::domain_lock_base
+	class type_domain : guarded_instance<type_domain, detail::domain_lock>
 	{
 		using guard_base = guarded_instance<type_domain, detail::domain_lock>;
 		using guard_type = access_guard<type_domain *, detail::domain_lock>;
@@ -80,6 +82,8 @@ namespace reflex
 		REFLEX_PUBLIC static type_domain *instance(type_domain *ptr);
 
 	private:
+		using data_factory = detail::type_data (*)() noexcept;
+
 		static constexpr guard_type guard(const type_domain *domain) { return {const_cast<type_domain *>(domain), domain->m_lock}; }
 
 	public:
@@ -108,8 +112,9 @@ namespace reflex
 		[[nodiscard]] REFLEX_PUBLIC type_info find(std::string_view name) const;
 
 	private:
-		[[nodiscard]] REFLEX_PUBLIC detail::type_data *try_reflect(std::string_view name, detail::type_data (*factory)() noexcept);
+		[[nodiscard]] REFLEX_PUBLIC detail::type_data *try_reflect(std::string_view name, data_factory factory);
 
-		tpp::stable_map<std::string_view, std::pair<detail::type_data, detail::type_data (*)() noexcept>> m_types;
+		tpp::stable_map<std::string_view, std::pair<detail::type_data, data_factory>> m_types;
+		mutable detail::domain_lock m_lock;
 	};
 }

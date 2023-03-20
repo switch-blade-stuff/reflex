@@ -43,4 +43,15 @@ static_assert(reflex::type_name_v<std::wstring> != "std::wstring");
 
 auto test() { return reflex::type_info::get<int>(); }
 
-int main() {}
+int main()
+{
+	int err = 0;
+	reflex::detail::domain_lock l;
+	err += !l.try_lock();
+	err += !l.try_lock();
+	err += !l.try_lock_shared();
+	l.unlock();
+	l.unlock();
+	l.unlock_shared();
+	return err;
+}

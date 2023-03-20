@@ -132,7 +132,7 @@ namespace reflex
 		/** Returns a const void pointer to the managed object. */
 		[[nodiscard]] constexpr const void *cdata() const noexcept
 		{
-			return (m_flags & detail::IS_VALUE) ? m_value : m_external.cdata;
+			return (m_flags & detail::IS_VALUE) ? m_value : (m_flags & detail::IS_CONST) ? m_external.data : m_external.cdata;
 		}
 		/** @copydoc cdata */
 		[[nodiscard]] constexpr const void *data() const noexcept { return cdata(); }
@@ -167,10 +167,18 @@ namespace reflex
 
 		/** Returns pointer to the managed object, casted to `T *` or `nullptr` if the managed object is of a different const-ness or not convertible to `T *`. */
 		template<typename T>
-		[[nodiscard]] inline T *as() noexcept;
+		[[nodiscard]] inline T *as() noexcept
+		{
+			/* TODO: Implement. */
+			return get<T>();
+		}
 		/** Returns const pointer to the managed object, casted to `T *` or `nullptr` if the managed object is of a different const-ness or not convertible to `T *`. */
 		template<typename T>
-		[[nodiscard]] inline std::add_const_t<T> *as() const noexcept;
+		[[nodiscard]] inline std::add_const_t<T> *as() const noexcept
+		{
+			/* TODO: Implement. */
+			return get<T>();
+		}
 
 	private:
 		template<typename T>
@@ -247,9 +255,9 @@ namespace reflex
 
 			for (std::size_t i = 0; i < expected.size(); ++i)
 			{
-				if (actual[i].is_const() > (expected[i]->flags & IS_CONST) ||
-				    expected[i]->type_name != actual[i].type().name())
-					return false;
+				//const auto domain = actual[i].type().domain();
+				if (actual[i].is_const() && !(expected[i]->flags & IS_CONST)) return false;
+				/*if (actual[i].empty() || expected[i]->type(*domain.pointer()) != actual[i].type()) return false;*/
 			}
 			return true;
 		}
@@ -260,7 +268,7 @@ namespace reflex
 
 			for (std::size_t i = 0; i < expected.size(); ++i)
 			{
-				if ((actual[i]->flags & IS_CONST) > (expected[i]->flags & IS_CONST) ||
+				if (((actual[i]->flags & IS_CONST) && !(expected[i]->flags & IS_CONST)) ||
 				    expected[i]->type_name != actual[i]->type_name)
 					return false;
 			}
@@ -314,8 +322,8 @@ namespace reflex
 
 						result.dtor = type_dtor::bind<T>();
 
-						result.copy_ctor = type_ctor<>::bind<T>();
 						result.default_ctor = type_ctor<>::bind<T>();
+						result.copy_ctor = type_ctor<>::bind<T, std::add_const_t<T> &>();
 						result.default_ctor->next = result.copy_ctor;
 						result.ctor_list = result.default_ctor;
 					}

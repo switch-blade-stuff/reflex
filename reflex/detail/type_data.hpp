@@ -202,7 +202,7 @@ namespace reflex::detail
 
 	template<typename T>
 	constexpr argument_data argument_data::value = {
-			type_name_v<T>, type_data::bind<std::remove_cvref_t<T>>,
+			type_name_v<std::remove_cvref_t<T>>, type_data::bind<std::remove_cvref_t<T>>,
 			std::is_const_v<std::remove_reference_t<T>> ? IS_CONST : type_flags{}
 	};
 }

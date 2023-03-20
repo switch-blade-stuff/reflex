@@ -186,10 +186,10 @@ namespace reflex
 #endif
 
 		/** Returns span of offending constructor arguments. */
-		[[nodiscard]] constexpr std::span<const argument_info> args() const noexcept { return m_args; }
+		[[nodiscard]] constexpr detail::subrange<detail::argument_info_iterator> args() const noexcept { return m_args; }
 
 	private:
-		std::vector<argument_info> m_args;
+		detail::subrange<detail::argument_info_iterator> m_args;
 	};
 
 	namespace detail
@@ -239,17 +239,24 @@ namespace reflex
 		public:
 			[[nodiscard]] static constexpr auto *bind(auto &&pc, auto &&ac) { return new type_ctor{argument_data::args_list<Ts...>(), std::forward<decltype(ac)>(ac), std::forward<decltype(pc)>(pc)}; }
 
+		private:
+			static void assert_args(std::span<any> args)
+			{
+				if (!argument_data::verify(argument_data::args_list<Ts...>(), args))
+					[[unlikely]] throw make_constructor_error<T, Ts...>();
+			}
+
 		public:
 			~type_ctor() override = default;
 
 			void construct_in_place(void *dst, std::span<any> args) override
 			{
-				if (!argument_data::verify(this->args, args)) [[unlikely]] throw make_constructor_error<T, Ts...>();
+				assert_args(args);
 				construct_at<Ts...>(m_in_place, static_cast<T *>(dst), args);
 			}
 			[[nodiscard]] void *construct_allocating(std::span<any> args) override
 			{
-				if (!argument_data::verify(this->args, args)) [[unlikely]] throw make_constructor_error<T, Ts...>();
+				assert_args(args);
 				return construct<T, Ts...>(m_allocating, args);
 			}
 

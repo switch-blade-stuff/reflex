@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <cassert>
+
 #include "type_domain.hpp"
 #include "type_info.hpp"
 
@@ -17,7 +19,7 @@ namespace reflex
 			while (m_busy_flag.test_and_set())
 			{
 				/* If the lock is owned by us, increment the writer counter. */
-				if (m_writer == self && m_writer_ctr)
+				if (is_writing(self))
 				{
 					m_writer_ctr++;
 					return;
@@ -30,11 +32,16 @@ namespace reflex
 		}
 		void domain_lock::unlock()
 		{
-			/* Decrement writer counter. If reached 0, reset writer id & clear the busy flag. */
+			assert(m_writer_ctr != 0);
+			assert(m_writer == std::this_thread::get_id());
+
+			/* Decrement writer counter. If the writer counter reaches 0, reset the writer thread id.
+			 * If both counters reach 0, clear the busy flag as well. */
 			if (m_writer_ctr-- == 1)
 			{
 				m_writer.store({}, std::memory_order_relaxed);
-				m_busy_flag.clear(std::memory_order_relaxed);
+				if (m_reader_ctr == 0)
+					m_busy_flag.clear(std::memory_order_relaxed);
 				std::atomic_thread_fence(std::memory_order_release);
 			}
 			/* Notify waiting threads. */
@@ -46,7 +53,7 @@ namespace reflex
 			if (m_busy_flag.test_and_set())
 			{
 				/* If we are the writing thread, increment write counter. */
-				if (m_writer == self && m_writer_ctr)
+				if (is_writing(self))
 				{
 					m_writer_ctr++;
 					return true;
@@ -62,8 +69,8 @@ namespace reflex
 		{
 			while (m_busy_flag.test_and_set())
 			{
-				/* If already locked in read mode, increment the read counter. */
-				if (m_writer == std::thread::id{} && m_reader_ctr)
+				/* If already locked in read mode, or the current thread is the writer, increment the read counter. */
+				if (is_reading() || is_writing(std::this_thread::get_id()))
 				{
 					m_reader_ctr++;
 					return;
@@ -76,8 +83,10 @@ namespace reflex
 		}
 		void domain_lock::unlock_shared()
 		{
-			/* Decrement reader counter. If reached 0, clear the busy flag. */
-			if (m_reader_ctr-- == 1)
+			assert(m_reader_ctr != 0);
+
+			/* Decrement reader counter. If both counters reach 0, clear the busy flag. */
+			if (m_reader_ctr-- == 1 && !m_writer_ctr)
 				m_busy_flag.clear();
 			/* Notify waiting threads. */
 			m_busy_flag.notify_all();
@@ -86,8 +95,8 @@ namespace reflex
 		{
 			if (m_busy_flag.test_and_set())
 			{
-				/* If already locked in read mode, increment the read counter. */
-				if (m_writer == std::thread::id{} && m_reader_ctr)
+				/* If already locked in read mode, or the current thread is the writer, increment the read counter. */
+				if (is_reading() || is_writing(std::this_thread::get_id()))
 				{
 					m_reader_ctr++;
 					return true;
@@ -124,15 +133,43 @@ namespace reflex
 		return {};
 	}
 
-	detail::type_data *type_domain::try_reflect(std::string_view name, detail::type_data (*factory)() noexcept)
+	detail::type_data *type_domain::try_reflect(std::string_view name, data_factory factory)
 	{
-		std::shared_lock<detail::domain_lock> rl{m_lock};
+		struct lock_guard
+		{
+			lock_guard(detail::domain_lock &l) : m_lock(l) { lock_shared(); }
+			~lock_guard() { unlock(); }
+
+			void lock_shared()
+			{
+				m_lock.lock_shared();
+				m_locked_shared = true;
+			}
+			void relock_unique()
+			{
+				unlock();
+				m_lock.lock();
+				m_locked_unique = true;
+			}
+			void unlock()
+			{
+				if (std::exchange(m_locked_shared, false))
+					m_lock.unlock_shared();
+				else if (std::exchange(m_locked_unique, false))
+					m_lock.unlock();
+			}
+
+			detail::domain_lock &m_lock;
+			bool m_locked_unique = false;
+			bool m_locked_shared = false;
+		};
+
+		lock_guard g{m_lock};
 		auto iter = m_types.find(name);
 		if (iter == m_types.end()) [[unlikely]]
 		{
 			/* Unable to find existing entry, lock for writing & insert. */
-			rl.unlock();
-			std::lock_guard<detail::domain_lock> wl{m_lock};
+			g.relock_unique();
 			iter = m_types.try_emplace(name, std::make_pair(factory(), factory)).first;
 		}
 		return &iter->second.first;
