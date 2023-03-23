@@ -4,28 +4,44 @@
 
 #pragma once
 
-#include "type_domain.hpp"
+#include <vector>
+
+#include "fwd.hpp"
 
 namespace reflex
 {
+	/** Exception type thrown when dynamic invocation of a constructor or assignment operator fails due to invalid arguments. */
+	class REFLEX_PUBLIC bad_argument_list : public std::runtime_error
+	{
+	public:
+		bad_argument_list(const bad_argument_list &) = default;
+		bad_argument_list &operator=(const bad_argument_list &) = default;
+		bad_argument_list(bad_argument_list &&) = default;
+		bad_argument_list &operator=(bad_argument_list &&) = default;
+
+		/** Initializes the argument list exception with message \a msg. */
+		explicit bad_argument_list(const char *msg) : std::runtime_error(msg) {}
+		/** @copydoc bad_argument_list */
+		explicit bad_argument_list(const std::string &msg) : std::runtime_error(msg) {}
+
+		~bad_argument_list() override = default;
+	};
+
 	/** Handle to reflected type information. */
 	class type_info
 	{
-		friend class argument_info;
-		friend class type_domain;
 		friend class any;
 
 	public:
-		/** Returns (potentially inserting) type info for type \a T from domain \a domain. */
+		/** Returns type info for type with name \a name, or an invalid type info if the type has not been reflected yet. */
+		[[nodiscard]] inline static type_info get(std::string_view name);
+		/** Returns type info for type \a T. */
 		template<typename T>
-		[[nodiscard]] static type_info get(type_domain &domain) noexcept { return {detail::type_data::bind<T>, domain}; }
-		/** Returns type info for type \a T from the global domain. */
-		template<typename T>
-		[[nodiscard]] static type_info get() noexcept { return get<T>(*type_domain::instance().access()); }
+		[[nodiscard]] inline static type_info get();
 
 	private:
-		type_info(detail::type_handle handle, type_domain &domain) noexcept : type_info(handle(domain), &domain) {}
-		constexpr type_info(const detail::type_data *data, type_domain *domain) noexcept : m_data(data), m_domain(domain) {}
+		inline type_info(detail::type_handle handle, detail::database_impl &db);
+		constexpr type_info(const detail::type_data *data, detail::database_impl *db) noexcept : m_data(data), m_db(db) {}
 
 	public:
 		/** Initializes an invalid type info. */
@@ -36,58 +52,97 @@ namespace reflex
 		/** @copydoc valid */
 		[[nodiscard]] constexpr operator bool() const noexcept { return valid(); }
 
-		/** Returns access guard to the domain of the referenced type. */
-		[[nodiscard]] constexpr auto domain() const noexcept { return type_domain::guard(m_domain); }
 		/** Returns the name of the referenced type. */
-		[[nodiscard]] constexpr std::string_view name() const noexcept { return m_data->name; }
+		[[nodiscard]] constexpr std::string_view name() const noexcept;
 		/** Returns the size of the referenced type.
 		 * @note If `is_empty_v<T>` evaluates to `true` for referenced type \a T, returns `0` instead of `1`. */
-		[[nodiscard]] constexpr std::size_t size() const noexcept { return m_data->size; }
-
-		/** Checks if the referenced type is empty. */
-		[[nodiscard]] constexpr bool is_empty() const noexcept { return size() == 0; }
+		[[nodiscard]] constexpr std::size_t size() const noexcept;
 
 		/** Checks if the referenced type is `void`. */
-		[[nodiscard]] constexpr bool is_void() const noexcept { return m_data->flags & detail::IS_VOID; }
+		[[nodiscard]] constexpr bool is_void() const noexcept;
+		/** Checks if the referenced type is empty. */
+		[[nodiscard]] constexpr bool is_empty() const noexcept;
 		/** Checks if the referenced type is `std::nullptr_t`. */
-		[[nodiscard]] constexpr bool is_nullptr() const noexcept { return m_data->flags & detail::IS_NULL; }
+		[[nodiscard]] constexpr bool is_nullptr() const noexcept;
 
 		/** Checks if the referenced type is an enum. */
-		[[nodiscard]] constexpr bool is_enum() const noexcept { return m_data->flags & detail::IS_ENUM; }
+		[[nodiscard]] constexpr bool is_enum() const noexcept;
 		/** Checks if the referenced type is a class. */
-		[[nodiscard]] constexpr bool is_class() const noexcept { return m_data->flags & detail::IS_CLASS; }
+		[[nodiscard]] constexpr bool is_class() const noexcept;
 
 		/** Checks if the referenced type is a pointer type.
 		 * @note For pointer-like class types, check the `pointer_like` facet. */
-		[[nodiscard]] constexpr bool is_pointer() const noexcept { return m_data->flags & detail::IS_POINTER; }
+		[[nodiscard]] constexpr bool is_pointer() const noexcept;
 		/** Checks if the referenced type is an integral type, or can be converted to `std::intmax_t` or `std::uintmax_t`. */
-		[[nodiscard]] constexpr bool is_integral() const noexcept { return m_data->flags & (detail::IS_SIGNED_INT | detail::IS_UNSIGNED_INT); }
+		[[nodiscard]] constexpr bool is_integral() const noexcept;
 		/** Checks if the referenced type is a signed integral type, or can be converted to `std::intmax_t`. */
-		[[nodiscard]] constexpr bool is_signed_integral() const noexcept { return m_data->flags & detail::IS_SIGNED_INT; }
+		[[nodiscard]] constexpr bool is_signed_integral() const noexcept;
 		/** Checks if the referenced type is an unsigned integral type, or can be converted to `std::uintmax_t`. */
-		[[nodiscard]] constexpr bool is_unsigned_integral() const noexcept { return m_data->flags & detail::IS_UNSIGNED_INT; }
+		[[nodiscard]] constexpr bool is_unsigned_integral() const noexcept;
 		/** Checks if the referenced type is an arithmetic type, or can be converted to `double`. */
-		[[nodiscard]] constexpr bool is_arithmetic() const noexcept { return m_data->flags & detail::IS_ARITHMETIC; }
+		[[nodiscard]] constexpr bool is_arithmetic() const noexcept;
 
-		/** Removes pointer from the referenced type. */
-		[[nodiscard]] type_info remove_pointer() const noexcept { return {m_data->remove_pointer, *domain().access()}; }
-		/** Removes pointer from the referenced type using type domain \a domain. */
-		[[nodiscard]] type_info remove_pointer(type_domain &domain) const noexcept { return {m_data->remove_pointer, domain}; }
 		/** Removes extent from the referenced type. */
-		[[nodiscard]] type_info remove_extent() const noexcept { return {m_data->remove_extent, *domain().access()}; }
-		/** Removes extent from the referenced type using type domain \a domain. */
-		[[nodiscard]] type_info remove_extent(type_domain &domain) const noexcept { return {m_data->remove_extent, domain}; }
+		[[nodiscard]] inline type_info remove_extent() const noexcept;
+		/** Removes pointer from the referenced type. */
+		[[nodiscard]] inline type_info remove_pointer() const noexcept;
 
-		/** Returns the extent of the referenced type. */
-		[[nodiscard]] constexpr std::size_t extent() const noexcept { return m_data->extent; }
 		/** Checks if the referenced type is an array type. */
-		[[nodiscard]] constexpr bool is_array() const noexcept { return extent() > 0; }
+		[[nodiscard]] constexpr bool is_array() const noexcept;
+		/** Returns the extent of the referenced type. */
+		[[nodiscard]] constexpr std::size_t extent() const noexcept;
+
+		/** Returns a set of the referenced type's parents (including the parents' parents). */
+		[[nodiscard]] inline tpp::dense_set<type_info> parents() const;
+
+		/** Checks if the referenced type inherits from a base type \a T. */
+		template<typename T>
+		[[nodiscard]] bool inherits_from() const { return inherits_from(type_name_v<T>); }
+		/** Checks if the referenced type inherits from a base type \a type. */
+		[[nodiscard]] bool inherits_from(type_info type) const noexcept { return inherits_from(type.name()); }
+		/** Checks if the referenced type inherits from a base type with name \a name. */
+		[[nodiscard]] inline bool inherits_from(std::string_view name) const noexcept;
+
+		/** Checks if the referenced type is convertible to type \a T. */
+		template<typename T>
+		[[nodiscard]] bool convertible_to() const { return convertible_to(type_name_v<T>); }
+		/** Checks if the referenced type is same as, inherits from, or can be type-casted to type \a type. */
+		[[nodiscard]] bool convertible_to(type_info type) const noexcept { return convertible_to(type.name()); }
+		/** Checks if the referenced type is same as, inherits from, or can be type-casted to type with name \a name. */
+		[[nodiscard]] bool convertible_to(std::string_view name) const noexcept { return find_conv(name) != nullptr; }
+
+		/** Checks if the referenced type is same as, inherits from, or can be type-casted to type \a T. */
+		template<typename T>
+		[[nodiscard]] bool compatible_with() const { return compatible_with(type_name_v<T>); }
+		/** Checks if the referenced type is same as, inherits from, or can be type-casted to type \a type. */
+		[[nodiscard]] bool compatible_with(type_info type) const noexcept { return *this == type || inherits_from(type) || convertible_to(type); }
+		/** Checks if the referenced type is same as, inherits from, or can be type-casted to type with name \a name. */
+		[[nodiscard]] bool compatible_with(std::string_view name) const noexcept { return this->name() == name || inherits_from(name) || convertible_to(name); }
 
 		[[nodiscard]] constexpr bool operator!=(const type_info &other) const noexcept = default;
 		[[nodiscard]] constexpr bool operator==(const type_info &other) const noexcept = default;
 
 	private:
+		/* Convenience operator for access to underlying type_data. */
+		[[nodiscard]] constexpr const detail::type_data *operator->() const noexcept { return m_data; }
+
+		inline void fill_parents(tpp::dense_set<type_info> &result) const;
+
+		[[nodiscard]] inline const detail::type_base *find_base(std::string_view name) const;
+		[[nodiscard]] inline const detail::type_conv *find_conv(std::string_view name) const;
+
 		const detail::type_data *m_data = nullptr;
-		type_domain *m_domain = nullptr;
+		detail::database_impl *m_db = nullptr;
 	};
+
+	namespace literals
+	{
+		/** Equivalent to `type_info::get`. */
+		[[nodiscard]] inline type_info operator ""_type(const char *str, std::size_t n) { return type_info::get({str, n}); }
+	}
 }
+
+template<auto F>
+struct tpp::hash<reflex::type_info, F> { std::size_t operator()(const reflex::type_info &value) const { return tpp::hash<std::string_view, F>{}(value.name()); }};
+template<>
+struct std::hash<reflex::type_info> { std::size_t operator()(const reflex::type_info &value) const { return std::hash<std::string_view>{}(value.name()); }};

@@ -41,17 +41,11 @@ struct reflex::type_name<std::string> { static constexpr std::string_view value 
 static_assert(reflex::type_name_v<std::string> == "std::string");
 static_assert(reflex::type_name_v<std::wstring> != "std::wstring");
 
-auto test() { return reflex::type_info::get<int>(); }
+auto test() { return ; }
 
 int main()
 {
-	int err = 0;
-	reflex::detail::domain_lock l;
-	err += !l.try_lock();
-	err += !l.try_lock();
-	err += !l.try_lock_shared();
-	l.unlock();
-	l.unlock();
-	l.unlock_shared();
-	return err;
+	auto src = reflex::make_any<int>(1);
+	auto dst = src.cast<double>();
+	return dst.empty() || *dst.get<double>() != 1;
 }

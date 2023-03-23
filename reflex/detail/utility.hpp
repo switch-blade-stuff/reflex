@@ -12,6 +12,13 @@
 
 namespace reflex
 {
+	/** Metaprogramming utility used to take const qualifier from \a From and apply it to \a To. */
+	template<typename To, typename From>
+	struct take_const { using type = std::conditional_t<std::is_const_v<From>, std::add_const_t<To>, To>; };
+	/** Alias for `typename take_const<To, From>::type`. */
+	template<typename To, typename From>
+	using take_const_t = typename take_const<To, From>::type;
+
 	/** Alias for `std::integral_constant` with automatic type deduction. */
 	template<auto Value>
 	using auto_constant = std::integral_constant<std::decay_t<decltype(Value)>, Value>;
@@ -53,6 +60,23 @@ namespace reflex
 
 	namespace detail
 	{
+		template<typename T>
+		[[nodiscard]] inline static T *void_cast(void *ptr) noexcept
+		{
+			if constexpr (std::is_const_v<T>)
+				return static_cast<T *>(const_cast<const void *>(ptr));
+			else
+				return static_cast<T *>(ptr);
+		}
+		template<typename T>
+		[[nodiscard]] inline static T *void_cast(const void *ptr) noexcept
+		{
+			if constexpr (!std::is_const_v<T>)
+				return static_cast<T *>(const_cast<void *>(ptr));
+			else
+				return static_cast<T *>(ptr);
+		}
+
 		/* CLang has issues with std::ranges::subrange. As such, define our own. */
 		template<typename Iter, typename Sent = Iter>
 		class subrange

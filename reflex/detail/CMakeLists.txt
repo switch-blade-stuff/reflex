@@ -5,14 +5,13 @@ list(APPEND REFLEX_PUBLIC_SOURCES
         ${CMAKE_CURRENT_LIST_DIR}/utility.hpp
         ${CMAKE_CURRENT_LIST_DIR}/fwd.hpp
         ${CMAKE_CURRENT_LIST_DIR}/type_data.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/arg_info.hpp
         ${CMAKE_CURRENT_LIST_DIR}/type_info.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/type_domain.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/type_domain_impl.hpp
+        ${CMAKE_CURRENT_LIST_DIR}/database.hpp
+        ${CMAKE_CURRENT_LIST_DIR}/database.ipp
         ${CMAKE_CURRENT_LIST_DIR}/facet.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/any.hpp)
+        ${CMAKE_CURRENT_LIST_DIR}/any.hpp
+        ${CMAKE_CURRENT_LIST_DIR}/any.ipp)
 
 list(APPEND REFLEX_PRIVATE_SOURCES
-        ${CMAKE_CURRENT_LIST_DIR}/type_data.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/exceptions.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/type_domain.cpp)
+        ${CMAKE_CURRENT_LIST_DIR}/database.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/any.cpp)

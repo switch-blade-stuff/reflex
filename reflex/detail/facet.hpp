@@ -49,33 +49,29 @@ namespace reflex
 		};
 
 		template<auto F, basic_const_string FuncName>
-		inline static facet_function_error make_facet_error();
+		[[nodiscard]] inline static bad_facet_function make_facet_error();
 	}
 
 	/** Exception type thrown when a function cannot be invoked on a facet. */
-	class REFLEX_PUBLIC facet_function_error : public std::runtime_error
+	class REFLEX_PUBLIC bad_facet_function : public std::runtime_error
 	{
 		template<auto F, basic_const_string FuncName>
-		friend inline facet_function_error detail::make_facet_error();
+		friend inline bad_facet_function detail::make_facet_error();
 
 		using std::runtime_error::runtime_error;
 
 	public:
-		facet_function_error(const facet_function_error &) = default;
-		facet_function_error &operator=(const facet_function_error &) = default;
-		facet_function_error(facet_function_error &&) = default;
-		facet_function_error &operator=(facet_function_error &&) = default;
+		bad_facet_function(const bad_facet_function &) = default;
+		bad_facet_function &operator=(const bad_facet_function &) = default;
+		bad_facet_function(bad_facet_function &&) = default;
+		bad_facet_function &operator=(bad_facet_function &&) = default;
 
 		/** Initializes the facet error exception from message and function name strings. */
-		facet_function_error(const char *msg, std::string_view name) : std::runtime_error(msg), m_name(name) {}
-		/** @copydoc facet_function_error */
-		facet_function_error(const std::string &msg, std::string_view name) : std::runtime_error(msg), m_name(name) {}
+		bad_facet_function(const char *msg, std::string_view name) : std::runtime_error(msg), m_name(name) {}
+		/** @copydoc bad_facet_function */
+		bad_facet_function(const std::string &msg, std::string_view name) : std::runtime_error(msg), m_name(name) {}
 
-#ifdef REFLEX_HEADER_ONLY
-		~facet_function_error() override = default;
-#else
-		~facet_function_error() override;
-#endif
+		~bad_facet_function() override = default;
 
 		/** Returns name of the offending facet function. */
 		[[nodiscard]] constexpr std::string_view name() const noexcept { return m_name; }
@@ -85,19 +81,19 @@ namespace reflex
 	};
 
 	template<auto F, basic_const_string FuncName>
-	[[nodiscard]] facet_function_error detail::make_facet_error()
+	[[nodiscard]] bad_facet_function detail::make_facet_error()
 	{
 		constexpr auto signature = type_name<detail::vtable_func_type_t<F>>::value;
 		constexpr auto msg_prefix = basic_const_string{"Failed to invoke facet function `"} + const_string<signature.size()>{signature};
 		if constexpr (FuncName.empty())
 		{
 			const auto msg = auto_constant<msg_prefix + basic_const_string{": "} + FuncName + basic_const_string{"`"}>::value.data();
-			return facet_function_error{msg, FuncName};
+			return bad_facet_function{msg, FuncName};
 		}
 		else
 		{
 			const auto msg = auto_constant<msg_prefix + basic_const_string{"`"}>::value.data();
-			return facet_function_error{msg, FuncName};
+			return bad_facet_function{msg, FuncName};
 		}
 	}
 

@@ -4,205 +4,224 @@
 
 #pragma once
 
-#include <span>
+#include <functional>
+#include <array>
+#include <list>
 
-#include "fwd.hpp"
+#include "any.hpp"
 
-namespace reflex::detail
+namespace reflex
 {
-	enum type_flags
+	namespace detail
 	{
-		/* Used by any, property_data & argument_data */
-		IS_CONST = 0x1,
-
-		/* Used by any */
-		IS_VALUE = 0x2,
-		IS_OWNED = 0x4,
-
-		/* Used by type_info */
-		IS_NULL = 0x10,
-		IS_VOID = 0x20,
-		IS_ENUM = 0x40,
-		IS_CLASS = 0x800,
-		IS_POINTER = 0x100,
-		IS_SIGNED_INT = 0x200,
-		IS_UNSIGNED_INT = 0x400,
-		IS_ARITHMETIC = 0x800,
-	};
-
-	constexpr type_flags &operator&=(type_flags &a, std::underlying_type_t<type_flags> b) noexcept { return a = static_cast<type_flags>(a & b); }
-	constexpr type_flags &operator|=(type_flags &a, std::underlying_type_t<type_flags> b) noexcept { return a = static_cast<type_flags>(a | b); }
-	constexpr type_flags &operator^=(type_flags &a, std::underlying_type_t<type_flags> b) noexcept { return a = static_cast<type_flags>(a ^ b); }
-
-	class type_dtor
-	{
-		template<typename>
-		struct instance_t;
-		template<>
-		struct instance_t<void>
+		struct type_base
 		{
-			constexpr instance_t(void (*destroy)(instance_t<void> *)) noexcept : destroy(destroy) {}
-
-			void (*destroy)(instance_t<void> *);
-		};
-		template<typename Dtor>
-		struct instance_t : instance_t<void>
-		{
-			constexpr instance_t(Dtor &&value) : instance_t<void>(+[](instance_t<void> *ptr) { delete static_cast<instance_t *>(ptr); }), value(std::forward<Dtor>(value)) {}
-
-			Dtor value;
+			type_handle type;
+			base_cast cast_func;
 		};
 
-	public:
-		template<typename T, typename PC, typename Deleting>
-		[[nodiscard]] static constexpr type_dtor bind(PC &&in_place, Deleting &&deleting) noexcept
+		template<typename T, typename B>
+		[[nodiscard]] inline static type_base make_type_base() noexcept
 		{
-			using in_place_t = std::remove_cvref_t<PC>;
-			using deleting_t = std::remove_cvref_t<Deleting>;
-
-			type_dtor result;
-			if constexpr (std::is_empty_v<in_place_t>)
-				result.m_destroy_in_place = +[](void *ptr) { PC{}(static_cast<T *>(ptr)); };
-			else
+			constexpr auto cast = [](const void *ptr) -> const void *
 			{
-				result.m_destroy_in_place_udata = +[](void *ptr, void *del) { static_cast<instance_t<in_place_t> *>(del)->value(static_cast<T *>(ptr)); };
-				result.m_in_place_instance = new instance_t{std::forward<in_place_t>(in_place)};
-			}
-			if constexpr (std::is_empty_v<deleting_t>)
-				result.m_destroy_deleting = +[](void *ptr) { deleting_t{}(static_cast<T *>(ptr)); };
-			else
+				auto *base = static_cast<std::add_const_t<B> *>(static_cast<std::add_const_t<T> *>(ptr));
+				return static_cast<const void *>(base);
+			};
+			return {make_type_data<B>, cast};
+		}
+
+		struct type_conv { std::function<any(const void *)> conv_func; };
+
+		template<typename From, typename To, typename F>
+		[[nodiscard]] inline static type_conv make_type_conv(F &&conv) noexcept
+		{
+			auto conv_func = [f = std::forward<F>(conv)](const void *data)
 			{
-				result.m_destroy_deleting_udata = +[](void *ptr, void *del) { static_cast<instance_t<deleting_t> *>(del)->value(static_cast<T *>(ptr)); };
-				result.m_deleting_instance = new instance_t{std::forward<deleting_t>(deleting)};
-			}
-			return result;
+				return make_any<To>(std::invoke(f, *static_cast<const From *>(data)));
+			};
+			return {std::move(conv_func)};
 		}
-		template<typename T>
-		[[nodiscard]] static constexpr type_dtor bind() noexcept { return bind<T>([](auto *ptr) { std::destroy_at(ptr); }, [](auto *ptr) { delete ptr; }); }
-
-		constexpr ~type_dtor()
+		template<typename From, typename To>
+		[[nodiscard]] inline static type_conv make_type_conv() noexcept
 		{
-			if (m_in_place_instance != nullptr) m_in_place_instance->destroy(m_in_place_instance);
-			if (m_deleting_instance != nullptr) m_deleting_instance->destroy(m_deleting_instance);
+			return make_type_conv<From, To>([](auto &value) { return static_cast<To>(value); });
 		}
 
-		constexpr void destroy_in_place(void *ptr) const
+		struct arg_data
 		{
-			if (m_in_place_instance != nullptr)
-				m_destroy_in_place_udata(ptr, m_in_place_instance);
-			else
-				m_destroy_in_place(ptr);
-		}
-		constexpr void destroy_deleting(void *ptr) const
-		{
-			if (m_in_place_instance != nullptr)
-				m_destroy_deleting_udata(ptr, m_in_place_instance);
-			else
-				m_destroy_deleting(ptr);
-		}
+			/* Return false when types are not compatible, or mutable ref is required, but got a constant. */
+			[[nodiscard]] constexpr static bool is_invocable(const arg_data &a, const any &b) noexcept { return !(a.flags == IS_CONST && !b.is_const()) && b.type().compatible_with(a.type); }
+			/* Return false when types don't exactly match, or mutable ref is required, but got a constant. */
+			[[nodiscard]] constexpr static bool is_exact_invocable(const arg_data &a, const any &b) noexcept { return !(a.flags == IS_CONST && !b.is_const()) && b.type().name() != a.type; }
 
-	private:
-		union
-		{
-			void (*m_destroy_in_place)(void *) = nullptr;
-			void (*m_destroy_in_place_udata)(void *, void *);
+			std::string_view type;
+			type_flags flags;
 		};
-		instance_t<void> *m_in_place_instance = nullptr;
 
-		union
-		{
-			void (*m_destroy_deleting)(void *) = nullptr;
-			void (*m_destroy_deleting_udata)(void *, void *);
-		};
-		instance_t<void> *m_deleting_instance = nullptr;
-	};
-
-	using type_handle = type_data *(*)(type_domain &) noexcept;
-
-	struct argument_data
-	{
 		template<typename T>
-		static const argument_data value;
+		[[nodiscard]] constexpr static arg_data make_arg_data() noexcept
+		{
+			type_flags flags = {};
+			if constexpr (std::is_const_v<T>) flags |= IS_CONST;
+			if constexpr (!std::is_reference_v<T>) flags |= IS_VALUE;
+			return {type_name_v<T>, flags};
+		}
 
 		template<typename... Ts>
-		[[nodiscard]] static constexpr std::span<const argument_data *const> args_list() noexcept
+		struct arg_list { constexpr static auto value = std::array{make_arg_data<Ts>()...}; };
+		template<>
+		struct arg_list<> { constexpr static std::span<const arg_data> value = {}; };
+
+		struct type_ctor
 		{
-			if constexpr (sizeof...(Ts) != 0)
-				return auto_constant<std::array{&argument_data::value<Ts>...}>::value;
-			else
-				return {};
+			std::span<const arg_data> args;
+			std::function<void *(std::span<any>)> allocating_func;
+			std::function<void(void *, std::span<any>)> placement_func;
+		};
+
+		template<typename T, typename... Ts, typename F, std::size_t... Is>
+		[[nodiscard]] inline static T *construct(std::index_sequence<Is...>, F &&f, std::span<any> args)
+		{
+			return std::invoke(f, (std::forward<Ts>(*args[Is].cast<Ts>().template get<Ts>()))...);
+		}
+		template<typename T, typename... Ts, typename F>
+		[[nodiscard]] inline static T *construct(F &&f, std::span<any> args)
+		{
+			return construct<T, Ts...>(std::make_index_sequence<sizeof...(Ts)>{}, std::forward<F>(f), args);
 		}
 
-		[[nodiscard]] static constexpr bool verify(std::span<const argument_data *const> expected, std::span<any> actual) noexcept;
-		[[nodiscard]] static constexpr bool verify(std::span<const argument_data *const> expected, std::span<const argument_data *const> actual) noexcept;
-
-		/* Type name is stored separately to allow for comparison without acquiring a domain. */
-		std::string_view type_name;
-
-		type_handle type;
-		type_flags flags;
-	};
-
-	template<>
-	class REFLEX_PUBLIC type_ctor<>
-	{
-	public:
-		constexpr type_ctor() noexcept = default;
-#ifdef REFLEX_HEADER_ONLY
-		virtual ~type_ctor() = default;
-#else
-		virtual ~type_ctor();
-#endif
-
-		constexpr type_ctor(std::span<const argument_data *const> args) noexcept : args(args) {}
-
-		template<typename T, typename... Ts, typename PC, typename AC>
-		[[nodiscard]] static constexpr type_ctor *bind(PC &&in_place, AC &&allocating)
+		template<typename T, typename... Ts, typename F, std::size_t... Is>
+		inline static void construct_at(std::index_sequence<Is...>, F &&f, T *ptr, std::span<any> args)
 		{
-			using in_place_t = std::remove_cvref_t<PC>;
-			using allocating_t = std::remove_cvref_t<AC>;
-			return type_ctor<T, in_place_t, allocating_t, Ts...>::bind(std::forward<PC>(in_place), std::forward<AC>(allocating));
+			std::invoke(f, ptr, (std::forward<Ts>(*args[Is].cast<Ts>().template get<Ts>()))...);
+		}
+		template<typename T, typename... Ts, typename F>
+		inline static void construct_at(F &&f, T *ptr, std::span<any> args)
+		{
+			construct_at<T, Ts...>(std::make_index_sequence<sizeof...(Ts)>{}, std::forward<F>(f), ptr, args);
+		}
+
+		template<typename T, typename... Ts, typename AF, typename PF>
+		[[nodiscard]] inline static type_ctor make_type_ctor(AF &&allocating, PF &&placement) noexcept
+		{
+			auto allocating_func = [f = std::forward<AF>(allocating)](std::span<any> args) -> void *
+			{
+				if (std::ranges::equal(arg_list<Ts...>::value, args, arg_data::is_invocable))
+					return construct<T, std::remove_reference_t<Ts>...>(f, args);
+				else
+					throw make_ctor_error<T, Ts...>();
+			};
+			auto placement_func = [f = std::forward<PF>(placement)](void *ptr, std::span<any> args)
+			{
+				if (std::ranges::equal(arg_list<Ts...>::value, args, arg_data::is_invocable))
+					construct_at<T, std::remove_reference_t<Ts>...>(f, void_cast<T>(ptr), args);
+				else
+					throw make_ctor_error<T, Ts...>();
+			};
+			return {arg_list<Ts...>::value, std::move(allocating_func), std::move(placement_func)};
 		}
 		template<typename T, typename... Ts>
-		[[nodiscard]] static constexpr type_ctor *bind()
+		[[nodiscard]] inline static type_ctor make_type_ctor() noexcept
 		{
-			return bind<T, Ts...>([](T *ptr, Ts ...as) { std::construct_at(ptr, as...); }, [](Ts ...as) { return new T(as...); });
+			constexpr auto placement = [](T *ptr, Ts ...as) { std::construct_at(ptr, as...); };
+			constexpr auto allocating = [](Ts ...as) -> T * { return new T(as...); };
+			return make_type_ctor<T, Ts...>(allocating, placement);
 		}
 
-		virtual void construct_in_place(void *, std::span<any>) = 0;
-		[[nodiscard]] virtual void *construct_allocating(std::span<any>) = 0;
+		struct type_dtor
+		{
+			std::function<void(void *)> deleting_func;
+			std::function<void(void *)> placement_func;
+		};
 
-		type_ctor *next = nullptr;
-		std::span<const argument_data *const> args;
-	};
-
-	struct type_data
-	{
+		template<typename T, typename DF, typename PF>
+		[[nodiscard]] inline static type_dtor make_type_dtor(DF &&deleting, PF &&placement) noexcept
+		{
+			auto deleting_func = [f = std::forward<DF>(deleting)](void *ptr) { std::invoke(f, void_cast<T>(ptr)); };
+			auto placement_func = [f = std::forward<PF>(placement)](void *ptr) { std::invoke(f, void_cast<T>(ptr)); };
+			return {std::move(deleting_func), std::move(placement_func)};
+		}
 		template<typename T>
-		[[nodiscard]] inline static type_data *bind(type_domain &) noexcept;
+		[[nodiscard]] inline static type_dtor make_type_dtor() noexcept
+		{
+			return make_type_dtor<T>([](T *ptr) { delete ptr; }, [](T *ptr) { std::destroy_at(ptr); });
+		}
 
-		std::string_view name;
-		type_flags flags = {};
-		std::size_t size = 0;
+		struct type_prop
+		{
+			std::function<any(const void *)> getter_func;
+			std::function<void(void *, any)> setter_func;
+		};
 
-		type_handle remove_pointer;
-		type_handle remove_extent;
-		std::size_t extent = 0;
+		template<typename T, typename GF, typename SF>
+		[[nodiscard]] inline static type_prop make_type_prop(GF &&getter, SF &&setter) noexcept
+		{
+			constexpr auto proxy_getter = [f = std::forward<GF>(getter)](const void *obj) -> any
+			{
+				return forward_any(std::invoke(f, static_cast<std::add_const_t<T> *>(obj)));
+			};
+			constexpr auto proxy_setter = [f = std::forward<SF>(setter)](void *obj, any value)
+			{
+				std::invoke(f, void_cast<T>(obj), std::move(value));
+			};
+			return {proxy_getter, proxy_setter};
+		}
+		template<typename T, auto T::*Member>
+		[[nodiscard]] inline static type_prop make_type_prop() noexcept
+		{
+			using mem_t = std::add_const_t<std::remove_cvref_t<decltype(std::declval<T>().*Member)>>;
+			constexpr auto getter = [](const void *obj) -> any { return forward_any(static_cast<std::add_const_t<T> *>(obj)->*Member); };
+			constexpr auto setter = [](void *obj, any value) { (void_cast<T>(obj)->*Member) = *value.cast<mem_t>().template get<mem_t>(); };
+			return {getter, setter};
+		}
 
-		/* `any` instance factories. */
-		void (any::*any_copy_init)(type_info, const void *, void *) = nullptr;
-		void (any::*any_copy_assign)(type_info, const void *, void *) = nullptr;
+		struct type_data
+		{
+			std::string_view name;
+			type_flags flags = {};
+			std::size_t size = 0;
 
-		type_dtor dtor;
+			type_handle remove_pointer;
+			type_handle remove_extent;
+			std::size_t extent = 0;
 
-		type_ctor<> *default_ctor;
-		type_ctor<> *copy_ctor;
-		type_ctor<> *ctor_list;
-	};
+			/* Base types. */
+			tpp::stable_map<std::string_view, type_base> base_list;
+			/* Type conversions. */
+			tpp::stable_map<std::string_view, type_conv> conv_list;
+			/* Enumeration constants. */
+			tpp::stable_map<std::string_view, any> enums;
+
+			/* `any` copy-initialization factories. */
+			void (any::*any_copy_init)(type_info, const void *, void *) = nullptr;
+			void (any::*any_copy_assign)(type_info, const void *, void *) = nullptr;
+
+			/* Constructors & destructors. */
+			std::list<type_ctor> ctor_list;
+			type_ctor *default_ctor = nullptr;
+			type_ctor *copy_ctor = nullptr;
+			type_dtor dtor;
+
+			/* Instance properties. */
+			tpp::stable_map<std::string_view, type_prop> props;
+		};
+	}
 
 	template<typename T>
-	constexpr argument_data argument_data::value = {
-			type_name_v<std::remove_cvref_t<T>>, type_data::bind<std::remove_cvref_t<T>>,
-			std::is_const_v<std::remove_reference_t<T>> ? IS_CONST : type_flags{}
-	};
+	void any::copy_init(type_info type, T *ptr)
+	{
+		if constexpr (std::is_const_v<T>)
+			(this->*(m_type->any_copy_init))(type, ptr, nullptr);
+		else
+			(this->*(m_type->any_copy_init))(type, nullptr, ptr);
+	}
+	template<typename T>
+	void any::copy_assign(type_info type, T *ptr)
+	{
+		if constexpr (std::is_const_v<T>)
+			(this->*(m_type->any_copy_assign))(type, ptr, nullptr);
+		else
+			(this->*(m_type->any_copy_assign))(type, nullptr, ptr);
+	}
 }
