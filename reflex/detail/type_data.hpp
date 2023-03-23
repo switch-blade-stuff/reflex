@@ -258,7 +258,7 @@ namespace reflex
 			}
 			[[nodiscard]] const type_prop *find_prop(std::string_view name) const
 			{
-				if (auto iter = static_props.find(name); iter != static_props.end())
+				if (auto iter = prop_list.find(name); iter != prop_list.end())
 					return &iter->second;
 				else
 					return nullptr;
@@ -273,7 +273,7 @@ namespace reflex
 			std::size_t extent = 0;
 
 			/* Enumeration constants. */
-			enum_table enums;
+			enum_table enum_list;
 			/* Base types. */
 			base_table base_list;
 			/* Type conversions. */
@@ -290,7 +290,7 @@ namespace reflex
 			type_dtor dtor;
 
 			/* Instance properties. */
-			prop_table static_props;
+			prop_table prop_list;
 		};
 	}
 
