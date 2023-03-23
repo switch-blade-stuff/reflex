@@ -163,6 +163,14 @@ namespace reflex
 			return make_type_dtor<T>([](T *ptr) { delete ptr; }, [](T *ptr) { std::destroy_at(ptr); });
 		}
 
+		/* Properties can either be bound at compile-time, or created dynamically from an object instance.
+		 * When created dynamically, a generator function is used to fill the dynamic property table, the generator
+		 * is bound from a user-provided functor that accepts an instance pointer of type `T` or `const T` and
+		 * a property factory functor with signature `void(string-like, getter, setter)`.
+		 *
+		 * Generator would then invoke the property factory for all dynamically-created properties, which would then be
+		 * inserted into the dynamic property table. When property list is requested on an object of a reflected type,
+		 * the property list is obtained from both static and dynamic properties of the type, as well as its parents. */
 		struct type_prop
 		{
 			type_prop() noexcept = default;
@@ -185,9 +193,30 @@ namespace reflex
 			std::function<any(const void *, void *)> getter_func;
 			std::function<void(void *, any)> setter_func;
 		};
+		struct prop_hash
+		{
+			using is_transparent = std::true_type;
 
-		using prop_table = tpp::stable_map<std::string, type_prop>;
-		using dyn_prop_t = std::function<void(prop_table &, const void *cdata, void *data)>;
+			[[nodiscard]] std::size_t operator()(const std::string &value) const
+			{
+				return tpp::seahash_hash<std::string>{}(value);
+			}
+			[[nodiscard]] std::size_t operator()(const std::string_view &value) const
+			{
+				return tpp::seahash_hash<std::string_view>{}(value);
+			}
+		};
+		struct prop_cmp
+		{
+			using is_transparent = std::true_type;
+
+			[[nodiscard]] std::size_t operator()(const std::string &a, const std::string &b) const { return a == b; }
+			[[nodiscard]] std::size_t operator()(const std::string &a, const std::string_view &b) const { return std::string_view{a} == b; }
+			[[nodiscard]] std::size_t operator()(const std::string_view &a, const std::string &b) const { return a == std::string_view{b}; }
+		};
+
+		using prop_table = tpp::stable_map<std::string, type_prop, prop_hash, prop_cmp>;
+		using prop_gen_t = std::function<void(prop_table &, const void *, void *)>;
 
 		template<typename T, typename GF, typename SF>
 		[[nodiscard]] inline static type_prop make_type_prop(GF &&getter, SF &&setter)
@@ -195,7 +224,7 @@ namespace reflex
 			return {std::in_place_type<T>, std::forward<GF>(getter), std::forward<SF>(setter)};
 		}
 		template<typename T, typename F>
-		[[nodiscard]] inline static dyn_prop_t make_dyn_prop(F &&generator)
+		[[nodiscard]] inline static prop_gen_t make_prop_gen(F &&generator)
 		{
 			return [f = std::forward<F>(generator)](prop_table &table, const void *cdata, void *data)
 			{
@@ -245,6 +274,13 @@ namespace reflex
 				else
 					return nullptr;
 			}
+			[[nodiscard]] const type_prop *find_prop(std::string_view name) const
+			{
+				if (auto iter = static_props.find(name); iter != static_props.end())
+					return &iter->second;
+				else
+					return nullptr;
+			}
 
 			std::string_view name;
 			type_flags flags = {};
@@ -271,9 +307,9 @@ namespace reflex
 			type_ctor *copy_ctor = nullptr;
 			type_dtor dtor;
 
-			/* Instance properties. */
-			dyn_prop_t dyn_prop;
-			prop_table props;
+			/* Instance properties (both statically-bound & dynamic). */
+			prop_table static_props;
+			prop_gen_t dyn_prop_gen;
 		};
 	}
 
