@@ -41,8 +41,6 @@ struct reflex::type_name<std::string> { static constexpr std::string_view value 
 static_assert(reflex::type_name_v<std::string> == "std::string");
 static_assert(reflex::type_name_v<std::wstring> != "std::wstring");
 
-auto test() { return ; }
-
 int main()
 {
 	auto src = reflex::make_any<int>(1);

@@ -40,7 +40,7 @@ namespace reflex
 		[[nodiscard]] inline static type_info get();
 
 	private:
-		inline type_info(detail::type_handle handle, detail::database_impl &db);
+		type_info(detail::type_handle handle, detail::database_impl &db) : m_data(handle(db)), m_db(&db) {}
 		constexpr type_info(const detail::type_data *data, detail::database_impl *db) noexcept : m_data(data), m_db(db) {}
 
 	public:
@@ -93,7 +93,7 @@ namespace reflex
 		[[nodiscard]] constexpr std::size_t extent() const noexcept;
 
 		/** Returns a set of the referenced type's parents (including the parents' parents). */
-		[[nodiscard]] inline tpp::dense_set<type_info> parents() const;
+		[[nodiscard]] REFLEX_PUBLIC tpp::dense_set<type_info> parents() const;
 
 		/** Checks if the referenced type inherits from a base type \a T. */
 		template<typename T>
@@ -101,7 +101,7 @@ namespace reflex
 		/** Checks if the referenced type inherits from a base type \a type. */
 		[[nodiscard]] bool inherits_from(type_info type) const noexcept { return inherits_from(type.name()); }
 		/** Checks if the referenced type inherits from a base type with name \a name. */
-		[[nodiscard]] inline bool inherits_from(std::string_view name) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool inherits_from(std::string_view name) const noexcept;
 
 		/** Checks if the referenced type is convertible to type \a T. */
 		template<typename T>
@@ -109,7 +109,7 @@ namespace reflex
 		/** Checks if the referenced type is same as, inherits from, or can be type-casted to type \a type. */
 		[[nodiscard]] bool convertible_to(type_info type) const noexcept { return convertible_to(type.name()); }
 		/** Checks if the referenced type is same as, inherits from, or can be type-casted to type with name \a name. */
-		[[nodiscard]] bool convertible_to(std::string_view name) const noexcept { return find_conv(name) != nullptr; }
+		[[nodiscard]] REFLEX_PUBLIC bool convertible_to(std::string_view name) const noexcept;
 
 		/** Checks if the referenced type is same as, inherits from, or can be type-casted to type \a T. */
 		template<typename T>
@@ -126,10 +126,7 @@ namespace reflex
 		/* Convenience operator for access to underlying type_data. */
 		[[nodiscard]] constexpr const detail::type_data *operator->() const noexcept { return m_data; }
 
-		inline void fill_parents(tpp::dense_set<type_info> &result) const;
-
-		[[nodiscard]] inline const detail::type_base *find_base(std::string_view name) const;
-		[[nodiscard]] inline const detail::type_conv *find_conv(std::string_view name) const;
+		REFLEX_PUBLIC void fill_parents(tpp::dense_set<type_info> &result) const;
 
 		const detail::type_data *m_data = nullptr;
 		detail::database_impl *m_db = nullptr;

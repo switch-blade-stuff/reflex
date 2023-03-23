@@ -2,8 +2,7 @@
  * Created by switchblade on 2023-03-22.
  */
 
-#include "type_data.hpp"
-#include "type_info.ipp"
+#include "database.hpp"
 #include "any.hpp"
 
 namespace reflex
@@ -37,7 +36,7 @@ namespace reflex
 	const void *any::base_cast(type_info type) const
 	{
 		/* If `type` is an immediate base of `this`, attempt to cast through that. */
-		if (const auto *base = m_type.find_base(type.name()); base != nullptr)
+		if (const auto *base = m_type->find_base(type.name()); base != nullptr)
 			return base->cast_func(cdata());
 
 		/* Otherwise, recursively cast through a base type. */
@@ -53,7 +52,7 @@ namespace reflex
 	any any::value_conv(type_info type) const
 	{
 		/* If `this` is directly convertible to `name`, use the existing conversion. */
-		if (const auto *conv = m_type.find_conv(type.name()); conv != nullptr)
+		if (const auto *conv = m_type->find_conv(type.name()); conv != nullptr)
 			return conv->conv_func(cdata());
 
 		/* Otherwise, recursively convert through a base type. */

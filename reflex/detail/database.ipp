@@ -6,7 +6,6 @@
 
 #include <cassert>
 
-#include "type_info.ipp"
 #include "database.hpp"
 
 namespace reflex::detail

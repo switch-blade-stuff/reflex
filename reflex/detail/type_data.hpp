@@ -107,17 +107,11 @@ namespace reflex
 		{
 			auto allocating_func = [f = std::forward<AF>(allocating)](std::span<any> args) -> void *
 			{
-				if (std::ranges::equal(arg_list<Ts...>::value, args, arg_data::is_invocable))
-					return construct<T, std::remove_reference_t<Ts>...>(f, args);
-				else
-					throw make_ctor_error<T, Ts...>();
+				return construct<T, std::remove_reference_t<Ts>...>(f, args);
 			};
 			auto placement_func = [f = std::forward<PF>(placement)](void *ptr, std::span<any> args)
 			{
-				if (std::ranges::equal(arg_list<Ts...>::value, args, arg_data::is_invocable))
-					construct_at<T, std::remove_reference_t<Ts>...>(f, void_cast<T>(ptr), args);
-				else
-					throw make_ctor_error<T, Ts...>();
+				construct_at<T, std::remove_reference_t<Ts>...>(f, void_cast<T>(ptr), args);
 			};
 			return {arg_list<Ts...>::value, std::move(allocating_func), std::move(placement_func)};
 		}
@@ -178,6 +172,21 @@ namespace reflex
 
 		struct type_data
 		{
+			[[nodiscard]] const type_base *find_base(std::string_view name) const
+			{
+				if (auto iter = base_list.find(name); iter != base_list.end())
+					return &iter->second;
+				else
+					return nullptr;
+			}
+			[[nodiscard]] const type_conv *find_conv(std::string_view name) const
+			{
+				if (auto iter = conv_list.find(name); iter != conv_list.end())
+					return &iter->second;
+				else
+					return nullptr;
+			}
+
 			std::string_view name;
 			type_flags flags = {};
 			std::size_t size = 0;
@@ -207,6 +216,27 @@ namespace reflex
 			tpp::stable_map<std::string_view, type_prop> props;
 		};
 	}
+
+	constexpr std::string_view type_info::name() const noexcept { return m_data->name; }
+	constexpr std::size_t type_info::extent() const noexcept { return m_data->extent; }
+	constexpr std::size_t type_info::size() const noexcept { return m_data->size; }
+
+	constexpr bool type_info::is_empty() const noexcept { return size() == 0; }
+	constexpr bool type_info::is_void() const noexcept { return m_data->flags & detail::IS_VOID; }
+	constexpr bool type_info::is_nullptr() const noexcept { return m_data->flags & detail::IS_NULL; }
+
+	constexpr bool type_info::is_array() const noexcept { return extent() > 0; }
+	constexpr bool type_info::is_enum() const noexcept { return m_data->flags & detail::IS_ENUM; }
+	constexpr bool type_info::is_class() const noexcept { return m_data->flags & detail::IS_CLASS; }
+
+	constexpr bool type_info::is_pointer() const noexcept { return m_data->flags & detail::IS_POINTER; }
+	constexpr bool type_info::is_integral() const noexcept { return m_data->flags & (detail::IS_SIGNED_INT | detail::IS_UNSIGNED_INT); }
+	constexpr bool type_info::is_signed_integral() const noexcept { return m_data->flags & detail::IS_SIGNED_INT; }
+	constexpr bool type_info::is_unsigned_integral() const noexcept { return m_data->flags & detail::IS_UNSIGNED_INT; }
+	constexpr bool type_info::is_arithmetic() const noexcept { return m_data->flags & detail::IS_ARITHMETIC; }
+
+	type_info type_info::remove_extent() const noexcept { return {m_data->remove_extent, *m_db}; }
+	type_info type_info::remove_pointer() const noexcept { return {m_data->remove_pointer, *m_db}; }
 
 	template<typename T>
 	void any::copy_init(type_info type, T *ptr)

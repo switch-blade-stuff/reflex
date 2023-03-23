@@ -27,7 +27,17 @@ namespace reflex
 	/** Exception type thrown when the managed object of `any` cannot be casted to the desired type. */
 	class REFLEX_PUBLIC bad_any_cast : public std::runtime_error
 	{
-		constexpr static const char *msg = "Managed object cannot be represented as or converted to the desired type";
+		[[nodiscard]] static std::string make_msg(type_info from_type, type_info to_type)
+		{
+			std::string result;
+			result.reserve(from_type.name().size() + to_type.name().size() + 78);
+			result.append("Managed object of type `");
+			result.append(from_type.name());
+			result.append("` cannot be represented as or converted to type `");
+			result.append(to_type.name());
+			result.append(1, '`');
+			return result;
+		}
 
 	public:
 		bad_any_cast(const bad_any_cast &) = default;
@@ -36,7 +46,7 @@ namespace reflex
 		bad_any_cast &operator=(bad_any_cast &&) = default;
 
 		/** Initializes the any cast exception from source type info and destination type info. */
-		bad_any_cast(type_info from_type, type_info to_type) : std::runtime_error(msg), m_from_type(from_type), m_to_type(to_type) {}
+		bad_any_cast(type_info from_type, type_info to_type) : std::runtime_error(make_msg(from_type, to_type)), m_from_type(from_type), m_to_type(to_type) {}
 
 		~bad_any_cast() override = default;
 
@@ -401,6 +411,29 @@ namespace reflex
 
 	namespace detail
 	{
+		[[nodiscard]] inline static bad_argument_list make_ctor_error(type_info type, std::span<any> args)
+		{
+			std::string msg;
+			msg.append("Type `");
+			msg.append(type.name());
+			msg.append("` is not constructible from arguments {");
+
+			/* Decorate args. */
+			for (std::size_t i = 0; i < args.size();)
+			{
+				const auto &arg = args[i];
+				if (arg.is_const())
+					msg.append("const ");
+				msg.append(arg.type().name());
+				if (arg.is_ref())
+					msg.append(" &");
+				if (++i != args.size())
+					msg.append(1, ',');
+			}
+
+			msg.append(1, '}');
+			return bad_argument_list{msg};
+		}
 		template<typename T, typename... Ts>
 		[[nodiscard]] inline static bad_argument_list make_ctor_error()
 		{

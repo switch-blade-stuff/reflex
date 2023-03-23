@@ -31,5 +31,6 @@
 #endif
 #define REFLEX_PRIVATE REFLEX_API_HIDDEN
 #else
+#define REFLEX_PUBLIC inline
 #define REFLEX_PRIVATE inline
 #endif
