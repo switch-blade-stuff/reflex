@@ -31,16 +31,25 @@ namespace reflex
 			return {make_type_data<B>, cast};
 		}
 
-		struct type_conv { std::function<any(const void *)> conv_func; };
+		struct type_conv
+		{
+			type_conv() noexcept = default;
+			template<typename From, typename To, typename F>
+			type_conv(std::in_place_type_t<From>, std::in_place_type_t<To>, F &&conv)
+			{
+				conv_func = [f = std::forward<F>(conv)](const void *data)
+				{
+					return make_any<To>(std::invoke(f, *static_cast<const From *>(data)));
+				};
+			}
+
+			std::function<any(const void *)> conv_func;
+		};
 
 		template<typename From, typename To, typename F>
-		[[nodiscard]] inline static type_conv make_type_conv(F &&conv) noexcept
+		[[nodiscard]] inline static type_conv make_type_conv(F &&conv)
 		{
-			auto conv_func = [f = std::forward<F>(conv)](const void *data)
-			{
-				return make_any<To>(std::invoke(f, *static_cast<const From *>(data)));
-			};
-			return {std::move(conv_func)};
+			return {std::in_place_type<From>, std::in_place_type<To>, std::forward<F>(conv)};
 		}
 		template<typename From, typename To>
 		[[nodiscard]] inline static type_conv make_type_conv() noexcept
@@ -75,6 +84,20 @@ namespace reflex
 
 		struct type_ctor
 		{
+			type_ctor() noexcept = default;
+			template<typename T, typename... Ts, typename AF, typename PF>
+			type_ctor(std::in_place_type_t<T>, type_pack_t<Ts...>, AF &&allocating, PF &&placement) : args(arg_list<Ts...>::value)
+			{
+				allocating_func = [f = std::forward<AF>(allocating)](std::span<any> args) -> void *
+				{
+					return construct<T, std::remove_reference_t<Ts>...>(f, args);
+				};
+				placement_func = [f = std::forward<PF>(placement)](void *ptr, std::span<any> args)
+				{
+					construct_at<T, std::remove_reference_t<Ts>...>(f, void_cast<T>(ptr), args);
+				};
+			}
+
 			std::span<const arg_data> args;
 			std::function<void *(std::span<any>)> allocating_func;
 			std::function<void(void *, std::span<any>)> placement_func;
@@ -103,17 +126,9 @@ namespace reflex
 		}
 
 		template<typename T, typename... Ts, typename AF, typename PF>
-		[[nodiscard]] inline static type_ctor make_type_ctor(AF &&allocating, PF &&placement) noexcept
+		[[nodiscard]] inline static type_ctor make_type_ctor(AF &&allocating, PF &&placement)
 		{
-			auto allocating_func = [f = std::forward<AF>(allocating)](std::span<any> args) -> void *
-			{
-				return construct<T, std::remove_reference_t<Ts>...>(f, args);
-			};
-			auto placement_func = [f = std::forward<PF>(placement)](void *ptr, std::span<any> args)
-			{
-				construct_at<T, std::remove_reference_t<Ts>...>(f, void_cast<T>(ptr), args);
-			};
-			return {arg_list<Ts...>::value, std::move(allocating_func), std::move(placement_func)};
+			return {std::in_place_type<T>, type_pack<Ts...>, std::forward<AF>(allocating), std::forward<PF>(placement)};
 		}
 		template<typename T, typename... Ts>
 		[[nodiscard]] inline static type_ctor make_type_ctor() noexcept
@@ -125,16 +140,22 @@ namespace reflex
 
 		struct type_dtor
 		{
+			type_dtor() noexcept = default;
+			template<typename T, typename DF, typename PF>
+			type_dtor(std::in_place_type_t<T>, DF &&deleting, PF &&placement)
+			{
+				deleting_func = [f = std::forward<DF>(deleting)](void *ptr) { std::invoke(f, void_cast<T>(ptr)); };
+				placement_func = [f = std::forward<PF>(placement)](void *ptr) { std::invoke(f, void_cast<T>(ptr)); };
+			}
+
 			std::function<void(void *)> deleting_func;
 			std::function<void(void *)> placement_func;
 		};
 
 		template<typename T, typename DF, typename PF>
-		[[nodiscard]] inline static type_dtor make_type_dtor(DF &&deleting, PF &&placement) noexcept
+		[[nodiscard]] inline static type_dtor make_type_dtor(DF &&deleting, PF &&placement)
 		{
-			auto deleting_func = [f = std::forward<DF>(deleting)](void *ptr) { std::invoke(f, void_cast<T>(ptr)); };
-			auto placement_func = [f = std::forward<PF>(placement)](void *ptr) { std::invoke(f, void_cast<T>(ptr)); };
-			return {std::move(deleting_func), std::move(placement_func)};
+			return {std::in_place_type<T>, std::forward<DF>(deleting), std::forward<PF>(placement)};
 		}
 		template<typename T>
 		[[nodiscard]] inline static type_dtor make_type_dtor() noexcept
@@ -144,29 +165,67 @@ namespace reflex
 
 		struct type_prop
 		{
-			std::function<any(const void *)> getter_func;
+			type_prop() noexcept = default;
+			template<typename T, typename GF, typename SF>
+			type_prop(std::in_place_type_t<T>, GF &&getter, SF &&setter)
+			{
+				getter_func = [f = std::forward<GF>(getter)](const void *cdata, void *data) -> any
+				{
+					if (cdata != nullptr)
+						return forward_any(std::invoke(f, static_cast<std::add_const_t<T> *>(cdata)));
+					else
+						return forward_any(std::invoke(f, static_cast<T *>(data)));
+				};
+				setter_func = [f = std::forward<SF>(setter)](void *obj, any value)
+				{
+					std::invoke(f, void_cast<T>(obj), std::move(value));
+				};
+			}
+
+			std::function<any(const void *, void *)> getter_func;
 			std::function<void(void *, any)> setter_func;
 		};
 
+		using prop_table = tpp::stable_map<std::string, type_prop>;
+		using dyn_prop_t = std::function<void(prop_table &, const void *cdata, void *data)>;
+
 		template<typename T, typename GF, typename SF>
-		[[nodiscard]] inline static type_prop make_type_prop(GF &&getter, SF &&setter) noexcept
+		[[nodiscard]] inline static type_prop make_type_prop(GF &&getter, SF &&setter)
 		{
-			constexpr auto proxy_getter = [f = std::forward<GF>(getter)](const void *obj) -> any
+			return {std::in_place_type<T>, std::forward<GF>(getter), std::forward<SF>(setter)};
+		}
+		template<typename T, typename F>
+		[[nodiscard]] inline static dyn_prop_t make_dyn_prop(F &&generator)
+		{
+			return [f = std::forward<F>(generator)](prop_table &table, const void *cdata, void *data)
 			{
-				return forward_any(std::invoke(f, static_cast<std::add_const_t<T> *>(obj)));
+				auto inserter = [&table]<typename GF, typename SF>(std::string_view name, GF &&getter, SF &&setter)
+				{
+					table.emplace_or_replace(name, std::in_place_type<T>,
+					                         std::forward<GF>(getter),
+					                         std::forward<SF>(setter));
+				};
+				if (cdata != nullptr)
+					std::invoke(f, static_cast<std::add_const_t<T> *>(cdata), inserter);
+				else
+					std::invoke(f, static_cast<T *>(data), inserter);
 			};
-			constexpr auto proxy_setter = [f = std::forward<SF>(setter)](void *obj, any value)
-			{
-				std::invoke(f, void_cast<T>(obj), std::move(value));
-			};
-			return {proxy_getter, proxy_setter};
 		}
 		template<typename T, auto T::*Member>
 		[[nodiscard]] inline static type_prop make_type_prop() noexcept
 		{
-			using mem_t = std::add_const_t<std::remove_cvref_t<decltype(std::declval<T>().*Member)>>;
-			constexpr auto getter = [](const void *obj) -> any { return forward_any(static_cast<std::add_const_t<T> *>(obj)->*Member); };
-			constexpr auto setter = [](void *obj, any value) { (void_cast<T>(obj)->*Member) = *value.cast<mem_t>().template get<mem_t>(); };
+			using mem_t = std::remove_cvref_t<decltype(std::declval<T>().*Member)>;
+			constexpr auto getter = [](const void *cdata, void *data) -> any
+			{
+				if (cdata != nullptr)
+					return forward_any(static_cast<std::add_const_t<T> *>(cdata)->*Member);
+				else
+					return forward_any(static_cast<T *>(data)->*Member);
+			};
+			constexpr auto setter = [](void *obj, any value)
+			{
+				(void_cast<T>(obj)->*Member) = *value.cast<mem_t>().template get<const mem_t>();
+			};
 			return {getter, setter};
 		}
 
@@ -200,7 +259,7 @@ namespace reflex
 			/* Type conversions. */
 			tpp::stable_map<std::string_view, type_conv> conv_list;
 			/* Enumeration constants. */
-			tpp::stable_map<std::string_view, any> enums;
+			tpp::stable_map<std::string, any> enums;
 
 			/* `any` copy-initialization factories. */
 			void (any::*any_copy_init)(type_info, const void *, void *) = nullptr;
@@ -213,7 +272,8 @@ namespace reflex
 			type_dtor dtor;
 
 			/* Instance properties. */
-			tpp::stable_map<std::string_view, type_prop> props;
+			dyn_prop_t dyn_prop;
+			prop_table props;
 		};
 	}
 

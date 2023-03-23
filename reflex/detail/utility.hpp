@@ -12,6 +12,13 @@
 
 namespace reflex
 {
+	/** Metaprogramming utility used to group a pack of types \a Ts. */
+	template<typename... Ts>
+	struct type_pack_t {};
+	/** Instance of `type_pack_t<Ts...>`. */
+	template<typename... Ts>
+	inline constexpr auto type_pack = type_pack_t<Ts...>{};
+
 	/** Metaprogramming utility used to take const qualifier from \a From and apply it to \a To. */
 	template<typename To, typename From>
 	struct take_const { using type = std::conditional_t<std::is_const_v<From>, std::add_const_t<To>, To>; };
