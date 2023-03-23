@@ -114,11 +114,11 @@ namespace reflex
 		}
 
 		/** Copies value of the managed object of \a other.
-		 * @throw bad_argument_list If the underlying type of \a other is not move-constructible. */
+		 * @throw bad_argument_list If the underlying type of \a other is not copy-constructible. */
 		any(const any &other) : any(other.type(), std::in_place, other.cdata()) {}
 		/** If types of `this` and \a other are the same and `this` is not a reference, copy-assigns the managed object.
 		 * Otherwise, destroys `this` and copy-constructs the managed object from \a other.
-		 * @throw bad_argument_list If the managed object cannot be copy-assigned and the underlying type of \a other is not move-constructible. */
+		 * @throw bad_argument_list If the managed object cannot be copy-assigned and the underlying type of \a other is not copy-constructible. */
 		any &operator=(const any &other) { return assign(other.type(), std::in_place, other.cdata()); }
 
 		~any() { destroy(); }
