@@ -98,13 +98,27 @@ namespace reflex
 		template<typename T, typename U = std::remove_cvref_t<T>>
 		static constexpr auto valid_deleter = std::is_empty_v<U> || detail::any_deleter_func<U>::value;
 		template<typename T>
-		static constexpr auto is_by_value = alignof(T) <= alignof(storage_t) && sizeof(T) <= (sizeof(storage_t) - sizeof(detail::type_flags));
+		static constexpr auto is_by_value = alignof(T) <= alignof(storage_t) && sizeof(T) <= (sizeof(storage_t) - sizeof(detail::type_flags)) &&
+		                                    std::is_trivially_move_constructible_v<T>;
 
 	public:
 		/** Initializes an empty `any`. */
 		constexpr any() noexcept = default;
 
+		constexpr any(any &&) noexcept = default;
+		constexpr any &operator=(any &&other) noexcept
+		{
+			std::swap(m_type, other.m_type);
+			std::swap(m_storage, other.m_storage);
+			return *this;
+		}
+
+		/** Copies value of the managed object of \a other.
+		 * @throw bad_argument_list If the underlying type of \a other is not move-constructible. */
 		any(const any &other) : any(other.type(), std::in_place, other.cdata()) {}
+		/** If types of `this` and \a other are the same and `this` is not a reference, copy-assigns the managed object.
+		 * Otherwise, destroys `this` and copy-constructs the managed object from \a other.
+		 * @throw bad_argument_list If the managed object cannot be copy-assigned and the underlying type of \a other is not move-constructible. */
 		any &operator=(const any &other) { return assign(other.type(), std::in_place, other.cdata()); }
 
 		~any() { destroy(); }
@@ -400,7 +414,7 @@ namespace reflex
 		{
 			m_type = type;
 			flags() = detail::IS_OWNED | (std::is_const_v<T> ? detail::IS_CONST : detail::type_flags{});
-			if constexpr (!is_by_value < T >)
+			if constexpr (!is_by_value<T>)
 				external().data = static_cast<void *>(new std::remove_cv_t<T>(std::forward<Args>(args)...));
 			else
 			{
