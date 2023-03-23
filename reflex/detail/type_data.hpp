@@ -14,11 +14,38 @@ namespace reflex
 {
 	namespace detail
 	{
+		struct str_hash
+		{
+			using is_transparent = std::true_type;
+
+			[[nodiscard]] std::size_t operator()(const std::string &value) const
+			{
+				return tpp::seahash_hash<std::string>{}(value);
+			}
+			[[nodiscard]] std::size_t operator()(const std::string_view &value) const
+			{
+				return tpp::seahash_hash<std::string_view>{}(value);
+			}
+		};
+		struct str_cmp
+		{
+			using is_transparent = std::true_type;
+
+			[[nodiscard]] std::size_t operator()(const std::string &a, const std::string &b) const { return a == b; }
+			[[nodiscard]] std::size_t operator()(const std::string &a, const std::string_view &b) const { return std::string_view{a} == b; }
+			[[nodiscard]] std::size_t operator()(const std::string_view &a, const std::string &b) const { return a == std::string_view{b}; }
+			[[nodiscard]] std::size_t operator()(const std::string_view &a, const std::string_view &b) const { return a == b; }
+		};
+
+		using enum_table = tpp::stable_map<std::string, any, str_hash, str_cmp>;
+
 		struct type_base
 		{
 			type_handle type;
 			base_cast cast_func;
 		};
+
+		using base_table = tpp::stable_map<std::string_view, type_base, str_hash, str_cmp>;
 
 		template<typename T, typename B>
 		[[nodiscard]] inline static type_base make_type_base() noexcept
@@ -45,6 +72,8 @@ namespace reflex
 
 			std::function<any(const void *)> conv_func;
 		};
+
+		using conv_table = tpp::stable_map<std::string_view, type_conv, str_hash, str_cmp>;
 
 		template<typename From, typename To, typename F>
 		[[nodiscard]] inline static type_conv make_type_conv(F &&conv)
@@ -163,14 +192,6 @@ namespace reflex
 			return make_type_dtor<T>([](T *ptr) { delete ptr; }, [](T *ptr) { std::destroy_at(ptr); });
 		}
 
-		/* Properties can either be bound at compile-time, or created dynamically from an object instance.
-		 * When created dynamically, a generator function is used to fill the dynamic property table, the generator
-		 * is bound from a user-provided functor that accepts an instance pointer of type `T` or `const T` and
-		 * a property factory functor with signature `void(string-like, getter, setter)`.
-		 *
-		 * Generator would then invoke the property factory for all dynamically-created properties, which would then be
-		 * inserted into the dynamic property table. When property list is requested on an object of a reflected type,
-		 * the property list is obtained from both static and dynamic properties of the type, as well as its parents. */
 		struct type_prop
 		{
 			type_prop() noexcept = default;
@@ -193,52 +214,13 @@ namespace reflex
 			std::function<any(const void *, void *)> getter_func;
 			std::function<void(void *, any)> setter_func;
 		};
-		struct prop_hash
-		{
-			using is_transparent = std::true_type;
 
-			[[nodiscard]] std::size_t operator()(const std::string &value) const
-			{
-				return tpp::seahash_hash<std::string>{}(value);
-			}
-			[[nodiscard]] std::size_t operator()(const std::string_view &value) const
-			{
-				return tpp::seahash_hash<std::string_view>{}(value);
-			}
-		};
-		struct prop_cmp
-		{
-			using is_transparent = std::true_type;
-
-			[[nodiscard]] std::size_t operator()(const std::string &a, const std::string &b) const { return a == b; }
-			[[nodiscard]] std::size_t operator()(const std::string &a, const std::string_view &b) const { return std::string_view{a} == b; }
-			[[nodiscard]] std::size_t operator()(const std::string_view &a, const std::string &b) const { return a == std::string_view{b}; }
-		};
-
-		using prop_table = tpp::stable_map<std::string, type_prop, prop_hash, prop_cmp>;
-		using prop_gen_t = std::function<void(prop_table &, const void *, void *)>;
+		using prop_table = tpp::stable_map<std::string, type_prop, str_hash, str_cmp>;
 
 		template<typename T, typename GF, typename SF>
 		[[nodiscard]] inline static type_prop make_type_prop(GF &&getter, SF &&setter)
 		{
 			return {std::in_place_type<T>, std::forward<GF>(getter), std::forward<SF>(setter)};
-		}
-		template<typename T, typename F>
-		[[nodiscard]] inline static prop_gen_t make_prop_gen(F &&generator)
-		{
-			return [f = std::forward<F>(generator)](prop_table &table, const void *cdata, void *data)
-			{
-				auto inserter = [&table]<typename GF, typename SF>(std::string_view name, GF &&getter, SF &&setter)
-				{
-					table.emplace_or_replace(name, std::in_place_type<T>,
-					                         std::forward<GF>(getter),
-					                         std::forward<SF>(setter));
-				};
-				if (cdata != nullptr)
-					std::invoke(f, static_cast<std::add_const_t<T> *>(cdata), inserter);
-				else
-					std::invoke(f, static_cast<T *>(data), inserter);
-			};
 		}
 		template<typename T, auto T::*Member>
 		[[nodiscard]] inline static type_prop make_type_prop() noexcept
@@ -290,12 +272,12 @@ namespace reflex
 			type_handle remove_extent;
 			std::size_t extent = 0;
 
-			/* Base types. */
-			tpp::stable_map<std::string_view, type_base> base_list;
-			/* Type conversions. */
-			tpp::stable_map<std::string_view, type_conv> conv_list;
 			/* Enumeration constants. */
-			tpp::stable_map<std::string, any> enums;
+			enum_table enums;
+			/* Base types. */
+			base_table base_list;
+			/* Type conversions. */
+			conv_table conv_list;
 
 			/* `any` copy-initialization factories. */
 			void (any::*any_copy_init)(type_info, const void *, void *) = nullptr;
@@ -307,9 +289,8 @@ namespace reflex
 			type_ctor *copy_ctor = nullptr;
 			type_dtor dtor;
 
-			/* Instance properties (both statically-bound & dynamic). */
+			/* Instance properties. */
 			prop_table static_props;
-			prop_gen_t dyn_prop_gen;
 		};
 	}
 
