@@ -122,8 +122,8 @@ namespace reflex
 		/** Checks if the referenced type has a property with name \a name. */
 		[[nodiscard]] REFLEX_PUBLIC bool has_property(std::string_view name) const noexcept;
 
-		[[nodiscard]] constexpr bool operator!=(const type_info &other) const noexcept = default;
 		[[nodiscard]] constexpr bool operator==(const type_info &other) const noexcept = default;
+		[[nodiscard]] constexpr bool operator!=(const type_info &other) const noexcept = default;
 
 	private:
 		/* Convenience operator for access to underlying type_data. */
@@ -134,6 +134,11 @@ namespace reflex
 		const detail::type_data *m_data = nullptr;
 		detail::database_impl *m_db = nullptr;
 	};
+
+	[[nodiscard]] constexpr bool operator==(const type_info &a, const std::string_view &b) noexcept { return a.name() == b; }
+	[[nodiscard]] constexpr bool operator==(const std::string_view &a, const type_info &b) noexcept { return a == b.name(); }
+	[[nodiscard]] constexpr bool operator!=(const type_info &a, const std::string_view &b) noexcept { return a.name() == b; }
+	[[nodiscard]] constexpr bool operator!=(const std::string_view &a, const type_info &b) noexcept { return a == b.name(); }
 
 	namespace literals
 	{
