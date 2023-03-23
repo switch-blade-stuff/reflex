@@ -14,6 +14,6 @@ list(APPEND REFLEX_PUBLIC_SOURCES
         ${CMAKE_CURRENT_LIST_DIR}/any.ipp)
 
 list(APPEND REFLEX_PRIVATE_SOURCES
-        ${CMAKE_CURRENT_LIST_DIR}/database.cpp
         ${CMAKE_CURRENT_LIST_DIR}/type_info.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/database.cpp
         ${CMAKE_CURRENT_LIST_DIR}/any.cpp)

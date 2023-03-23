@@ -43,7 +43,15 @@ static_assert(reflex::type_name_v<std::wstring> != "std::wstring");
 
 int main()
 {
+	int err = 0;
+
 	auto src = reflex::make_any<int>(1);
-	auto dst = src.cast<double>();
-	return dst.empty() || *dst.get<double>() != 1;
+	err += !src.type().convertible_to<double>();
+	err += !src.type().convertible_to<std::intptr_t>();
+	err += !src.type().convertible_to<std::uintptr_t>();
+
+	auto dst = src.try_cast<double>();
+	err += dst.empty() || *dst.get<double>() != 1;
+
+	return err;
 }

@@ -35,8 +35,8 @@ namespace reflex
 		if (m_data->find_base(name) != nullptr)
 			return true;
 
-		const auto iter = std::ranges::find_if(m_data->base_list, [&](auto e) { return type_info{e.second.type, *m_db}.inherits_from(name); });
-		return iter != m_data->base_list.end();
+		const auto pred = [&](auto e) { return type_info{e.second.type, *m_db}.inherits_from(name); };
+		return std::ranges::any_of(m_data->base_list, pred);
 	}
 	bool type_info::convertible_to(std::string_view name) const noexcept
 	{
