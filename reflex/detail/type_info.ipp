@@ -11,13 +11,13 @@
 
 namespace reflex
 {
-	tpp::dense_set<type_info> type_info::parents() const
+	tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> type_info::parents() const
 	{
-		tpp::dense_set<type_info> result;
+		tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> result;
 		fill_parents(result);
 		return result;
 	}
-	void type_info::fill_parents(tpp::dense_set<type_info> &result) const
+	void type_info::fill_parents(tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> &result) const
 	{
 		/* Recursively add parent types to the set. */
 		result.reserve(result.capacity() + m_data->base_list.size());

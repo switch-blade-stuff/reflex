@@ -16,8 +16,53 @@
 
 namespace reflex
 {
+
+	class bad_facet_function;
+	class bad_argument_list;
+	class bad_any_cast;
+
+	class type_database;
+
+	template<typename Vtable>
+	class facet;
+	template<typename... Fs>
+	class facet_group;
+
+	class type_info;
+	class any;
+
 	namespace detail
 	{
+		struct str_hash
+		{
+			using is_transparent = std::true_type;
+
+			[[nodiscard]] std::size_t operator()(const std::string &value) const
+			{
+				return tpp::seahash_hash<std::string>{}(value);
+			}
+			[[nodiscard]] std::size_t operator()(const std::string_view &value) const
+			{
+				return tpp::seahash_hash<std::string_view>{}(value);
+			}
+			[[nodiscard]] inline std::size_t operator()(const type_info &value) const;
+		};
+		struct str_cmp
+		{
+			using is_transparent = std::true_type;
+
+			[[nodiscard]] std::size_t operator()(const std::string &a, const std::string &b) const { return a == b; }
+			[[nodiscard]] std::size_t operator()(const std::string_view &a, const std::string_view &b) const { return a == b; }
+			[[nodiscard]] std::size_t operator()(const std::string &a, const std::string_view &b) const { return std::string_view{a} == b; }
+			[[nodiscard]] std::size_t operator()(const std::string_view &a, const std::string &b) const { return a == std::string_view{b}; }
+
+			[[nodiscard]] inline std::size_t operator()(const type_info &a, const type_info &b) const;
+			[[nodiscard]] inline std::size_t operator()(const std::string &a, const type_info &b) const;
+			[[nodiscard]] inline std::size_t operator()(const type_info &a, const std::string &b) const;
+			[[nodiscard]] inline std::size_t operator()(const type_info &a, const std::string_view &b) const;
+			[[nodiscard]] inline std::size_t operator()(const std::string_view &a, const type_info &b) const;
+		};
+
 		enum type_flags
 		{
 			/* Used by any, prop_data & arg_data */
@@ -62,20 +107,6 @@ namespace reflex
 		template<typename T>
 		[[nodiscard]] inline static type_data *make_type_data(database_impl &);
 	}
-
-	class bad_facet_function;
-	class bad_argument_list;
-	class bad_any_cast;
-
-	class type_database;
-
-	template<typename Vtable>
-	class facet;
-	template<typename... Fs>
-	class facet_group;
-
-	class type_info;
-	class any;
 }
 
 template<auto F>

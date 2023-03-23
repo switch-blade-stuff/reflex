@@ -93,7 +93,7 @@ namespace reflex
 		[[nodiscard]] constexpr std::size_t extent() const noexcept;
 
 		/** Returns a set of the referenced type's parents (including the parents' parents). */
-		[[nodiscard]] REFLEX_PUBLIC tpp::dense_set<type_info> parents() const;
+		[[nodiscard]] REFLEX_PUBLIC auto parents() const -> tpp::dense_set<type_info, detail::str_hash, detail::str_cmp>;
 
 		/** Checks if the referenced type inherits from a base type \a T. */
 		template<typename T>
@@ -129,7 +129,7 @@ namespace reflex
 		/* Convenience operator for access to underlying type_data. */
 		[[nodiscard]] constexpr const detail::type_data *operator->() const noexcept { return m_data; }
 
-		REFLEX_PUBLIC void fill_parents(tpp::dense_set<type_info> &result) const;
+		inline void fill_parents(tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> &result) const;
 
 		const detail::type_data *m_data = nullptr;
 		detail::database_impl *m_db = nullptr;

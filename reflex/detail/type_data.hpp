@@ -14,28 +14,13 @@ namespace reflex
 {
 	namespace detail
 	{
-		struct str_hash
-		{
-			using is_transparent = std::true_type;
+		std::size_t str_hash::operator()(const type_info &value) const { return tpp::seahash_hash<type_info>{}(value); }
 
-			[[nodiscard]] std::size_t operator()(const std::string &value) const
-			{
-				return tpp::seahash_hash<std::string>{}(value);
-			}
-			[[nodiscard]] std::size_t operator()(const std::string_view &value) const
-			{
-				return tpp::seahash_hash<std::string_view>{}(value);
-			}
-		};
-		struct str_cmp
-		{
-			using is_transparent = std::true_type;
-
-			[[nodiscard]] std::size_t operator()(const std::string &a, const std::string &b) const { return a == b; }
-			[[nodiscard]] std::size_t operator()(const std::string &a, const std::string_view &b) const { return std::string_view{a} == b; }
-			[[nodiscard]] std::size_t operator()(const std::string_view &a, const std::string &b) const { return a == std::string_view{b}; }
-			[[nodiscard]] std::size_t operator()(const std::string_view &a, const std::string_view &b) const { return a == b; }
-		};
+		std::size_t str_cmp::operator()(const type_info &a, const type_info &b) const { return a == b; }
+		std::size_t str_cmp::operator()(const std::string &a, const type_info &b) const { return std::string_view{a} == b; }
+		std::size_t str_cmp::operator()(const type_info &a, const std::string &b) const { return a == std::string_view{b}; }
+		std::size_t str_cmp::operator()(const type_info &a, const std::string_view &b) const { return a == b; }
+		std::size_t str_cmp::operator()(const std::string_view &a, const type_info &b) const { return a == b; }
 
 		using enum_table = tpp::stable_map<std::string, any, str_hash, str_cmp>;
 
