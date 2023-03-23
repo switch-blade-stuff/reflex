@@ -31,7 +31,6 @@ namespace reflex
 
 	bool type_info::inherits_from(std::string_view name) const noexcept
 	{
-		/* Breadth-first search of parents. */
 		if (m_data->find_base(name) != nullptr)
 			return true;
 
@@ -40,6 +39,18 @@ namespace reflex
 	}
 	bool type_info::convertible_to(std::string_view name) const noexcept
 	{
-		return m_data->find_conv(name) != nullptr;
+		if (m_data->find_conv(name) != nullptr)
+			return true;
+
+		const auto pred = [&](auto e) { return type_info{e.second.type, *m_db}.convertible_to(name); };
+		return std::ranges::any_of(m_data->base_list, pred);
+	}
+	bool type_info::has_property(std::string_view name) const noexcept
+	{
+		if (m_data->find_prop(name) != nullptr)
+			return true;
+
+		const auto pred = [&](auto e) { return type_info{e.second.type, *m_db}.has_property(name); };
+		return std::ranges::any_of(m_data->base_list, pred);
 	}
 }
