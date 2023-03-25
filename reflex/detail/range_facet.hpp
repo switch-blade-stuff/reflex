@@ -153,7 +153,7 @@ namespace reflex
 			any (*cend)(const any &) = nullptr;
 
 			any (*at)(any &, std::size_t) = nullptr;
-			any (*cat)(const any &, std::size_t) = nullptr;
+			any (*at_const)(const any &, std::size_t) = nullptr;
 
 			bool (*empty)(const any &) = nullptr;
 			std::size_t (*size)(const any &) = nullptr;
@@ -183,15 +183,12 @@ namespace reflex
 		[[nodiscard]] iterator begin()
 		{
 			if (!instance().is_const())
-				return {vtable()->iter_funcs, base_t::checked_invoke<&vtable_type::begin, "iterator begin()">(instance())};
+				return {vtable()->iter_funcs, vtable()->begin(instance())};
 			else
 				return cbegin();
 		}
 		/** Returns a type-erased constant begin iterator of the underlying range. */
-		[[nodiscard]] const_iterator cbegin() const
-		{
-			return {vtable()->const_iter_funcs, base_t::checked_invoke<&vtable_type::cbegin, "const_iterator cbegin() const">(instance())};
-		}
+		[[nodiscard]] const_iterator cbegin() const { return {vtable()->const_iter_funcs, vtable()->cbegin(instance())}; }
 		/** @copydoc cbegin */
 		[[nodiscard]] const_iterator begin() const { return cbegin(); }
 
@@ -200,20 +197,17 @@ namespace reflex
 		[[nodiscard]] iterator end()
 		{
 			if (!instance().is_const())
-				return {vtable()->iter_funcs, base_t::checked_invoke<&vtable_type::end, "iterator end()">(instance())};
+				return {vtable()->iter_funcs, vtable()->end(instance())};
 			else
 				return cend();
 		}
 		/** Returns a type-erased constant end iterator of the underlying range. */
-		[[nodiscard]] const_iterator cend() const
-		{
-			return {vtable()->const_iter_funcs, base_t::checked_invoke<&vtable_type::cend, "const_iterator cend() const">(instance())};
-		}
+		[[nodiscard]] const_iterator cend() const { return {vtable()->const_iter_funcs, vtable()->cend(instance())}; }
 		/** @copydoc cend */
 		[[nodiscard]] const_iterator end() const { return cend(); }
 
 		/** Checks if the underlying range is empty. */
-		[[nodiscard]] bool empty() const { return base_t::checked_invoke<&vtable_type::empty, "bool empty() const">(instance()); }
+		[[nodiscard]] bool empty() const { return vtable()->empty(instance()); }
 		/** Returns size of the underlying range.
 		 * @throw bad_facet_function If the underlying range type is not a sized range. */
 		[[nodiscard]] size_type size() const { return base_t::checked_invoke<&vtable_type::size, "size_type size() const">(instance()); }
@@ -222,7 +216,7 @@ namespace reflex
 		 * @throw bad_facet_function If the underlying range type is not a random-access range. */
 		[[nodiscard]] any at(size_type n) { return base_t::checked_invoke<&vtable_type::at, "value_type at(size_type)">(instance(), n); }
 		/** @copydoc at */
-		[[nodiscard]] any at(size_type n) const { return base_t::checked_invoke<&vtable_type::cat, "value_type at(size_type) const">(instance(), n); }
+		[[nodiscard]] any at(size_type n) const { return base_t::checked_invoke<&vtable_type::at_const, "value_type at(size_type) const">(instance(), n); }
 	};
 
 	template<std::ranges::input_range T>
@@ -245,18 +239,12 @@ namespace reflex
 			if constexpr (std::ranges::forward_range<T>)
 			{
 				result.iter_pre_inc = +[](any &iter) { ++(*iter.as<Iter>()); };
-				result.iter_post_inc = +[](const any &iter)
-				{
-					return make_any<Iter>((*iter.as<Iter>())++);
-				};
+				result.iter_post_inc = +[](const any &iter) { return forward_any((*iter.as<Iter>())++); };
 			}
 			if constexpr (std::ranges::bidirectional_range<T>)
 			{
 				result.iter_pre_dec = +[](any &iter) { --(*iter.as<Iter>()); };
-				result.iter_post_dec = +[](const any &iter)
-				{
-					return make_any<Iter>((*iter.as<Iter>())--);
-				};
+				result.iter_post_dec = +[](const any &iter) { return forward_any((*iter.as<Iter>())--); };
 			}
 			if constexpr (std::ranges::random_access_range<T>)
 			{
@@ -273,12 +261,12 @@ namespace reflex
 				result.iter_add = +[](const any &iter, std::ptrdiff_t n)
 				{
 					const auto diff = static_cast<difference_type>(n);
-					return make_any<Iter>(*iter.as<Iter>() + diff);
+					return forward_any(*iter.as<Iter>() + diff);
 				};
 				result.iter_sub = +[](const any &iter, std::ptrdiff_t n)
 				{
 					const auto diff = static_cast<difference_type>(n);
-					return make_any<Iter>(*iter.as<Iter>() - diff);
+					return forward_any(*iter.as<Iter>() - diff);
 				};
 				result.iter_diff = +[](const any &a, const any &b)
 				{
@@ -338,7 +326,7 @@ namespace reflex
 					const auto diff = static_cast<difference_type>(n);
 					return forward_any(std::ranges::begin(range_ref)[diff]);
 				};
-				result.cat = +[](const any &range, std::size_t n)
+				result.at_const = +[](const any &range, std::size_t n)
 				{
 					auto &range_ref = *range.as<T>();
 					const auto diff = static_cast<difference_type>(n);
