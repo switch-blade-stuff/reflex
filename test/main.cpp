@@ -64,28 +64,42 @@ int main()
 {
 	int err = 0;
 
-	auto src = reflex::make_any<int>(1);
-	err += !src.type().convertible_to<double>();
-	err += !src.type().convertible_to<std::intptr_t>();
-	err += !src.type().convertible_to<std::uintptr_t>();
+	auto i0 = reflex::make_any<int>(1);
+	err += !i0.type().convertible_to<double>();
+	err += !i0.type().convertible_to<std::intptr_t>();
+	err += !i0.type().convertible_to<std::uintptr_t>();
 
-	err += !(reflex::type_of(src) == reflex::type_info::get<int>());
-	err += !(reflex::type_of(src) == reflex::type_of(int{}));
-	err += !(reflex::type_of(src) == src.type());
+	err += !(reflex::type_of(i0) == reflex::type_info::get<int>());
+	err += !(reflex::type_of(i0) == reflex::type_of(int{}));
+	err += !(reflex::type_of(i0) == i0.type());
 
-	auto dst = src.try_cast<double>();
-	err += dst.empty() || *dst.get<double>() != 1;
+	auto d0 = i0.try_cast<double>();
+	err += d0.empty() || *d0.get<double>() != 1;
 
-	err += !(reflex::type_of(dst) == reflex::type_info::get<double>());
-	err += !(reflex::type_of(dst) == reflex::type_of(double{}));
-	err += !(reflex::type_of(dst) == dst.type());;
+	err += !(reflex::type_of(d0) == reflex::type_info::get<double>());
+	err += !(reflex::type_of(d0) == reflex::type_of(double{}));
+	err += !(reflex::type_of(d0) == d0.type());;
 
-	err += (src == dst) != !(src != dst);
-	err += !(src >= reflex::any{});
-	err += !(src > reflex::any{});
-	err += src == reflex::any{};
+	err += (i0 == d0) != !(i0 != d0);
+	err += !(i0 >= reflex::any{});
+	err += !(i0 > reflex::any{});
+	err += i0 == reflex::any{};
 
 	err += !reflex::type_info::get<reflex::object>().is_abstract();
+
+	auto i1 = i0.type().construct(i0);
+	err += !(reflex::type_of(i1) == reflex::type_info::get<int>());
+	err += !(reflex::type_of(i1) == reflex::type_of(int{}));
+	err += !(reflex::type_of(i1) == i0.type());
+	err += i1.empty() || *i1.get<int>() != 1;
+	err += i1 != i0;
+
+	auto i2 = i0.type().construct();
+	err += !(reflex::type_of(i2) == reflex::type_info::get<int>());
+	err += !(reflex::type_of(i2) == reflex::type_of(int{}));
+	err += !(reflex::type_of(i2) == i0.type());
+	err += i2.empty() || *i2.get<int>() != 0;
+	err += i2 == i0;
 
 	const auto base = test_base{};
 	err += !(reflex::type_of(base) == reflex::type_info::get<test_base>());

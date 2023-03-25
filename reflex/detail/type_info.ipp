@@ -65,4 +65,32 @@ namespace reflex
 		const auto pred = [&](auto e) { return type_info{e.second.type, *m_db}.has_property(name); };
 		return std::ranges::any_of(m_data->base_list, pred);
 	}
+
+	bool type_info::constructible_from(std::span<any> args) const
+	{
+		if (!valid()) [[unlikely]] return false;
+		return m_data->find_ctor(args) != nullptr;
+	}
+
+	any type_info::construct(std::span<any> args) const
+	{
+		if (valid()) [[likely]]
+		{
+			const auto *ctor = m_data->find_ctor(args);
+			if (ctor != nullptr) return ctor->allocating_func(args);
+		}
+		return {};
+	}
+	bool type_info::construct(void *ptr, std::span<any> args) const
+	{
+		if (valid()) [[likely]]
+		{
+			if (const auto *ctor = m_data->find_ctor(args); ctor != nullptr)
+			{
+				ctor->placement_func(ptr, args);
+				return true;
+			}
+		}
+		return false;
+	}
 }

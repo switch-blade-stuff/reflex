@@ -100,11 +100,33 @@ namespace reflex
 
 		struct type_ctor
 		{
+			template<typename T, typename... Ts, typename F, std::size_t... Is>
+			[[nodiscard]] inline static any construct(std::index_sequence<Is...>, F &&f, std::span<any> args)
+			{
+				return std::invoke(f, (std::forward<Ts>(*args[Is].cast<Ts>().template get<Ts>()))...);
+			}
+			template<typename T, typename... Ts, typename F>
+			[[nodiscard]] inline static any construct(F &&f, std::span<any> args)
+			{
+				return construct<T, Ts...>(std::make_index_sequence<sizeof...(Ts)>{}, std::forward<F>(f), args);
+			}
+
+			template<typename T, typename... Ts, typename F, std::size_t... Is>
+			inline static void construct_at(std::index_sequence<Is...>, F &&f, T *ptr, std::span<any> args)
+			{
+				std::invoke(f, ptr, (std::forward<Ts>(*args[Is].cast<Ts>().template get<Ts>()))...);
+			}
+			template<typename T, typename... Ts, typename F>
+			inline static void construct_at(F &&f, T *ptr, std::span<any> args)
+			{
+				construct_at<T, Ts...>(std::make_index_sequence<sizeof...(Ts)>{}, std::forward<F>(f), ptr, args);
+			}
+
 			type_ctor() noexcept = default;
 			template<typename T, typename... Ts, typename AF, typename PF>
 			type_ctor(std::in_place_type_t<T>, type_pack_t<Ts...>, AF &&allocating, PF &&placement) : args(arg_list<Ts...>::value)
 			{
-				allocating_func = [f = std::forward<AF>(allocating)](std::span<any> args) -> void *
+				allocating_func = [f = std::forward<AF>(allocating)](std::span<any> args) -> any
 				{
 					return construct<T, std::remove_reference_t<Ts>...>(f, args);
 				};
@@ -115,31 +137,9 @@ namespace reflex
 			}
 
 			std::span<const arg_data> args;
-			std::function<void *(std::span<any>)> allocating_func;
+			std::function<any(std::span<any>)> allocating_func;
 			std::function<void(void *, std::span<any>)> placement_func;
 		};
-
-		template<typename T, typename... Ts, typename F, std::size_t... Is>
-		[[nodiscard]] inline static T *construct(std::index_sequence<Is...>, F &&f, std::span<any> args)
-		{
-			return std::invoke(f, (std::forward<Ts>(*args[Is].cast<Ts>().template get<Ts>()))...);
-		}
-		template<typename T, typename... Ts, typename F>
-		[[nodiscard]] inline static T *construct(F &&f, std::span<any> args)
-		{
-			return construct<T, Ts...>(std::make_index_sequence<sizeof...(Ts)>{}, std::forward<F>(f), args);
-		}
-
-		template<typename T, typename... Ts, typename F, std::size_t... Is>
-		inline static void construct_at(std::index_sequence<Is...>, F &&f, T *ptr, std::span<any> args)
-		{
-			std::invoke(f, ptr, (std::forward<Ts>(*args[Is].cast<Ts>().template get<Ts>()))...);
-		}
-		template<typename T, typename... Ts, typename F>
-		inline static void construct_at(F &&f, T *ptr, std::span<any> args)
-		{
-			construct_at<T, Ts...>(std::make_index_sequence<sizeof...(Ts)>{}, std::forward<F>(f), ptr, args);
-		}
 
 		template<typename T, typename... Ts, typename AF, typename PF>
 		[[nodiscard]] inline static type_ctor make_type_ctor(AF &&allocating, PF &&placement)
@@ -150,7 +150,7 @@ namespace reflex
 		[[nodiscard]] inline static type_ctor make_type_ctor() noexcept
 		{
 			constexpr auto placement = [](T *ptr, Ts ...as) { std::construct_at(ptr, as...); };
-			constexpr auto allocating = [](Ts ...as) -> T * { return new T(as...); };
+			constexpr auto allocating = [](Ts ...as) -> any { return make_any<T>(as...); };
 			return make_type_ctor<T, Ts...>(allocating, placement);
 		}
 
@@ -311,6 +311,35 @@ namespace reflex
 					return &iter->second;
 				else
 					return nullptr;
+			}
+
+			[[nodiscard]] const type_ctor *find_ctor(std::span<any> args) const
+			{
+				const auto exact_pred = [&](const type_ctor &ctor)
+				{
+					if (ctor.args.empty() && args.empty()) return true;
+					for (std::size_t i = 0; i < ctor.args.size() && i < args.size(); ++i)
+					{
+						if (arg_data::is_exact_invocable(ctor.args[i], args[i]))
+							return true;
+					}
+					return false;
+				};
+				const auto compat_pred = [&](const type_ctor &ctor)
+				{
+					if (ctor.args.empty() && args.empty()) return true;
+					for (std::size_t i = 0; i < ctor.args.size() && i < args.size(); ++i)
+					{
+						if (arg_data::is_invocable(ctor.args[i], args[i]))
+							return true;
+					}
+					return false;
+				};
+
+				/* First search for exact matches, then search for matches with conversion. */
+				for (const auto &ctor: ctor_list) if (exact_pred(ctor)) return &ctor;
+				for (const auto &ctor: ctor_list) if (compat_pred(ctor)) return &ctor;
+				return nullptr;
 			}
 
 			std::string_view name;

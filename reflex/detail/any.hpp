@@ -367,7 +367,7 @@ namespace reflex
 		{
 			if constexpr (std::is_const_v<T>)
 				return std::as_const(*this).get<T>();
-			else if (type().name() == type_name_v<T>)
+			else if (type().name() == type_name_v<std::remove_cvref_t<T>>)
 				return static_cast<T *>(data());
 			else
 				return nullptr;
@@ -376,7 +376,7 @@ namespace reflex
 		template<typename T>
 		[[nodiscard]] std::add_const_t<T> *get() const noexcept
 		{
-			if (type().name() == type_name_v<T>)
+			if (type().name() == type_name_v<std::remove_cvref_t<T>>)
 				return static_cast<std::add_const_t<T> *>(data());
 			else
 				return nullptr;
@@ -388,8 +388,8 @@ namespace reflex
 		{
 			if constexpr (std::is_const_v<T>)
 				return std::as_const(*this).as<T>();
-			else if (type().name() != type_name_v<T>)
-				return static_cast<T *>(base_cast(type_name_v<T>));
+			else if (type().name() != type_name_v<std::remove_cvref_t<T>>)
+				return static_cast<T *>(base_cast(type_name_v<std::remove_cvref_t<T>>));
 			else
 				return static_cast<T *>(data());
 		}
@@ -397,8 +397,8 @@ namespace reflex
 		template<typename T>
 		[[nodiscard]] std::add_const_t<T> *as() const
 		{
-			if (type().name() != type_name_v<T>)
-				return static_cast<std::add_const_t<T> *>(base_cast(type_name_v<T>));
+			if (type().name() != type_name_v<std::remove_cvref_t<T>>)
+				return static_cast<std::add_const_t<T> *>(base_cast(type_name_v<std::remove_cvref_t<T>>));
 			else
 				return static_cast<std::add_const_t<T> *>(data());
 		}
@@ -555,4 +555,18 @@ namespace reflex
 	/** Returns an `any` owning an instance of \a T constructed with arguments \a args. */
 	template<typename T, typename... Args>
 	[[nodiscard]] inline any make_any(Args &&...args) { return any{std::in_place_type<T>, std::forward<Args>(args)...}; }
+
+	template<std::size_t N>
+	any type_info::construct(std::span<any, N> args) const { return construct(std::span<any>{args}); }
+	template<typename... Args>
+	any type_info::construct(Args &&... args) const
+	{
+		if constexpr (sizeof...(Args) == 0)
+			return construct(std::span<any>{});
+		else
+		{
+			auto args_array = std::array{forward_any(args)...};
+			return construct(std::span<any>{args_array});
+		}
+	}
 }

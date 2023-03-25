@@ -103,7 +103,7 @@ namespace reflex
 
 		/** Checks if the referenced type inherits from a base type \a T. */
 		template<typename T>
-		[[nodiscard]] bool inherits_from() const noexcept { return inherits_from(type_name_v<T>); }
+		[[nodiscard]] bool inherits_from() const noexcept { return inherits_from(type_name_v<std::remove_cvref_t<T>>); }
 		/** Checks if the referenced type inherits from a base type \a type. */
 		[[nodiscard]] bool inherits_from(type_info type) const noexcept { return type.valid() && inherits_from(type.name()); }
 		/** Checks if the referenced type inherits from a base type with name \a name. */
@@ -111,7 +111,7 @@ namespace reflex
 
 		/** Checks if the referenced type is convertible to type \a T, or inherits from a type convertible to \a T. */
 		template<typename T>
-		[[nodiscard]] bool convertible_to() const noexcept { return convertible_to(type_name_v<T>); }
+		[[nodiscard]] bool convertible_to() const noexcept { return convertible_to(type_name_v<std::remove_cvref_t<T>>); }
 		/** Checks if the referenced type is convertible to type \a type, or inherits from a type convertible to \a type. */
 		[[nodiscard]] bool convertible_to(type_info type) const noexcept { return type.valid() && convertible_to(type.name()); }
 		/** Checks if the referenced type is convertible to type with name \a name, or inherits from a type convertible to \a name. */
@@ -119,11 +119,28 @@ namespace reflex
 
 		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type \a T. */
 		template<typename T>
-		[[nodiscard]] bool compatible_with() const noexcept { return compatible_with(type_name_v<T>); }
+		[[nodiscard]] bool compatible_with() const noexcept { return compatible_with(type_name_v<std::remove_cvref_t<T>>); }
 		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type \a type. */
 		[[nodiscard]] bool compatible_with(type_info type) const noexcept { return *this == type || inherits_from(type) || convertible_to(type); }
 		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type with name \a name. */
 		[[nodiscard]] bool compatible_with(std::string_view name) const noexcept { return this->name() == name || inherits_from(name) || convertible_to(name); }
+
+		/** Checks if the referenced type is constructible from arguments \a args. */
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool constructible_from(std::span<any> args) const;
+
+		/** Constructs an object of the referenced type from arguments \a args.
+		 * @return `any` containing the constructed object instance, or an empty `any` if `this` is not valid or the referenced type is not constructible from \a args. */
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE any construct(std::span<any> args) const;
+		/** @cpoydoc construct */
+		template<std::size_t N>
+		[[nodiscard]] inline any construct(std::span<any, N> args) const;
+		/** @cpoydoc construct */
+		template<typename... Args>
+		[[nodiscard]] inline any construct(Args &&...args) const;
+
+		/** Constructs an object of the referenced type from arguments \a args at location pointed to by \a ptr.
+		 * @return `true` on success, `false` if `this` is not valid or the referenced type is not constructible from \a args. */
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool construct(void *ptr, std::span<any> args) const;
 
 		/** Checks if the referenced type has a property with name \a name. */
 		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool has_property(std::string_view name) const noexcept;
