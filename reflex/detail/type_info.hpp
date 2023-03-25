@@ -69,6 +69,8 @@ namespace reflex
 		[[nodiscard]] constexpr bool is_enum() const noexcept;
 		/** Checks if the referenced type is a class. */
 		[[nodiscard]] constexpr bool is_class() const noexcept;
+		/** Checks if the referenced type is an abstract type. */
+		[[nodiscard]] constexpr bool is_abstract() const noexcept;
 
 		/** Checks if the referenced type is a pointer type.
 		 * @note For pointer-like class types, check the `pointer_like` facet. */

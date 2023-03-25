@@ -7,6 +7,7 @@
 #include <span>
 
 #define TPP_STL_HASH_ALL
+
 #include <tpp/stable_map.hpp>
 #include <tpp/dense_set.hpp>
 #include <tpp/stl_hash.hpp>
@@ -73,11 +74,12 @@ namespace reflex
 			IS_OWNED = 0x4,
 
 			/* Used by type_data */
-			IS_NULL = 0x10,
-			IS_VOID = 0x20,
-			IS_ENUM = 0x40,
-			IS_CLASS = 0x800,
-			IS_POINTER = 0x100,
+			IS_NULL = 0x8,
+			IS_VOID = 0x10,
+			IS_ENUM = 0x20,
+			IS_CLASS = 0x40,
+			IS_POINTER = 0x80,
+			IS_ABSTRACT = 0x100,
 
 			IS_SIGNED_INT = 0x200,
 			IS_UNSIGNED_INT = 0x400,
