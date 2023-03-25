@@ -129,7 +129,7 @@ namespace reflex
 
 		/** Initializes `any` to manage a reference to \a ref. */
 		template<typename T>
-		any(T &ref) requires (!std::same_as<std::remove_cv_t<T>, any>) : any(type_info::get<T>(), ref) {}
+		any(T &ref) requires (!std::same_as<std::remove_cv_t<T>, any>) : any(type_of(ref), ref) {}
 		/** Initializes `any` to manage a reference to \a ref using type info \a type. */
 		template<typename T>
 		any(type_info type, T &ref) requires (!std::same_as<std::remove_cv_t<T>, any>) : m_type(type)
@@ -146,7 +146,7 @@ namespace reflex
 		/** Initializes `any` to take ownership of \a ptr with deleter \a Del.
 		 * @note Deleter must be an empty functor, a `void(void *)` or a `void(const void *)` function pointer. */
 		template<typename T, typename Del = std::default_delete<T>>
-		any(std::in_place_t, T *ptr, Del &&del = Del{}) requires(valid_deleter<Del>) : any(type_info::get<T>(), std::in_place, ptr, std::forward<Del>(del)) {}
+		any(std::in_place_t, T *ptr, Del &&del = Del{}) requires(valid_deleter<Del>) : any(type_of(*ptr), std::in_place, ptr, std::forward<Del>(del)) {}
 		/** Initializes `any` to take ownership of \a ptr with deleter \a Del using type info \a type.
 		 * @note Deleter must be an empty functor, a `void(void *)` or a `void(const void *)` function pointer. */
 		template<typename T, typename Del = std::default_delete<T>>
@@ -209,7 +209,7 @@ namespace reflex
 
 		/** Replaces the managed object with a reference to \a ref. */
 		template<typename T>
-		any &operator=(T &ref) requires (!std::same_as<std::remove_cv_t<T>, any>) { return assign(type_info::get<T>(), ref); }
+		any &operator=(T &ref) requires (!std::same_as<std::remove_cv_t<T>, any>) { return assign(type_of(ref), ref); }
 		/** @copydoc operator= */
 		template<typename T>
 		any &assign(T &ref) requires (!std::same_as<std::remove_cv_t<T>, any>) { return operator=(ref); }
