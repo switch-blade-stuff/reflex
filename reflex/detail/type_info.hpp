@@ -152,6 +152,10 @@ namespace reflex
 		template<typename... Args>
 		[[nodiscard]] inline bool construct_at(void *ptr, Args &&...args) const;
 
+		/** Destroys an object of the referenced type pointed to by \a ptr.
+		 * @warning Memory pointed to by \a ptr must contain an object of the referenced type. */
+		REFLEX_PUBLIC_OR_INLINE void destroy_at(void *ptr) const;
+
 		/** Checks if the referenced type has a property with name \a name. */
 		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool has_property(std::string_view name) const noexcept;
 

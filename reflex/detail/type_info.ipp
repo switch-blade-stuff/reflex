@@ -93,4 +93,6 @@ namespace reflex
 		}
 		return false;
 	}
+
+	void type_info::destroy_at(void *ptr) const { if (valid()) [[likely]] m_data->dtor.placement_func(ptr); }
 }

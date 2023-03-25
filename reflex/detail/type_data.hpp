@@ -375,28 +375,28 @@ namespace reflex
 		};
 	}
 
-	constexpr std::string_view type_info::name() const noexcept { return m_data->name; }
-	constexpr std::size_t type_info::extent() const noexcept { return m_data->extent; }
-	constexpr std::size_t type_info::size() const noexcept { return m_data->size; }
-	constexpr std::size_t type_info::alignment() const noexcept { return m_data->alignment; }
+	constexpr std::string_view type_info::name() const noexcept { return valid() ? m_data->name : std::string_view{}; }
+	constexpr std::size_t type_info::extent() const noexcept { return valid() ? m_data->extent : 0; }
+	constexpr std::size_t type_info::size() const noexcept { return valid() ? m_data->size : 0; }
+	constexpr std::size_t type_info::alignment() const noexcept { return valid() ? m_data->alignment : 0; }
 
 	constexpr bool type_info::is_empty() const noexcept { return size() == 0; }
-	constexpr bool type_info::is_void() const noexcept { return m_data->flags & detail::IS_VOID; }
-	constexpr bool type_info::is_nullptr() const noexcept { return m_data->flags & detail::IS_NULL; }
+	constexpr bool type_info::is_void() const noexcept { return valid() && (m_data->flags & detail::IS_VOID); }
+	constexpr bool type_info::is_nullptr() const noexcept { return valid() && (m_data->flags & detail::IS_NULL); }
 
 	constexpr bool type_info::is_array() const noexcept { return extent() > 0; }
-	constexpr bool type_info::is_enum() const noexcept { return m_data->flags & detail::IS_ENUM; }
-	constexpr bool type_info::is_class() const noexcept { return m_data->flags & detail::IS_CLASS; }
-	constexpr bool type_info::is_abstract() const noexcept { return m_data->flags & detail::IS_ABSTRACT; }
+	constexpr bool type_info::is_enum() const noexcept { return valid() && (m_data->flags & detail::IS_ENUM); }
+	constexpr bool type_info::is_class() const noexcept { return valid() && (m_data->flags & detail::IS_CLASS); }
+	constexpr bool type_info::is_abstract() const noexcept { return valid() && (m_data->flags & detail::IS_ABSTRACT); }
 
-	constexpr bool type_info::is_pointer() const noexcept { return m_data->flags & detail::IS_POINTER; }
-	constexpr bool type_info::is_integral() const noexcept { return m_data->flags & (detail::IS_SIGNED_INT | detail::IS_UNSIGNED_INT); }
-	constexpr bool type_info::is_signed_integral() const noexcept { return m_data->flags & detail::IS_SIGNED_INT; }
-	constexpr bool type_info::is_unsigned_integral() const noexcept { return m_data->flags & detail::IS_UNSIGNED_INT; }
-	constexpr bool type_info::is_arithmetic() const noexcept { return m_data->flags & detail::IS_ARITHMETIC; }
+	constexpr bool type_info::is_pointer() const noexcept { return valid() && (m_data->flags & detail::IS_POINTER); }
+	constexpr bool type_info::is_integral() const noexcept { return valid() && (m_data->flags & (detail::IS_SIGNED_INT | detail::IS_UNSIGNED_INT)); }
+	constexpr bool type_info::is_signed_integral() const noexcept { return valid() && (m_data->flags & detail::IS_SIGNED_INT); }
+	constexpr bool type_info::is_unsigned_integral() const noexcept { return valid() && (m_data->flags & detail::IS_UNSIGNED_INT); }
+	constexpr bool type_info::is_arithmetic() const noexcept { return valid() && (m_data->flags & detail::IS_ARITHMETIC); }
 
-	type_info type_info::remove_extent() const noexcept { return {m_data->remove_extent, *m_db}; }
-	type_info type_info::remove_pointer() const noexcept { return {m_data->remove_pointer, *m_db}; }
+	type_info type_info::remove_extent() const noexcept { return valid() && m_data->remove_extent ? type_info{m_data->remove_extent, *m_db} : type_info{}; }
+	type_info type_info::remove_pointer() const noexcept { return valid() && m_data->remove_pointer ? type_info{m_data->remove_pointer, *m_db} : type_info{}; }
 
 	template<typename T>
 	void any::copy_init(type_info type, T *ptr)
