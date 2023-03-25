@@ -11,7 +11,8 @@ list(APPEND REFLEX_PUBLIC_SOURCES
         ${CMAKE_CURRENT_LIST_DIR}/database.ipp
         ${CMAKE_CURRENT_LIST_DIR}/facet.hpp
         ${CMAKE_CURRENT_LIST_DIR}/any.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/any.ipp)
+        ${CMAKE_CURRENT_LIST_DIR}/any.ipp
+        ${CMAKE_CURRENT_LIST_DIR}/range_facet.hpp)
 
 list(APPEND REFLEX_PRIVATE_SOURCES
         ${CMAKE_CURRENT_LIST_DIR}/type_info.cpp

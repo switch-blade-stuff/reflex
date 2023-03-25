@@ -83,16 +83,16 @@ namespace reflex
 	template<auto F, basic_const_string FuncName>
 	[[nodiscard]] bad_facet_function detail::make_facet_error()
 	{
-		constexpr auto signature = type_name<detail::vtable_func_type_t<F>>::value;
-		constexpr auto msg_prefix = basic_const_string{"Failed to invoke facet function `"} + const_string<signature.size()>{signature};
+		constexpr auto msg_prefix = basic_const_string{"Failed to invoke facet function `"};
 		if constexpr (FuncName.empty())
 		{
-			const auto msg = auto_constant<msg_prefix + basic_const_string{": "} + FuncName + basic_const_string{"`"}>::value.data();
+			const auto msg = auto_constant<msg_prefix + FuncName + basic_const_string{"`"}>::value.data();
 			return bad_facet_function{msg, FuncName};
 		}
 		else
 		{
-			const auto msg = auto_constant<msg_prefix + basic_const_string{"`"}>::value.data();
+			constexpr auto signature = type_name<detail::vtable_func_type_t<F>>::value;
+			const auto msg = auto_constant<msg_prefix + const_string<signature.size()>{signature} + basic_const_string{"`"}>::value.data();
 			return bad_facet_function{msg, FuncName};
 		}
 	}
