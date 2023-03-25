@@ -38,7 +38,7 @@ namespace reflex
 
 	namespace detail
 	{
-		[[nodiscard]] REFLEX_PUBLIC object *checked_object_cast(object *ptr, type_info from, type_info to) noexcept;
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE object *checked_object_cast(object *ptr, type_info from, type_info to) noexcept;
 	}
 
 	/** @brief Dynamically casts an object of type \a From to type \a To.

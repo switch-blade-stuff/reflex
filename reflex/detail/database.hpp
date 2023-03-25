@@ -15,11 +15,11 @@ namespace reflex
 		{
 #ifndef REFLEX_NO_THREADS
 		public:
-			REFLEX_PUBLIC shared_spinlock &lock();
-			REFLEX_PUBLIC shared_spinlock &lock_shared();
+			REFLEX_PUBLIC_OR_INLINE shared_spinlock &lock();
+			REFLEX_PUBLIC_OR_INLINE shared_spinlock &lock_shared();
 
-			REFLEX_PUBLIC void unlock();
-			REFLEX_PUBLIC void unlock_shared();
+			REFLEX_PUBLIC_OR_INLINE void unlock();
+			REFLEX_PUBLIC_OR_INLINE void unlock_shared();
 
 		private:
 			std::atomic_flag m_busy_flag = {};
@@ -52,17 +52,17 @@ namespace reflex
 				return value;
 			}
 
-			[[nodiscard]] REFLEX_PUBLIC static database_impl *instance() noexcept;
-			REFLEX_PUBLIC static database_impl *instance(database_impl *ptr) noexcept;
+			[[nodiscard]] REFLEX_PUBLIC_OR_INLINE static database_impl *instance() noexcept;
+			REFLEX_PUBLIC_OR_INLINE static database_impl *instance(database_impl *ptr) noexcept;
 
-			REFLEX_PUBLIC database_impl() noexcept;
-			REFLEX_PUBLIC ~database_impl();
+			REFLEX_PUBLIC_OR_INLINE database_impl() noexcept;
+			REFLEX_PUBLIC_OR_INLINE ~database_impl();
 
-			REFLEX_PUBLIC void reset();
-			REFLEX_PUBLIC const type_data *reset(std::string_view name);
-			REFLEX_PUBLIC const type_data *find(std::string_view name) const;
+			REFLEX_PUBLIC_OR_INLINE void reset();
+			REFLEX_PUBLIC_OR_INLINE const type_data *reset(std::string_view name);
+			REFLEX_PUBLIC_OR_INLINE const type_data *find(std::string_view name) const;
 
-			REFLEX_PUBLIC type_data *reflect(std::string_view name, data_factory factory);
+			REFLEX_PUBLIC_OR_INLINE type_data *reflect(std::string_view name, data_factory factory);
 
 			tpp::stable_map<std::string_view, std::pair<type_data, data_factory>> m_types;
 		};

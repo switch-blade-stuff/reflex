@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "type_info.hpp"
 #include "detail/facet.hpp"
 #include "detail/range_facet.hpp"
 #include "detail/tuple_facet.hpp"

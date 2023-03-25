@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <tuple>
 
-#include "../const_string.hpp"
+#include "database.hpp"
 #include "any.hpp"
 
 namespace reflex
@@ -117,8 +117,7 @@ namespace reflex
 	class facet : detail::facet_instance
 	{
 		template<typename...>
-		friend
-		class facet_group;
+		friend class facet_group;
 
 	public:
 		using vtable_type = Vtable;

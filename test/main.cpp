@@ -4,6 +4,7 @@
 
 #include <reflex/type_info.hpp>
 #include <reflex/object.hpp>
+#include <reflex/facet.hpp>
 
 struct test_vtable
 {

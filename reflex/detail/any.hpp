@@ -357,9 +357,9 @@ namespace reflex
 		 *
 		 * @return `any` containing the type-cast reference or value, or an empty `any` if the
 		 * managed object cannot be represented via `T &` and no conversions to `T` are available. */
-		[[nodiscard]] REFLEX_PUBLIC any try_cast(type_info type);
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE any try_cast(type_info type);
 		/** @copydoc try_cast */
-		[[nodiscard]] REFLEX_PUBLIC any try_cast(type_info type) const;
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE any try_cast(type_info type) const;
 
 		/** Returns pointer to the managed object or `nullptr` if the managed object is of a different type or const-ness than `T`. */
 		template<typename T>
@@ -405,21 +405,21 @@ namespace reflex
 
 		/** If the managed object of `this` is equal to the managed object of \a other, or if `this` and \a other are empty,
 		 * returns `true`. Otherwise returns `false`. */
-		[[nodiscard]] REFLEX_PUBLIC bool operator==(const any &other) const;
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool operator==(const any &other) const;
 		/** If the managed object of `this` is not equal to the managed object of \a other, returns `true`. Otherwise returns `false`.  */
-		[[nodiscard]] REFLEX_PUBLIC bool operator!=(const any &other) const;
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool operator!=(const any &other) const;
 		/** If the managed object of `this` is greater than or equal to the managed object of \a other, or if `this` is not empty while
 		 * \a other is empty, or if both `this` and \a other are empty, returns `true`. Otherwise returns `false`.  */
-		[[nodiscard]] REFLEX_PUBLIC bool operator>=(const any &other) const;
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool operator>=(const any &other) const;
 		/** If the managed object of `this` is less than or equal to the managed object of \a other, or if \a other is not empty while
 		 * `this` is empty, or if both `this` and \a other are empty, returns `true`. Otherwise returns `false`.  */
-		[[nodiscard]] REFLEX_PUBLIC bool operator<=(const any &other) const;
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool operator<=(const any &other) const;
 		/** If the managed object of `this` is greater than the managed object of \a other, or if `this` is not empty while
 		 * \a other is empty, returns `true`. Otherwise returns `false`.  */
-		[[nodiscard]] REFLEX_PUBLIC bool operator>(const any &other) const;
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool operator>(const any &other) const;
 		/** If the managed object of `this` is less than the managed object of \a other, or if \a other is not empty while
 		 * `this` is empty, returns `true`. Otherwise returns `false`.  */
-		[[nodiscard]] REFLEX_PUBLIC bool operator<(const any &other) const;
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool operator<(const any &other) const;
 
 	private:
 		[[nodiscard]] void *local() noexcept { return m_storage.bytes; }
@@ -455,7 +455,7 @@ namespace reflex
 		inline void copy_init(type_info type, T *ptr);
 		template<typename T>
 		inline void copy_assign(type_info type, T *ptr);
-		REFLEX_PUBLIC void destroy();
+		REFLEX_PUBLIC_OR_INLINE void destroy();
 
 		template<typename T, typename U>
 		void impl_copy_from(type_info type, U *data)
@@ -486,8 +486,8 @@ namespace reflex
 				*tgt = *detail::void_cast<T>(data);
 		}
 
-		[[nodiscard]] REFLEX_PUBLIC void *base_cast(std::string_view) const;
-		[[nodiscard]] REFLEX_PUBLIC any value_conv(std::string_view) const;
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE void *base_cast(std::string_view) const;
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE any value_conv(std::string_view) const;
 
 		type_info m_type = {};
 		storage_t m_storage;
