@@ -42,13 +42,21 @@ struct reflex::type_name<std::string> { static constexpr std::string_view value 
 static_assert(reflex::type_name_v<std::string> == "std::string");
 static_assert(reflex::type_name_v<std::wstring> != "std::wstring");
 
-class test_object : public reflex::object
+class test_base : public reflex::object
 {
-	REFLEX_DEFINE_OBJECT(test_object)
+	REFLEX_DEFINE_OBJECT(test_base)
 
 public:
-	constexpr test_object() noexcept = default;
-	~test_object() noexcept override = default;
+	constexpr test_base() noexcept = default;
+	~test_base() noexcept override = default;
+};
+class test_child : public test_base
+{
+	REFLEX_DEFINE_OBJECT(test_child)
+
+public:
+	constexpr test_child() noexcept = default;
+	~test_child() noexcept override = default;
 };
 
 int main()
@@ -68,10 +76,28 @@ int main()
 	err += !(src > reflex::any{});
 	err += src == reflex::any{};
 
-	const auto obj = test_object{};
-	err += !(reflex::type_of(obj) == reflex::type_info::get<test_object>());
-	err += !(reflex::type_of(obj).inherits_from<reflex::object>());
 	err += !reflex::type_info::get<reflex::object>().is_abstract();
+
+	const auto base = test_base{};
+	err += !(reflex::type_of(base) == reflex::type_info::get<test_base>());
+	err += !(reflex::type_of(base).inherits_from<reflex::object>());
+
+	auto *base_ptr = &base;
+	err += !(reflex::type_of(*base_ptr) == reflex::type_info::get<test_base>());
+	err += !(reflex::type_of(base) == reflex::type_of(*base_ptr));
+	err += !(reflex::object_cast<const reflex::object>(base_ptr) != nullptr);
+	err += !(reflex::object_cast<const test_base>(base_ptr) != nullptr);
+
+	const auto child = test_child{};
+	err += !(reflex::type_of(child) == reflex::type_info::get<test_child>());
+	err += !(reflex::type_of(child).inherits_from<reflex::object>());
+
+	base_ptr = &child;
+	err += !(reflex::type_of(*base_ptr) == reflex::type_info::get<test_child>());
+	err += !(reflex::type_of(child) == reflex::type_of(*base_ptr));
+	err += !(reflex::object_cast<const reflex::object>(base_ptr) != nullptr);
+	err += !(reflex::object_cast<const test_child>(base_ptr) != nullptr);
+	err += !(reflex::object_cast<const test_base>(base_ptr) != nullptr);
 
 	return err;
 }
