@@ -50,7 +50,7 @@ namespace reflex
 	 *
 	 * @return Pointer \a ptr, dynamically cast to \a From, or `nullptr` if \a From cannot be cast to \a To. */
 	template<typename To, typename From>
-	[[nodiscard]] To *object_cast(From *ptr)
+	[[nodiscard]] inline To *object_cast(From *ptr)
 	{
 		static_assert(std::same_as<take_const_t<To, From>, To>, "object_cast cannot cast away type qualifiers");
 		if constexpr (std::same_as<To, From>)
