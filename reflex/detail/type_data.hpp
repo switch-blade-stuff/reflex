@@ -126,13 +126,13 @@ namespace reflex
 			template<typename T, typename... Ts, typename AF, typename PF>
 			type_ctor(std::in_place_type_t<T>, type_pack_t<Ts...>, AF &&allocating, PF &&placement) : args(arg_list<Ts...>::value)
 			{
-				allocating_func = [f = std::forward<AF>(allocating)](std::span<any> args) -> any
+				allocating_func = [f = std::forward<AF>(allocating)](std::span<any> any_args) -> any
 				{
-					return construct<T, std::remove_reference_t<Ts>...>(f, args);
+					return construct<T, std::remove_reference_t<Ts>...>(f, any_args);
 				};
-				placement_func = [f = std::forward<PF>(placement)](void *ptr, std::span<any> args)
+				placement_func = [f = std::forward<PF>(placement)](void *ptr, std::span<any> any_args)
 				{
-					construct_at<T, std::remove_reference_t<Ts>...>(f, void_cast<T>(ptr), args);
+					construct_at<T, std::remove_reference_t<Ts>...>(f, void_cast<T>(ptr), any_args);
 				};
 			}
 
@@ -344,7 +344,9 @@ namespace reflex
 
 			std::string_view name;
 			type_flags flags = {};
+
 			std::size_t size = 0;
+			std::size_t alignment = 0;
 
 			type_handle remove_pointer;
 			type_handle remove_extent;
@@ -376,6 +378,7 @@ namespace reflex
 	constexpr std::string_view type_info::name() const noexcept { return m_data->name; }
 	constexpr std::size_t type_info::extent() const noexcept { return m_data->extent; }
 	constexpr std::size_t type_info::size() const noexcept { return m_data->size; }
+	constexpr std::size_t type_info::alignment() const noexcept { return m_data->alignment; }
 
 	constexpr bool type_info::is_empty() const noexcept { return size() == 0; }
 	constexpr bool type_info::is_void() const noexcept { return m_data->flags & detail::IS_VOID; }

@@ -82,6 +82,7 @@ namespace reflex
 						result.flags |= type_flags::IS_VOID;
 					else
 					{
+						result.alignment = alignof(T);
 						if constexpr (!std::is_empty_v<T>) result.size = sizeof(T);
 
 						if constexpr (std::is_null_pointer_v<T>) result.flags |= type_flags::IS_NULL;

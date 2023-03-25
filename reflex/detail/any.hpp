@@ -569,4 +569,18 @@ namespace reflex
 			return construct(std::span<any>{args_array});
 		}
 	}
+
+	template<std::size_t N>
+	bool type_info::construct_at(void *ptr, std::span<any, N> args) const { return construct_at(ptr, std::span<any>{args}); }
+	template<typename... Args>
+	bool type_info::construct_at(void *ptr, Args &&... args) const
+	{
+		if constexpr (sizeof...(Args) == 0)
+			return construct_at(ptr, std::span<any>{});
+		else
+		{
+			auto args_array = std::array{forward_any(args)...};
+			return construct_at(ptr, std::span<any>{args_array});
+		}
+	}
 }

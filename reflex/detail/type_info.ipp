@@ -81,7 +81,7 @@ namespace reflex
 		}
 		return {};
 	}
-	bool type_info::construct(void *ptr, std::span<any> args) const
+	bool type_info::construct_at(void *ptr, std::span<any> args) const
 	{
 		if (valid()) [[likely]]
 		{

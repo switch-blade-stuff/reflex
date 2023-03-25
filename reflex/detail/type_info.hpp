@@ -54,9 +54,12 @@ namespace reflex
 
 		/** Returns the name of the referenced type. */
 		[[nodiscard]] constexpr std::string_view name() const noexcept;
+
 		/** Returns the size of the referenced type.
 		 * @note If `is_empty_v<T>` evaluates to `true` for referenced type \a T, returns `0` instead of `1`. */
 		[[nodiscard]] constexpr std::size_t size() const noexcept;
+		/** Returns the alignment of the referenced type. */
+		[[nodiscard]] constexpr std::size_t alignment() const noexcept;
 
 		/** Checks if the referenced type is `void`. */
 		[[nodiscard]] constexpr bool is_void() const noexcept;
@@ -139,8 +142,15 @@ namespace reflex
 		[[nodiscard]] inline any construct(Args &&...args) const;
 
 		/** Constructs an object of the referenced type from arguments \a args at location pointed to by \a ptr.
-		 * @return `true` on success, `false` if `this` is not valid or the referenced type is not constructible from \a args. */
-		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool construct(void *ptr, std::span<any> args) const;
+		 * @return `true` on success, `false` if `this` is not valid or the referenced type is not constructible from \a args.
+		 * @warning Memory pointed to by \a ptr must be large enough and have appropriate alignment for an object of the referenced type. */
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool construct_at(void *ptr, std::span<any> args) const;
+		/** @cpoydoc construct */
+		template<std::size_t N>
+		[[nodiscard]] inline bool construct_at(void *ptr, std::span<any, N> args) const;
+		/** @cpoydoc construct */
+		template<typename... Args>
+		[[nodiscard]] inline bool construct_at(void *ptr, Args &&...args) const;
 
 		/** Checks if the referenced type has a property with name \a name. */
 		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool has_property(std::string_view name) const noexcept;
