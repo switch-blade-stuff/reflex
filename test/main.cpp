@@ -3,6 +3,7 @@
  */
 
 #include <reflex/type_info.hpp>
+#include <reflex/object.hpp>
 
 struct test_vtable
 {
@@ -41,6 +42,15 @@ struct reflex::type_name<std::string> { static constexpr std::string_view value 
 static_assert(reflex::type_name_v<std::string> == "std::string");
 static_assert(reflex::type_name_v<std::wstring> != "std::wstring");
 
+class test_object : public reflex::object
+{
+	REFLEX_DEFINE_OBJECT(test_object)
+
+public:
+	constexpr test_object() noexcept = default;
+	~test_object() noexcept override = default;
+};
+
 int main()
 {
 	int err = 0;
@@ -57,6 +67,10 @@ int main()
 	err += !(src >= reflex::any{});
 	err += !(src > reflex::any{});
 	err += src == reflex::any{};
+
+	const auto obj = test_object{};
+	err += !(reflex::type_of(obj) == reflex::type_info::get<test_object>());
+	err += !(reflex::type_of(obj).inherits_from<reflex::object>());
 
 	return err;
 }

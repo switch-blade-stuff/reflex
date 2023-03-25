@@ -37,7 +37,7 @@ namespace reflex
 		template<typename T, typename B>
 		[[nodiscard]] inline static type_base make_type_base() noexcept
 		{
-			constexpr auto cast = [](const void *ptr) -> const void *
+			constexpr auto cast = [](const void *ptr) noexcept -> const void *
 			{
 				auto *base = static_cast<std::add_const_t<B> *>(static_cast<std::add_const_t<T> *>(ptr));
 				return static_cast<const void *>(base);

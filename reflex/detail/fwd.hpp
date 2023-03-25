@@ -28,6 +28,7 @@ namespace reflex
 	class facet_group;
 
 	class type_info;
+	class object;
 	class any;
 
 	namespace detail

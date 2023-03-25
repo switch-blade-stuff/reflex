@@ -97,6 +97,10 @@ namespace reflex
 					/* Constructors, destructors & conversions are only created for object types. */
 					if constexpr (std::is_object_v<T>)
 					{
+						/* If `T` is derived from `object`, add `object` to the list of parent types. */
+						if constexpr (std::derived_from<T, object>)
+							result.base_list.emplace(type_name_v<object>, make_type_base<T, object>());
+
 						if constexpr (std::convertible_to<T, std::intmax_t>)
 						{
 							result.flags |= type_flags::IS_SIGNED_INT;

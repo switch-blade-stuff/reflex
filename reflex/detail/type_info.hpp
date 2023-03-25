@@ -145,6 +145,10 @@ namespace reflex
 	[[nodiscard]] constexpr bool operator!=(const type_info &a, const std::string_view &b) noexcept { return a.name() == b; }
 	[[nodiscard]] constexpr bool operator!=(const std::string_view &a, const type_info &b) noexcept { return a == b.name(); }
 
+	/** Returns the type info of \a T. Equivalent to `type_info::get<T>()`. */
+	template<typename T>
+	[[nodiscard]] inline type_info type_of(T &&) { return type_info::get<T>(); }
+
 	namespace literals
 	{
 		/** Equivalent to `type_info::get`. */

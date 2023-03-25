@@ -22,6 +22,10 @@ namespace reflex
 		struct any_deleter_func<void (*)(void *)> : std::true_type {};
 		template<>
 		struct any_deleter_func<void (*)(const void *)> : std::true_type {};
+
+		[[nodiscard]] inline static bad_argument_list make_ctor_error(type_info, std::span<any>);
+		template<typename T, typename... Ts>
+		[[nodiscard]] inline static bad_argument_list make_ctor_error();
 	}
 
 	/** Exception type thrown when the managed object of `any` cannot be casted to the desired type. */
@@ -453,7 +457,7 @@ namespace reflex
 			if constexpr (std::is_constructible_v<T, other_t &>)
 				init_owned<T>(type, *static_cast<other_t *>(data));
 			else
-				throw make_ctor_error<T, other_t &>();
+				throw detail::make_ctor_error<T, other_t &>();
 		}
 		template<typename T>
 		void copy_from(type_info type, const void *cdata, void *data)
@@ -522,6 +526,10 @@ namespace reflex
 			return bad_argument_list{msg.data()};
 		}
 	}
+
+	/** Returns the type info of the object managed by \a value. Equivalent to `value.type()`. */
+	template<typename T>
+	[[nodiscard]] inline type_info type_of(T &&value) requires std::same_as<std::remove_cvref_t<T>, any> { return value.type(); }
 
 	/** Returns an `any` referencing the object managed by \a other. */
 	template<typename T>

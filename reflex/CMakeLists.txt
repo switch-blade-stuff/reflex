@@ -6,4 +6,8 @@ list(APPEND REFLEX_PUBLIC_SOURCES
         ${CMAKE_CURRENT_LIST_DIR}/type_name.hpp
         ${CMAKE_CURRENT_LIST_DIR}/type_info.hpp
         ${CMAKE_CURRENT_LIST_DIR}/type_database.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/facet.hpp)
+        ${CMAKE_CURRENT_LIST_DIR}/object.hpp
+        ${CMAKE_CURRENT_LIST_DIR}/object.ipp)
+
+list(APPEND REFLEX_PRIVATE_SOURCES
+        ${CMAKE_CURRENT_LIST_DIR}/object.cpp)
