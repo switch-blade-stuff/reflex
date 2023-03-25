@@ -143,6 +143,20 @@ namespace reflex
 			}
 		}
 
+		/** Initializes `any` to manage an instance of \a T move-constructed from \a value. */
+		template<typename T>
+		any(T &&value) requires (!std::same_as<std::remove_cv_t<T>, any>) : any(std::in_place_type<std::remove_cvref_t<T>>, std::forward<T>(value)) {}
+		/** Initializes `any` to manage an instance of \a T move-constructed from \a value using type info \a type. */
+		template<typename T>
+		any(type_info type, T &&value) requires (!std::same_as<std::remove_cv_t<T>, any>) : any(type, std::in_place_type<std::remove_cvref_t<T>>, std::forward<T>(value)) {}
+
+		/** Initializes `any` to manage in-place constructed instance of \a T with arguments \a args. */
+		template<typename T, typename... Args>
+		any(std::in_place_type_t<T>, Args &&...args) requires std::constructible_from<T, Args...> : any(type_info::get<T>(), std::in_place_type<T>, std::forward<Args>(args)...) {}
+		/** Initializes `any` to manage in-place constructed instance of \a T with arguments \a args using type info \a type. */
+		template<typename T, typename... Args>
+		any(type_info type, std::in_place_type_t<T>, Args &&...args) requires std::constructible_from<T, Args...> { init_owned<T>(type, std::forward<Args>(args)...); }
+
 		/** Initializes `any` to take ownership of \a ptr with deleter \a Del.
 		 * @note Deleter must be an empty functor, a `void(void *)` or a `void(const void *)` function pointer. */
 		template<typename T, typename Del = std::default_delete<T>>
@@ -167,13 +181,6 @@ namespace reflex
 				flags() |= detail::IS_CONST;
 			}
 		}
-
-		/** Initializes `any` to manage in-place constructed instance of \a T with arguments \a args. */
-		template<typename T, typename... Args>
-		any(std::in_place_type_t<T>, Args &&...args) requires std::constructible_from<T, Args...> : any(type_info::get<T>(), std::in_place_type<T>, std::forward<Args>(args)...) {}
-		/** Initializes `any` to manage in-place constructed instance of \a T with arguments \a args using type info \a type. */
-		template<typename T, typename... Args>
-		any(type_info type, std::in_place_type_t<T>, Args &&...args) requires std::constructible_from<T, Args...> { init_owned<T>(type, std::forward<Args>(args)...); }
 
 		/** Initializes `any` to manage a reference to object of type \a type located at \a ptr. */
 		any(type_info type, void *ptr) noexcept : m_type(type)
@@ -537,6 +544,13 @@ namespace reflex
 	/** Returns an `any` referencing the object at \a instance. */
 	template<typename T>
 	[[nodiscard]] inline any forward_any(T &instance) requires (!std::same_as<std::decay_t<T>, any>) { return any{instance}; }
+
+	/** Returns an `any` containing a move-constructed instance of \a value. */
+	template<typename T>
+	[[nodiscard]] inline any forward_any(T &&value) { return any{std::forward<T>(value)}; }
+	/** Forwards \a value. */
+	template<typename T>
+	[[nodiscard]] inline any &&forward_any(any &&value) { return std::forward<any>(value); }
 
 	/** Returns an `any` owning an instance of \a T constructed with arguments \a args. */
 	template<typename T, typename... Args>
