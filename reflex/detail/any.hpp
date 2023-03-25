@@ -392,6 +392,13 @@ namespace reflex
 				return static_cast<std::add_const_t<T> *>(data());
 		}
 
+		[[nodiscard]] REFLEX_PUBLIC bool operator==(const any &other) const;
+		[[nodiscard]] REFLEX_PUBLIC bool operator!=(const any &other) const;
+		[[nodiscard]] REFLEX_PUBLIC bool operator>=(const any &other) const;
+		[[nodiscard]] REFLEX_PUBLIC bool operator<=(const any &other) const;
+		[[nodiscard]] REFLEX_PUBLIC bool operator>(const any &other) const;
+		[[nodiscard]] REFLEX_PUBLIC bool operator<(const any &other) const;
+
 	private:
 		[[nodiscard]] void *local() noexcept { return m_storage.bytes; }
 		[[nodiscard]] const void *local() const noexcept { return m_storage.bytes; }

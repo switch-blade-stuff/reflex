@@ -29,6 +29,14 @@ namespace reflex
 		}
 	}
 
+	bool type_info::has_facet_vtable(std::string_view name) const noexcept
+	{
+		if (m_data->find_facet(name) != nullptr)
+			return true;
+
+		const auto pred = [&](auto e) { return type_info{e.second.type, *m_db}.has_facet_vtable(name); };
+		return std::ranges::any_of(m_data->base_list, pred);
+	}
 	bool type_info::inherits_from(std::string_view name) const noexcept
 	{
 		if (m_data->find_base(name) != nullptr)

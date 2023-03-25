@@ -9,6 +9,7 @@
 #include <list>
 
 #include "any.hpp"
+#include "type_info.hpp"
 
 namespace reflex
 {
@@ -22,6 +23,7 @@ namespace reflex
 		std::size_t str_cmp::operator()(const type_info &a, const std::string_view &b) const { return a == b; }
 		std::size_t str_cmp::operator()(const std::string_view &a, const type_info &b) const { return a == b; }
 
+		using facet_table = tpp::stable_map<std::string_view, const void *, str_hash, str_cmp>;
 		using enum_table = tpp::stable_map<std::string, any, str_hash, str_cmp>;
 
 		struct type_base
@@ -227,6 +229,13 @@ namespace reflex
 
 		struct type_data
 		{
+			[[nodiscard]] const const void *find_facet(std::string_view name) const
+			{
+				if (auto iter = facet_list.find(name); iter != facet_list.end())
+					return &iter->second;
+				else
+					return nullptr;
+			}
 			[[nodiscard]] const type_base *find_base(std::string_view name) const
 			{
 				if (auto iter = base_list.find(name); iter != base_list.end())
@@ -257,6 +266,8 @@ namespace reflex
 			type_handle remove_extent;
 			std::size_t extent = 0;
 
+			/* Facet vtables. */
+			facet_table facet_list;
 			/* Enumeration constants. */
 			enum_table enum_list;
 			/* Base types. */

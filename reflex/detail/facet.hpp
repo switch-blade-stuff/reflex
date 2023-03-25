@@ -183,8 +183,10 @@ namespace reflex
 		static_assert(((!std::is_final_v<Fs>) && ...), "Grouped facet types can not be final");
 		static_assert(is_unique_v<Fs...>, "Grouped facet types must not repeat");
 
+	public:
 		using vtable_type = std::tuple<const typename Fs::vtable_type *...>;
 
+	private:
 		template<typename F>
 		static constexpr decltype(auto) get_vtable(auto &&vt) noexcept { return std::get<const typename F::vtable_type *>(std::forward<decltype(vt)>(vt)); }
 
@@ -219,4 +221,13 @@ namespace reflex
 		template<typename F>
 		[[nodiscard]] constexpr const typename F::vtable_type *vtable() const noexcept { return get_vtable<F>(vtable()); }
 	};
+
+	/** Customization point used to bind a vtable instance of facet \a Facet with type \a T.
+	 * Instances of `impl_facet` must expose a `value` static constant member of type `Facet::vtable_type`. */
+	template<typename Facet, typename T>
+	struct impl_facet;
+
+	/** Alias for `impl_facet<Facet, T>::value`. */
+	template<typename Facet, typename T>
+	inline constexpr typename Facet::vtable_type impl_facet_v = impl_facet<Facet, T>::value;
 }

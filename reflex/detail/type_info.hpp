@@ -95,9 +95,13 @@ namespace reflex
 		/** Returns a set of the referenced type's parents (including the parents' parents). */
 		[[nodiscard]] REFLEX_PUBLIC auto parents() const -> tpp::dense_set<type_info, detail::str_hash, detail::str_cmp>;
 
+		/** Checks if the referenced type implements a facet type \a T. */
+		template<typename T>
+		[[nodiscard]] bool implements_facet() const noexcept { return has_facet_vtable(type_name_v<typename T::vtable_type>); }
+
 		/** Checks if the referenced type inherits from a base type \a T. */
 		template<typename T>
-		[[nodiscard]] bool inherits_from() const { return inherits_from(type_name_v<T>); }
+		[[nodiscard]] bool inherits_from() const noexcept { return inherits_from(type_name_v<T>); }
 		/** Checks if the referenced type inherits from a base type \a type. */
 		[[nodiscard]] bool inherits_from(type_info type) const noexcept { return inherits_from(type.name()); }
 		/** Checks if the referenced type inherits from a base type with name \a name. */
@@ -105,7 +109,7 @@ namespace reflex
 
 		/** Checks if the referenced type is convertible to type \a T, or inherits from a type convertible to \a T. */
 		template<typename T>
-		[[nodiscard]] bool convertible_to() const { return convertible_to(type_name_v<T>); }
+		[[nodiscard]] bool convertible_to() const noexcept { return convertible_to(type_name_v<T>); }
 		/** Checks if the referenced type is convertible to type \a type, or inherits from a type convertible to \a type. */
 		[[nodiscard]] bool convertible_to(type_info type) const noexcept { return convertible_to(type.name()); }
 		/** Checks if the referenced type is convertible to type with name \a name, or inherits from a type convertible to \a name. */
@@ -113,7 +117,7 @@ namespace reflex
 
 		/** Checks if the referenced type is same as, inherits from, or can be type-casted to type \a T. */
 		template<typename T>
-		[[nodiscard]] bool compatible_with() const { return compatible_with(type_name_v<T>); }
+		[[nodiscard]] bool compatible_with() const noexcept { return compatible_with(type_name_v<T>); }
 		/** Checks if the referenced type is same as, inherits from, or can be type-casted to type \a type. */
 		[[nodiscard]] bool compatible_with(type_info type) const noexcept { return *this == type || inherits_from(type) || convertible_to(type); }
 		/** Checks if the referenced type is same as, inherits from, or can be type-casted to type with name \a name. */
@@ -129,6 +133,7 @@ namespace reflex
 		/* Convenience operator for access to underlying type_data. */
 		[[nodiscard]] constexpr const detail::type_data *operator->() const noexcept { return m_data; }
 
+		[[nodiscard]] REFLEX_PUBLIC bool has_facet_vtable(std::string_view name) const noexcept;
 		inline void fill_parents(tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> &result) const;
 
 		const detail::type_data *m_data = nullptr;

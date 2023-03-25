@@ -16,7 +16,6 @@
 
 namespace reflex
 {
-
 	class bad_facet_function;
 	class bad_argument_list;
 	class bad_any_cast;
@@ -78,6 +77,7 @@ namespace reflex
 			IS_ENUM = 0x40,
 			IS_CLASS = 0x800,
 			IS_POINTER = 0x100,
+
 			IS_SIGNED_INT = 0x200,
 			IS_UNSIGNED_INT = 0x400,
 			IS_ARITHMETIC = 0x800,

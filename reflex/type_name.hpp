@@ -186,4 +186,54 @@ namespace reflex
 		[[nodiscard]] constexpr operator value_type() noexcept { return value; }
 		[[nodiscard]] constexpr value_type operator()() noexcept { return value; }
 	};
+
+	namespace detail
+	{
+		template<typename... Args>
+		[[nodiscard]] constexpr auto function_args_str() noexcept
+		{
+			constexpr auto arg_name = []<typename U>(std::in_place_type_t<U>)
+			{
+				constexpr auto name = type_name_v<U>;
+				return const_string<name.size()>{name};
+			};
+			return basic_const_string{"("} + (arg_name(std::in_place_type<Args>) + ... + basic_const_string{")"});
+		}
+		template<typename R, typename... Args>
+		[[nodiscard]] constexpr auto eval_function_name() noexcept
+		{
+			constexpr auto ret = type_name<R>::value;
+			return const_string<ret.size()>{ret} + function_args_str<Args...>();
+		}
+		template<typename R, typename... Args>
+		[[nodiscard]] constexpr std::string_view function_name() noexcept
+		{
+			return auto_constant<eval_function_name<R, Args...>()>::value;
+		}
+		template<typename R, typename... Args>
+		[[nodiscard]] constexpr std::string_view noexcept_function_name() noexcept
+		{
+			return auto_constant<eval_function_name<R, Args...>() + basic_const_string{" noexcept"}>::value;
+		}
+	}
+
+	template<typename R, typename... Args>
+	struct type_name<R(Args...)>
+	{
+		using value_type = std::string_view;
+		static constexpr value_type value = detail::function_name<R, Args...>();
+
+		[[nodiscard]] constexpr operator value_type() noexcept { return value; }
+		[[nodiscard]] constexpr value_type operator()() noexcept { return value; }
+	};
+
+	template<typename R, typename... Args>
+	struct type_name<R(Args...) noexcept>
+	{
+		using value_type = std::string_view;
+		static constexpr value_type value = detail::noexcept_function_name<R, Args...>();
+
+		[[nodiscard]] constexpr operator value_type() noexcept { return value; }
+		[[nodiscard]] constexpr value_type operator()() noexcept { return value; }
+	};
 }
