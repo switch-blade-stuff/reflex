@@ -31,6 +31,7 @@ namespace reflex
 
 	bool type_info::has_facet_vtable(std::string_view name) const noexcept
 	{
+		if (is_empty()) return false;
 		if (m_data->find_facet(name) != nullptr)
 			return true;
 
@@ -39,6 +40,7 @@ namespace reflex
 	}
 	bool type_info::inherits_from(std::string_view name) const noexcept
 	{
+		if (is_empty()) return false;
 		if (m_data->find_base(name) != nullptr)
 			return true;
 
@@ -47,6 +49,7 @@ namespace reflex
 	}
 	bool type_info::convertible_to(std::string_view name) const noexcept
 	{
+		if (is_empty()) return false;
 		if (m_data->find_conv(name) != nullptr)
 			return true;
 
@@ -55,6 +58,7 @@ namespace reflex
 	}
 	bool type_info::has_property(std::string_view name) const noexcept
 	{
+		if (is_empty()) return false;
 		if (m_data->find_prop(name) != nullptr)
 			return true;
 

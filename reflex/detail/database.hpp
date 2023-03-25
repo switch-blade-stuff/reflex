@@ -113,9 +113,6 @@ namespace reflex
 							result.conv_list.emplace(type_name_v<double>, make_type_conv<T, double>());
 						}
 
-						result.any_copy_init = &any::copy_from<T>;
-						result.any_copy_assign = &any::assign_from<T>;
-
 						/* Add default & copy constructors. */
 						if constexpr (std::is_default_constructible_v<T>)
 							result.default_ctor = &result.ctor_list.emplace_back(make_type_ctor<T>());
@@ -123,6 +120,7 @@ namespace reflex
 							result.copy_ctor = &result.ctor_list.emplace_back(make_type_ctor<T, std::add_const_t<T> &>());
 
 						result.dtor = make_type_dtor<T>();
+						result.any_funcs = make_any_funcs<T>();
 					}
 
 					return result;

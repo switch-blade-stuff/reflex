@@ -92,7 +92,7 @@ namespace reflex
 		constexpr type_flags &operator^=(type_flags &a, std::underlying_type_t<type_flags> b) noexcept { return a = static_cast<type_flags>(a ^ b); }
 
 		struct database_impl;
-
+		struct any_funcs_t;
 		struct type_base;
 		struct arg_data;
 		struct type_ctor;
@@ -104,6 +104,8 @@ namespace reflex
 		using base_cast = const void *(*)(const void *) noexcept;
 		using type_handle = type_data *(*)(database_impl &);
 
+		template<typename T>
+		[[nodiscard]] inline static any_funcs_t make_any_funcs() noexcept;
 		template<typename T>
 		[[nodiscard]] inline static type_data *make_type_data(database_impl &);
 	}

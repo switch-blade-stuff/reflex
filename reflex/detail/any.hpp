@@ -65,7 +65,7 @@ namespace reflex
 	{
 		friend class type_info;
 		template<typename>
-		friend detail::type_data *detail::make_type_data(detail::database_impl &);
+		friend detail::any_funcs_t detail::make_any_funcs() noexcept;
 
 		struct storage_t
 		{
@@ -392,11 +392,22 @@ namespace reflex
 				return static_cast<std::add_const_t<T> *>(data());
 		}
 
+		/** If the managed object of `this` is equal to the managed object of \a other, or if `this` and \a other are empty,
+		 * returns `true`. Otherwise returns `false`. */
 		[[nodiscard]] REFLEX_PUBLIC bool operator==(const any &other) const;
+		/** If the managed object of `this` is not equal to the managed object of \a other, returns `true`. Otherwise returns `false`.  */
 		[[nodiscard]] REFLEX_PUBLIC bool operator!=(const any &other) const;
+		/** If the managed object of `this` is greater than or equal to the managed object of \a other, or if `this` is not empty while
+		 * \a other is empty, or if both `this` and \a other are empty, returns `true`. Otherwise returns `false`.  */
 		[[nodiscard]] REFLEX_PUBLIC bool operator>=(const any &other) const;
+		/** If the managed object of `this` is less than or equal to the managed object of \a other, or if \a other is not empty while
+		 * `this` is empty, or if both `this` and \a other are empty, returns `true`. Otherwise returns `false`.  */
 		[[nodiscard]] REFLEX_PUBLIC bool operator<=(const any &other) const;
+		/** If the managed object of `this` is greater than the managed object of \a other, or if `this` is not empty while
+		 * \a other is empty, returns `true`. Otherwise returns `false`.  */
 		[[nodiscard]] REFLEX_PUBLIC bool operator>(const any &other) const;
+		/** If the managed object of `this` is less than the managed object of \a other, or if \a other is not empty while
+		 * `this` is empty, returns `true`. Otherwise returns `false`.  */
 		[[nodiscard]] REFLEX_PUBLIC bool operator<(const any &other) const;
 
 	private:
@@ -464,10 +475,8 @@ namespace reflex
 				*tgt = *detail::void_cast<T>(data);
 		}
 
-		[[nodiscard]] void *base_cast(type_info type) { return const_cast<void *>(std::as_const(*this).base_cast(type)); }
-
-		[[nodiscard]] REFLEX_PUBLIC const void *base_cast(type_info type) const;
-		[[nodiscard]] REFLEX_PUBLIC any value_conv(type_info type) const;
+		[[nodiscard]] REFLEX_PUBLIC void *base_cast(std::string_view) const;
+		[[nodiscard]] REFLEX_PUBLIC any value_conv(std::string_view) const;
 
 		type_info m_type = {};
 		storage_t m_storage;

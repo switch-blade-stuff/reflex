@@ -227,9 +227,64 @@ namespace reflex
 			return {getter, setter};
 		}
 
+		struct any_funcs_t
+		{
+			void (any::*copy_init)(type_info, const void *, void *) = nullptr;
+			void (any::*copy_assign)(type_info, const void *, void *) = nullptr;
+
+			bool (*cmp_eq)(const any &, const any &) = nullptr;
+			bool (*cmp_ne)(const any &, const any &) = nullptr;
+			bool (*cmp_ge)(const any &, const any &) = nullptr;
+			bool (*cmp_le)(const any &, const any &) = nullptr;
+			bool (*cmp_gt)(const any &, const any &) = nullptr;
+			bool (*cmp_lt)(const any &, const any &) = nullptr;
+		};
+
+		template<typename T>
+		[[nodiscard]] inline static any_funcs_t make_any_funcs() noexcept
+		{
+			any_funcs_t result;
+
+			result.copy_init = &any::copy_from<T>;
+			result.copy_assign = &any::assign_from<T>;
+
+			if constexpr (requires(const T &a, const T &b){ a == b; })
+				result.cmp_eq = +[](const any &a, const any &b)
+				{
+					return *a.get<T>() == *b.as<T>();
+				};
+			if constexpr (requires(const T &a, const T &b){ a != b; })
+				result.cmp_ne = +[](const any &a, const any &b)
+				{
+					return *a.get<T>() != *b.as<T>();
+				};
+			if constexpr (requires(const T &a, const T &b){ a >= b; })
+				result.cmp_ge = +[](const any &a, const any &b)
+				{
+					return *a.get<T>() >= *b.as<T>();
+				};
+			if constexpr (requires(const T &a, const T &b){ a <= b; })
+				result.cmp_le = +[](const any &a, const any &b)
+				{
+					return *a.get<T>() <= *b.as<T>();
+				};
+			if constexpr (requires(const T &a, const T &b){ a > b; })
+				result.cmp_gt = +[](const any &a, const any &b)
+				{
+					return *a.get<T>() > *b.as<T>();
+				};
+			if constexpr (requires(const T &a, const T &b){ a < b; })
+				result.cmp_lt = +[](const any &a, const any &b)
+				{
+					return *a.get<T>() < *b.as<T>();
+				};
+
+			return result;
+		}
+
 		struct type_data
 		{
-			[[nodiscard]] const const void *find_facet(std::string_view name) const
+			[[nodiscard]] const void *find_facet(std::string_view name) const
 			{
 				if (auto iter = facet_list.find(name); iter != facet_list.end())
 					return &iter->second;
@@ -275,10 +330,6 @@ namespace reflex
 			/* Type conversions. */
 			conv_table conv_list;
 
-			/* `any` copy-initialization factories. */
-			void (any::*any_copy_init)(type_info, const void *, void *) = nullptr;
-			void (any::*any_copy_assign)(type_info, const void *, void *) = nullptr;
-
 			/* Constructors & destructors. */
 			std::list<type_ctor> ctor_list;
 			type_ctor *default_ctor = nullptr;
@@ -287,6 +338,9 @@ namespace reflex
 
 			/* Instance properties. */
 			prop_table prop_list;
+
+			/* `any` functions. */
+			any_funcs_t any_funcs;
 		};
 	}
 
@@ -315,16 +369,16 @@ namespace reflex
 	void any::copy_init(type_info type, T *ptr)
 	{
 		if constexpr (std::is_const_v<T>)
-			(this->*(m_type->any_copy_init))(type, ptr, nullptr);
+			(this->*(m_type->any_funcs.copy_init))(type, ptr, nullptr);
 		else
-			(this->*(m_type->any_copy_init))(type, nullptr, ptr);
+			(this->*(m_type->any_funcs.copy_init))(type, nullptr, ptr);
 	}
 	template<typename T>
 	void any::copy_assign(type_info type, T *ptr)
 	{
 		if constexpr (std::is_const_v<T>)
-			(this->*(m_type->any_copy_assign))(type, ptr, nullptr);
+			(this->*(m_type->any_funcs.copy_assign))(type, ptr, nullptr);
 		else
-			(this->*(m_type->any_copy_assign))(type, nullptr, ptr);
+			(this->*(m_type->any_funcs.copy_assign))(type, nullptr, ptr);
 	}
 }
