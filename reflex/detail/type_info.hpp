@@ -115,12 +115,12 @@ namespace reflex
 		/** Checks if the referenced type is convertible to type with name \a name, or inherits from a type convertible to \a name. */
 		[[nodiscard]] REFLEX_PUBLIC bool convertible_to(std::string_view name) const noexcept;
 
-		/** Checks if the referenced type is same as, inherits from, or can be type-casted to type \a T. */
+		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type \a T. */
 		template<typename T>
 		[[nodiscard]] bool compatible_with() const noexcept { return compatible_with(type_name_v<T>); }
-		/** Checks if the referenced type is same as, inherits from, or can be type-casted to type \a type. */
+		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type \a type. */
 		[[nodiscard]] bool compatible_with(type_info type) const noexcept { return *this == type || inherits_from(type) || convertible_to(type); }
-		/** Checks if the referenced type is same as, inherits from, or can be type-casted to type with name \a name. */
+		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type with name \a name. */
 		[[nodiscard]] bool compatible_with(std::string_view name) const noexcept { return this->name() == name || inherits_from(name) || convertible_to(name); }
 
 		/** Checks if the referenced type has a property with name \a name. */

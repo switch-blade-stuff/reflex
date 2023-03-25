@@ -48,7 +48,7 @@ namespace reflex
 	 * object pointed to by \a ptr is a child of or same as \a To, equivalent to `static_cast<To *>(static_cast<[const] object *>(ptr))`.
 	 * Otherwise, returns `nullptr`.
 	 *
-	 * @return Pointer \a ptr, dynamically casted to \a From, or `nullptr` if \a From cannot be casted to \a To. */
+	 * @return Pointer \a ptr, dynamically cast to \a From, or `nullptr` if \a From cannot be cast to \a To. */
 	template<typename To, typename From>
 	[[nodiscard]] To *object_cast(From *ptr)
 	{

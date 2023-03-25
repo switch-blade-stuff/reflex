@@ -28,7 +28,7 @@ namespace reflex
 		[[nodiscard]] inline static bad_argument_list make_ctor_error();
 	}
 
-	/** Exception type thrown when the managed object of `any` cannot be casted to the desired type. */
+	/** Exception type thrown when the managed object of `any` cannot be cast to the desired type. */
 	class REFLEX_PUBLIC bad_any_cast : public std::runtime_error
 	{
 		[[nodiscard]] static std::string make_msg(type_info from_type, type_info to_type)
@@ -301,7 +301,7 @@ namespace reflex
 		 * if the managed object is convertible to `T`, equivalent to `static_cast<T>(obj)`, where `obj` is the object
 		 * managed by `this`.
 		 *
-		 * @return `any` containing the type-casted reference or value.
+		 * @return `any` containing the type-cast reference or value.
 		 * @throw bad_any_cast If the managed object cannot be represented via `T &` and no conversions to `T` are available. */
 		template<typename T>
 		[[nodiscard]] any cast() { return cast(type_info::get<T>()); }
@@ -313,7 +313,7 @@ namespace reflex
 		 * if the managed object is convertible to `T`, equivalent to `static_cast<T>(obj)`, where `obj` is the object
 		 * managed by `this`, and `T` is the underlying type of \a type with same qualifiers as `obj`.
 		 *
-		 * @return `any` containing the type-casted reference or value.
+		 * @return `any` containing the type-cast reference or value.
 		 * @throw bad_any_cast If the managed object cannot be represented via `T &` and no conversions to `T` are available. */
 		[[nodiscard]] any cast(type_info type)
 		{
@@ -336,7 +336,7 @@ namespace reflex
 		 * if the managed object is convertible to `T`, equivalent to `static_cast<T>(obj)`, where `obj` is the object
 		 * managed by `this`.
 		 *
-		 * @return `any` containing the type-casted reference or value, or an empty `any` if the
+		 * @return `any` containing the type-cast reference or value, or an empty `any` if the
 		 * managed object cannot be represented via `T &` and no conversions to `T` are available. */
 		template<typename T>
 		[[nodiscard]] any try_cast() { return try_cast(type_info::get<T>()); }
@@ -348,7 +348,7 @@ namespace reflex
 		 * if the managed object is convertible to `T`, equivalent to `static_cast<T>(obj)`, where `obj` is the object
 		 * managed by `this`, and `T` is the underlying type of \a type with same qualifiers as `obj`.
 		 *
-		 * @return `any` containing the type-casted reference or value, or an empty `any` if the
+		 * @return `any` containing the type-cast reference or value, or an empty `any` if the
 		 * managed object cannot be represented via `T &` and no conversions to `T` are available. */
 		[[nodiscard]] REFLEX_PUBLIC any try_cast(type_info type);
 		/** @copydoc try_cast */
@@ -375,7 +375,7 @@ namespace reflex
 				return nullptr;
 		}
 
-		/** Returns pointer to the managed object, casted to `T *` or `nullptr` if the managed object is of a different const-ness or not representable with `T *`. */
+		/** Returns pointer to the managed object, cast to `T *` or `nullptr` if the managed object is of a different const-ness or not representable with `T *`. */
 		template<typename T>
 		[[nodiscard]] T *as()
 		{
@@ -386,7 +386,7 @@ namespace reflex
 			else
 				return static_cast<T *>(data());
 		}
-		/** Returns const pointer to the managed object, casted to `T *` or `nullptr` if the managed object is of a different const-ness or not representable with `T *`. */
+		/** Returns const pointer to the managed object, cast to `T *` or `nullptr` if the managed object is of a different const-ness or not representable with `T *`. */
 		template<typename T>
 		[[nodiscard]] std::add_const_t<T> *as() const
 		{
