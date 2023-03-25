@@ -36,6 +36,24 @@ namespace reflex
 		[[nodiscard]] any get(std::size_t n) { return base_t::vtable()->get(instance(), n); }
 		/** @copydoc get */
 		[[nodiscard]] any get(std::size_t n) const { return base_t::vtable()->get_const(instance(), n); }
+
+		/** Checks if the tuple has size of 2. */
+		[[nodiscard]] bool is_pair() const noexcept { return size() == 2; }
+
+		/** Returns type of the first element of the tuple. */
+		[[nodiscard]] type_info first_type() const { return tuple_element(0); }
+		/** Returns type of the second element of the tuple. */
+		[[nodiscard]] type_info second_type() const { return tuple_element(1); }
+
+		/** Returns the first element of the tuple. */
+		[[nodiscard]] any first() { return get(0); }
+		/** @copydoc first */
+		[[nodiscard]] any first() const { return get(0); }
+
+		/** Returns the second element of the tuple. */
+		[[nodiscard]] any second() { return get(1); }
+		/** @copydoc second */
+		[[nodiscard]] any second() const { return get(1); }
 	};
 
 	template<typename T>
