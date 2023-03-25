@@ -103,7 +103,7 @@ namespace reflex
 		template<typename T>
 		[[nodiscard]] bool inherits_from() const noexcept { return inherits_from(type_name_v<T>); }
 		/** Checks if the referenced type inherits from a base type \a type. */
-		[[nodiscard]] bool inherits_from(type_info type) const noexcept { return !type.is_empty() && inherits_from(type.name()); }
+		[[nodiscard]] bool inherits_from(type_info type) const noexcept { return type.valid() && inherits_from(type.name()); }
 		/** Checks if the referenced type inherits from a base type with name \a name. */
 		[[nodiscard]] REFLEX_PUBLIC bool inherits_from(std::string_view name) const noexcept;
 
@@ -111,7 +111,7 @@ namespace reflex
 		template<typename T>
 		[[nodiscard]] bool convertible_to() const noexcept { return convertible_to(type_name_v<T>); }
 		/** Checks if the referenced type is convertible to type \a type, or inherits from a type convertible to \a type. */
-		[[nodiscard]] bool convertible_to(type_info type) const noexcept { return !type.is_empty() && convertible_to(type.name()); }
+		[[nodiscard]] bool convertible_to(type_info type) const noexcept { return type.valid() && convertible_to(type.name()); }
 		/** Checks if the referenced type is convertible to type with name \a name, or inherits from a type convertible to \a name. */
 		[[nodiscard]] REFLEX_PUBLIC bool convertible_to(std::string_view name) const noexcept;
 

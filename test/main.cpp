@@ -53,5 +53,10 @@ int main()
 	auto dst = src.try_cast<double>();
 	err += dst.empty() || *dst.get<double>() != 1;
 
+	err += (src == dst) != !(src != dst);
+	err += !(src >= reflex::any{});
+	err += !(src > reflex::any{});
+	err += src == reflex::any{};
+
 	return err;
 }

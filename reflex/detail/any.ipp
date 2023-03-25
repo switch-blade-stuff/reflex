@@ -107,7 +107,7 @@ namespace reflex
 		if (other.type().compatible_with(type()) && m_type->any_funcs.cmp_ge)
 			return m_type->any_funcs.cmp_ge(*this, other);
 		else
-			return empty() >= other.empty();
+			return empty() <= other.empty();
 	}
 	bool any::operator<=(const any &other) const
 	{
