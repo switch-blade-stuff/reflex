@@ -71,6 +71,7 @@ int main()
 	const auto obj = test_object{};
 	err += !(reflex::type_of(obj) == reflex::type_info::get<test_object>());
 	err += !(reflex::type_of(obj).inherits_from<reflex::object>());
+	err += !reflex::type_info::get<reflex::object>().is_abstract();
 
 	return err;
 }

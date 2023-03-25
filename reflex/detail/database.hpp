@@ -88,6 +88,7 @@ namespace reflex
 						if constexpr (std::is_enum_v<T>) result.flags |= type_flags::IS_ENUM;
 						if constexpr (std::is_class_v<T>) result.flags |= type_flags::IS_CLASS;
 						if constexpr (std::is_pointer_v<T>) result.flags |= type_flags::IS_POINTER;
+						if constexpr (std::is_abstract_v<T>) result.flags |= type_flags::IS_ABSTRACT;
 
 						result.remove_pointer = make_type_data<std::remove_pointer_t<T>>;
 						result.remove_extent = make_type_data<std::remove_extent_t<T>>;

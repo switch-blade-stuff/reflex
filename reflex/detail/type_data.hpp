@@ -284,30 +284,30 @@ namespace reflex
 
 		struct type_data
 		{
-			[[nodiscard]] const void *find_facet(std::string_view name) const
+			[[nodiscard]] const void *find_facet(std::string_view type) const
 			{
-				if (auto iter = facet_list.find(name); iter != facet_list.end())
+				if (auto iter = facet_list.find(type); iter != facet_list.end())
 					return &iter->second;
 				else
 					return nullptr;
 			}
-			[[nodiscard]] const type_base *find_base(std::string_view name) const
+			[[nodiscard]] const type_base *find_base(std::string_view type) const
 			{
-				if (auto iter = base_list.find(name); iter != base_list.end())
+				if (auto iter = base_list.find(type); iter != base_list.end())
 					return &iter->second;
 				else
 					return nullptr;
 			}
-			[[nodiscard]] const type_conv *find_conv(std::string_view name) const
+			[[nodiscard]] const type_conv *find_conv(std::string_view type) const
 			{
-				if (auto iter = conv_list.find(name); iter != conv_list.end())
+				if (auto iter = conv_list.find(type); iter != conv_list.end())
 					return &iter->second;
 				else
 					return nullptr;
 			}
-			[[nodiscard]] const type_prop *find_prop(std::string_view name) const
+			[[nodiscard]] const type_prop *find_prop(std::string_view type) const
 			{
-				if (auto iter = prop_list.find(name); iter != prop_list.end())
+				if (auto iter = prop_list.find(type); iter != prop_list.end())
 					return &iter->second;
 				else
 					return nullptr;
@@ -355,6 +355,7 @@ namespace reflex
 	constexpr bool type_info::is_array() const noexcept { return extent() > 0; }
 	constexpr bool type_info::is_enum() const noexcept { return m_data->flags & detail::IS_ENUM; }
 	constexpr bool type_info::is_class() const noexcept { return m_data->flags & detail::IS_CLASS; }
+	constexpr bool type_info::is_abstract() const noexcept { return m_data->flags & detail::IS_ABSTRACT; }
 
 	constexpr bool type_info::is_pointer() const noexcept { return m_data->flags & detail::IS_POINTER; }
 	constexpr bool type_info::is_integral() const noexcept { return m_data->flags & (detail::IS_SIGNED_INT | detail::IS_UNSIGNED_INT); }
