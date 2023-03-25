@@ -66,6 +66,18 @@ namespace reflex
 		}
 		return nullptr;
 	}
+
+#ifdef REFLEX_HEADER_ONLY
+	object::~object() = default;
+
+	object *detail::checked_object_cast(object *ptr, type_info from, type_info to) noexcept
+	{
+		if (from == to || from.inherits_from(to))
+			return ptr;
+		else
+			return nullptr;
+	}
+#endif
 }
 
 /** Convenience macro used to implement required `reflex::object` functions for type \a T. */
