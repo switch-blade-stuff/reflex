@@ -69,8 +69,16 @@ int main()
 	err += !src.type().convertible_to<std::intptr_t>();
 	err += !src.type().convertible_to<std::uintptr_t>();
 
+	err += !(reflex::type_of(src) == reflex::type_info::get<int>());
+	err += !(reflex::type_of(src) == reflex::type_of(int{}));
+	err += !(reflex::type_of(src) == src.type());
+
 	auto dst = src.try_cast<double>();
 	err += dst.empty() || *dst.get<double>() != 1;
+
+	err += !(reflex::type_of(dst) == reflex::type_info::get<double>());
+	err += !(reflex::type_of(dst) == reflex::type_of(double{}));
+	err += !(reflex::type_of(dst) == dst.type());;
 
 	err += (src == dst) != !(src != dst);
 	err += !(src >= reflex::any{});
