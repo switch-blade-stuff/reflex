@@ -80,7 +80,7 @@ int main()
 	err += !(reflex::type_of(d0) == reflex::type_of(double{}));
 	err += !(reflex::type_of(d0) == d0.type());;
 
-	err += (i0 == d0) != !(i0 != d0);
+	err += i0.cast<std::intmax_t>() != d0.cast<std::intmax_t>();
 	err += !(i0 >= reflex::any{});
 	err += !(i0 > reflex::any{});
 	err += i0 == reflex::any{};

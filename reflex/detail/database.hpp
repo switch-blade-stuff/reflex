@@ -39,7 +39,7 @@ namespace reflex
 
 		struct database_impl : shared_spinlock
 		{
-			using data_factory = type_data (*)() noexcept;
+			using data_factory = type_data (*)();
 
 			static database_impl *local_ptr() noexcept
 			{
@@ -70,12 +70,10 @@ namespace reflex
 		template<typename T>
 		[[nodiscard]] inline static type_data *make_type_data(database_impl &db)
 		{
-			/* Cache type_data instance to avoid needless lookups. `database_impl::reflect` does its own synchronization,
-			 * so it is fine to not initialize the pointer directly. */
 			constinit static type_data *data = nullptr;
 			if (data == nullptr) [[unlikely]]
 			{
-				data = db.reflect(type_name<T>::value, +[]() noexcept -> type_data
+				data = db.reflect(type_name<T>::value, +[]() -> type_data
 				{
 					auto result = type_data{type_name_v<T>};
 					if constexpr (std::same_as<T, void>)

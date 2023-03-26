@@ -90,42 +90,42 @@ namespace reflex
 
 	bool any::operator==(const any &other) const
 	{
-		if (other.type().compatible_with(type()) && m_type->any_funcs.cmp_eq)
+		if ((type() == other.type() || other.type().inherits_from(type())) && m_type->any_funcs.cmp_eq)
 			return m_type->any_funcs.cmp_eq(*this, other);
 		else
 			return empty() == other.empty();
 	}
 	bool any::operator!=(const any &other) const
 	{
-		if (other.type().compatible_with(type()) && m_type->any_funcs.cmp_ne)
+		if ((type() == other.type() || other.type().inherits_from(type())) && m_type->any_funcs.cmp_ne)
 			return m_type->any_funcs.cmp_ne(*this, other);
 		else
 			return empty() != other.empty();
 	}
 	bool any::operator>=(const any &other) const
 	{
-		if (other.type().compatible_with(type()) && m_type->any_funcs.cmp_ge)
+		if ((type() == other.type() || other.type().inherits_from(type())) && m_type->any_funcs.cmp_ge)
 			return m_type->any_funcs.cmp_ge(*this, other);
 		else
 			return empty() <= other.empty();
 	}
 	bool any::operator<=(const any &other) const
 	{
-		if (other.type().compatible_with(type()) && m_type->any_funcs.cmp_le)
+		if ((type() == other.type() || other.type().inherits_from(type())) && m_type->any_funcs.cmp_le)
 			return m_type->any_funcs.cmp_le(*this, other);
 		else
 			return empty() >= other.empty();
 	}
 	bool any::operator>(const any &other) const
 	{
-		if (other.type().compatible_with(type()) && m_type->any_funcs.cmp_gt)
+		if ((type() == other.type() || other.type().inherits_from(type())) && m_type->any_funcs.cmp_gt)
 			return m_type->any_funcs.cmp_gt(*this, other);
 		else
 			return !empty() && other.empty();
 	}
 	bool any::operator<(const any &other) const
 	{
-		if (other.type().compatible_with(type()) && m_type->any_funcs.cmp_lt)
+		if ((type() == other.type() || other.type().inherits_from(type())) && m_type->any_funcs.cmp_lt)
 			return m_type->any_funcs.cmp_lt(*this, other);
 		else
 			return empty() && !other.empty();
