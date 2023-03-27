@@ -13,7 +13,7 @@ namespace reflex
 		if (empty() || !type.valid()) return {};
 
 		/* If `type` is the same as or is a base of `this`, return reference to `this`. */
-		if (type == m_type) return ref();
+		if (type == this->type()) return ref();
 		/* If `this` is convertible to `type`, convert `this` to `type`. */
 		if (const auto *base_ptr = base_cast(type.name()); base_ptr != nullptr)
 		{
@@ -31,7 +31,7 @@ namespace reflex
 		if (empty() || !type.valid()) return {};
 
 		/* If `type` is the same as or is a base of `this`, return reference to `this`. */
-		if (type == m_type) return ref();
+		if (type == this->type()) return ref();
 		/* If `this` is convertible to `type`, convert `this` to `type`. */
 		if (const auto *base_ptr = base_cast(type.name()); base_ptr != nullptr)
 			return any{type, base_ptr};
@@ -41,15 +41,17 @@ namespace reflex
 
 	void *any::base_cast(std::string_view base_name) const
 	{
+		const auto *data = type_data();
+
 		/* If `type` is an immediate base of `this`, attempt to cast through that. */
-		if (const auto *base = m_type->find_base(base_name); base != nullptr)
+		if (const auto *base = data->find_base(base_name); base != nullptr)
 			return const_cast<void *>(base->cast_func(cdata()));
 
 		/* Otherwise, recursively cast through a base type. */
-		for (auto [_, base]: m_type->base_list)
+		for (auto [_, base]: data->base_list)
 		{
 			const auto *base_ptr = base.cast_func(cdata());
-			const auto base_type = type_info{base.type, *m_type.m_db};
+			const auto base_type = type_info{base.type, *database()};
 			auto candidate = any{base_type, base_ptr}.base_cast(base_name);
 			if (candidate != nullptr) return candidate;
 		}
@@ -57,15 +59,17 @@ namespace reflex
 	}
 	any any::value_conv(std::string_view base_name) const
 	{
+		const auto *data = type_data();
+
 		/* If `this` is directly convertible to `name`, use the existing conversion. */
-		if (const auto *conv = m_type->find_conv(base_name); conv != nullptr)
+		if (const auto *conv = data->find_conv(base_name); conv != nullptr)
 			return conv->conv_func(cdata());
 
 		/* Otherwise, recursively convert through a base type. */
-		for (auto [_, base]: m_type->base_list)
+		for (auto [_, base]: data->base_list)
 		{
 			const auto *base_ptr = base.cast_func(cdata());
-			const auto base_type = type_info{base.type, *m_type.m_db};
+			const auto base_type = type_info{base.type, *database()};
 			auto candidate = any{base_type, base_ptr}.value_conv(base_name);
 			if (!candidate.empty()) return candidate;
 		}
@@ -78,50 +82,56 @@ namespace reflex
 		if (empty() || is_ref()) return;
 
 		if (!(flags() & detail::IS_VALUE))
-			external().deleter(external().data);
+			(*deleter())(external());
 		else
-			m_type->dtor(local());
+			type_data()->dtor(local());
 	}
 
 	bool any::operator==(const any &other) const
 	{
-		if (other.type().compatible_with(type()) && m_type->any_funcs.cmp_eq)
-			return m_type->any_funcs.cmp_eq(*this, other);
+		const auto *data = type_data();
+		if (other.type().compatible_with(type()) && data->any_funcs.cmp_eq)
+			return data->any_funcs.cmp_eq(*this, other);
 		else
 			return empty() == other.empty();
 	}
 	bool any::operator!=(const any &other) const
 	{
-		if (other.type().compatible_with(type()) && m_type->any_funcs.cmp_ne)
-			return m_type->any_funcs.cmp_ne(*this, other);
+		const auto *data = type_data();
+		if (other.type().compatible_with(type()) && data->any_funcs.cmp_ne)
+			return data->any_funcs.cmp_ne(*this, other);
 		else
 			return empty() != other.empty();
 	}
 	bool any::operator>=(const any &other) const
 	{
-		if (other.type().compatible_with(type()) && m_type->any_funcs.cmp_ge)
-			return m_type->any_funcs.cmp_ge(*this, other);
+		const auto *data = type_data();
+		if (other.type().compatible_with(type()) && data->any_funcs.cmp_ge)
+			return data->any_funcs.cmp_ge(*this, other);
 		else
 			return empty() <= other.empty();
 	}
 	bool any::operator<=(const any &other) const
 	{
-		if (other.type().compatible_with(type()) && m_type->any_funcs.cmp_le)
-			return m_type->any_funcs.cmp_le(*this, other);
+		const auto *data = type_data();
+		if (other.type().compatible_with(type()) && data->any_funcs.cmp_le)
+			return data->any_funcs.cmp_le(*this, other);
 		else
 			return empty() >= other.empty();
 	}
 	bool any::operator>(const any &other) const
 	{
-		if (other.type().compatible_with(type()) && m_type->any_funcs.cmp_gt)
-			return m_type->any_funcs.cmp_gt(*this, other);
+		const auto *data = type_data();
+		if (other.type().compatible_with(type()) && data->any_funcs.cmp_gt)
+			return data->any_funcs.cmp_gt(*this, other);
 		else
 			return !empty() && other.empty();
 	}
 	bool any::operator<(const any &other) const
 	{
-		if (other.type().compatible_with(type()) && m_type->any_funcs.cmp_lt)
-			return m_type->any_funcs.cmp_lt(*this, other);
+		const auto *data = type_data();
+		if (other.type().compatible_with(type()) && data->any_funcs.cmp_lt)
+			return data->any_funcs.cmp_lt(*this, other);
 		else
 			return empty() && !other.empty();
 	}

@@ -90,7 +90,7 @@ namespace reflex
 		[[nodiscard]] constexpr static arg_data make_arg_data() noexcept
 		{
 			type_flags flags = {};
-			if constexpr (std::is_const_v<T>) flags |= IS_CONST;
+			if constexpr (std::is_const_v<std::remove_reference_t<T>>) flags |= IS_CONST;
 			if constexpr (!std::is_reference_v<T>) flags |= IS_VALUE;
 			return {type_name_v<std::decay_t<T>>, flags};
 		}
@@ -335,6 +335,8 @@ namespace reflex
 			/* `any` functions. */
 			any_funcs_t any_funcs;
 		};
+
+		static_assert(alignof(detail::type_data) > static_cast<std::size_t>(detail::ANY_FAGS_MAX));
 	}
 
 	constexpr std::string_view type_info::name() const noexcept { return valid() ? m_data->name : std::string_view{}; }
@@ -367,16 +369,16 @@ namespace reflex
 	void any::copy_init(type_info type, T *ptr)
 	{
 		if constexpr (std::is_const_v<T>)
-			(this->*(m_type->any_funcs.copy_init))(type, ptr, nullptr);
+			(this->*(type_data()->any_funcs.copy_init))(type, ptr, nullptr);
 		else
-			(this->*(m_type->any_funcs.copy_init))(type, nullptr, ptr);
+			(this->*(type_data()->any_funcs.copy_init))(type, nullptr, ptr);
 	}
 	template<typename T>
 	void any::copy_assign(type_info type, T *ptr)
 	{
 		if constexpr (std::is_const_v<T>)
-			(this->*(m_type->any_funcs.copy_assign))(type, ptr, nullptr);
+			(this->*(type_data()->any_funcs.copy_assign))(type, ptr, nullptr);
 		else
-			(this->*(m_type->any_funcs.copy_assign))(type, nullptr, ptr);
+			(this->*(type_data()->any_funcs.copy_assign))(type, nullptr, ptr);
 	}
 }

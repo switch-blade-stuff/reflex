@@ -71,32 +71,38 @@ namespace reflex
 		template<typename>
 		friend detail::any_funcs_t detail::make_any_funcs() noexcept;
 
-		struct alignas(std::max(alignof(std::uintptr_t), alignof(std::uintmax_t))) storage_t
+		struct alignas(alignof(std::uintptr_t)) storage_t
 		{
 			template<typename T, std::ptrdiff_t Off>
 			[[nodiscard]] T *get() noexcept
 			{
 				if constexpr (Off < 0)
-					return reinterpret_cast<T *>(bytes + Off + sizeof(bytes));
+				{
+					static_assert(sizeof(T) + sizeof(bytes) + Off <= sizeof(storage_t));
+					return reinterpret_cast<T *>(bytes + sizeof(bytes) + Off);
+				}
 				else
+				{
+					static_assert(sizeof(T) + Off <= sizeof(storage_t));
 					return reinterpret_cast<T *>(bytes + Off);
+				}
 			}
 			template<typename T, std::ptrdiff_t Off>
 			[[nodiscard]] const T *get() const noexcept
 			{
 				if constexpr (Off < 0)
-					return reinterpret_cast<const T *>(bytes + Off + sizeof(bytes));
+				{
+					static_assert(sizeof(T) + sizeof(bytes) + Off <= sizeof(storage_t));
+					return reinterpret_cast<const T *>(bytes + sizeof(bytes) + Off);
+				}
 				else
+				{
+					static_assert(sizeof(T) + Off <= sizeof(storage_t));
 					return reinterpret_cast<const T *>(bytes + Off);
+				}
 			}
 
-			std::byte bytes[std::max(sizeof(std::uintptr_t), sizeof(std::uintmax_t)) * 3] = {};
-		};
-
-		struct ptr_storage
-		{
-			void (*deleter)(void *) = nullptr;
-			void *data = nullptr;
+			std::byte bytes[sizeof(std::uintptr_t) * 4] = {};
 		};
 
 		template<typename T, typename U = std::decay_t<T>>
@@ -112,7 +118,6 @@ namespace reflex
 		constexpr any(any &&) noexcept = default;
 		constexpr any &operator=(any &&other) noexcept
 		{
-			std::swap(m_type, other.m_type);
 			std::swap(m_storage, other.m_storage);
 			return *this;
 		}
@@ -132,15 +137,12 @@ namespace reflex
 		any(T &ref) requires (!std::same_as<std::decay_t<T>, any>) : any(type_of(ref), ref) {}
 		/** Initializes `any` to manage a reference to \a ref using type info \a type. */
 		template<typename T>
-		any(type_info type, T &ref) requires (!std::same_as<std::decay_t<T>, any>) : m_type(type)
+		any(type_info type, T &ref) requires (!std::same_as<std::decay_t<T>, any>)
 		{
-			if constexpr (!std::is_const_v<T>)
-				external().data = std::addressof(ref);
-			else
-			{
-				external().data = const_cast<std::remove_const_t<T> *>(std::addressof(ref));
-				flags() = detail::IS_CONST;
-			}
+			this->type(type);
+			if constexpr (std::is_const_v<T>)
+				flags(detail::IS_CONST);
+			external(std::addressof(ref));
 		}
 
 		/** Initializes `any` to manage an instance of \a T move-constructed from \a value. */
@@ -164,34 +166,29 @@ namespace reflex
 		/** Initializes `any` to take ownership of \a ptr with deleter \a Del using type info \a type.
 		 * @note Deleter must be an empty functor, a `void(void *)` or a `void(const void *)` function pointer. */
 		template<typename T, typename Del = std::default_delete<T>>
-		any(type_info type, std::in_place_t, T *ptr, Del &&del = Del{}) requires(valid_deleter<Del>) : m_type(type)
+		any(type_info type, std::in_place_t, T *ptr, Del &&del = Del{}) requires valid_deleter<Del>
 		{
-			flags() = detail::IS_OWNED;
-
+			this->type(type);
+			flags(detail::IS_OWNED | (std::is_const_v<T> ? detail::IS_CONST : detail::type_flags{}));
 			if constexpr (!(std::is_function_v<Del> && std::is_invocable_v<Del, void *>))
-				external().deleter = +[](void *ptr) { Del{}(detail::void_cast<T>(ptr)); };
+				deleter(+[](void *ptr) { Del{}(detail::void_cast<T>(ptr)); });
 			else
-				external().deleter = del;
-
-			if constexpr (!std::is_const_v<T>)
-				external().data = static_cast<void *>(ptr);
-			else
-			{
-				external().data = const_cast<void *>(static_cast<const void *>(ptr));
-				flags() |= detail::IS_CONST;
-			}
+				deleter(del);
+			external(ptr);
 		}
 
 		/** Initializes `any` to manage a reference to object of type \a type located at \a ptr. */
-		any(type_info type, void *ptr) noexcept : m_type(type)
+		any(type_info type, void *ptr) noexcept
 		{
-			external().data = ptr;
+			this->type(type);
+			external(ptr);
 		}
 		/** @copydoc any */
-		any(type_info type, const void *ptr) noexcept : m_type(type)
+		any(type_info type, const void *ptr) noexcept
 		{
-			flags() = detail::IS_CONST;
-			external().data = const_cast<void *>(ptr);
+			this->type(type);
+			flags(detail::IS_CONST);
+			external(ptr);
 		}
 
 		/** Initializes `any` to manage an object of type \a type copy-constructed from value at \a ptr. */
@@ -200,18 +197,20 @@ namespace reflex
 		any(type_info type, std::in_place_t, const void *ptr) { copy_init(type, ptr); }
 
 		/** Initializes `any` to take ownership of \a ptr with deleter \a del using type info \a type. */
-		any(type_info type, std::in_place_t, void *ptr, void (*del)(void *)) noexcept : m_type(type)
+		any(type_info type, std::in_place_t, void *ptr, void (*del)(void *)) noexcept
 		{
-			flags() = detail::IS_OWNED;
-			external().deleter = del;
-			external().data = ptr;
+			this->type(type);
+			flags(detail::IS_OWNED);
+			deleter(del);
+			external(ptr);
 		}
 		/** @copydoc any */
-		any(type_info type, std::in_place_t, const void *ptr, void (*del)(const void *)) noexcept : m_type(type)
+		any(type_info type, std::in_place_t, const void *ptr, void (*del)(const void *)) noexcept
 		{
-			flags() = detail::IS_OWNED | detail::IS_CONST;
-			external().deleter = reinterpret_cast<void (*)(void *)>(del);
-			external().data = const_cast<void *>(ptr);
+			this->type(type);
+			flags(detail::IS_OWNED | detail::IS_CONST);
+			deleter(reinterpret_cast<void (*)(void *)>(del));
+			external(ptr);
 		}
 
 		/** Replaces the managed object with a reference to \a ref. */
@@ -225,14 +224,10 @@ namespace reflex
 		any &assign(type_info type, T &ref) requires (!std::same_as<std::remove_cv_t<T>, any>)
 		{
 			destroy();
-			m_type = type;
-			if constexpr (!std::is_const_v<T>)
-				external().data = std::addressof(ref);
-			else
-			{
-				external().data = const_cast<std::remove_const_t<T> *>(std::addressof(ref));
-				flags() = detail::IS_CONST;
-			}
+			this->type(type);
+			if constexpr (std::is_const_v<T>)
+				flags(detail::IS_CONST);
+			external(std::addressof(ref));
 			return *this;
 		}
 
@@ -265,10 +260,10 @@ namespace reflex
 		}
 
 		/** Returns type of the managed object. */
-		[[nodiscard]] constexpr type_info type() const noexcept { return {m_type}; }
+		[[nodiscard]] constexpr type_info type() const noexcept { return {type_data(), database()}; }
 
 		/** Checks if the `any` has a managed object (either value or reference). */
-		[[nodiscard]] constexpr bool empty() const noexcept { return !m_type.valid(); }
+		[[nodiscard]] constexpr bool empty() const noexcept { return type_data() == nullptr; }
 		/** Checks if the managed object is const-qualified. */
 		[[nodiscard]] bool is_const() const noexcept { return flags() & detail::IS_CONST; }
 		/** Checks if the `any` contains a reference to an external object. */
@@ -279,12 +274,12 @@ namespace reflex
 		[[nodiscard]] void *data() noexcept
 		{
 			if (flags() & detail::IS_CONST) [[unlikely]] return nullptr;
-			return (flags() & detail::IS_VALUE) ? local() : external().data;
+			return (flags() & detail::IS_VALUE) ? local() : external();
 		}
 		/** Returns a const void pointer to the managed object. */
 		[[nodiscard]] const void *cdata() const noexcept
 		{
-			return (flags() & detail::IS_VALUE) ? local() : external().data;
+			return (flags() & detail::IS_VALUE) ? local() : external();
 		}
 		/** @copydoc cdata */
 		[[nodiscard]] const void *data() const noexcept { return cdata(); }
@@ -293,7 +288,7 @@ namespace reflex
 		void reset()
 		{
 			destroy();
-			m_type = {};
+			m_storage = {};
 		}
 
 		/** Returns an `any` containing a reference to the managed object of `this`. */
@@ -325,7 +320,7 @@ namespace reflex
 		[[nodiscard]] any cast(type_info type)
 		{
 			if (auto result = try_cast(type); result.empty())
-				[[unlikely]] throw bad_any_cast(m_type, type);
+				[[unlikely]] throw bad_any_cast(this->type(), type);
 			else
 				return result;
 		}
@@ -333,7 +328,7 @@ namespace reflex
 		[[nodiscard]] any cast(type_info type) const
 		{
 			if (auto result = try_cast(type); result.empty())
-				[[unlikely]] throw bad_any_cast(m_type, type);
+				[[unlikely]] throw bad_any_cast(this->type(), type);
 			else
 				return result;
 		}
@@ -426,37 +421,78 @@ namespace reflex
 		[[nodiscard]] REFLEX_PUBLIC bool operator<(const any &other) const;
 
 	private:
-		[[nodiscard]] void *local() noexcept { return m_storage.bytes; }
-		[[nodiscard]] const void *local() const noexcept { return m_storage.bytes; }
-		[[nodiscard]] ptr_storage &external() noexcept { return *m_storage.get<ptr_storage, 0>(); }
-		[[nodiscard]] const ptr_storage &external() const noexcept { return *m_storage.get<ptr_storage, 0>(); }
+		/* Flags are stored within the type data pointer. */
+		const detail::type_data *type_data(const detail::type_data *ptr) noexcept
+		{
+			const auto intptr = *m_storage.get<std::uintptr_t, 0>();
+			const auto old_value = intptr & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX);
+			const auto old_flags = static_cast<std::uintptr_t>(intptr & detail::ANY_FAGS_MAX);
+			*m_storage.get<std::uintptr_t, 0>() = std::bit_cast<std::uintptr_t>(ptr) | old_flags;
+			return std::bit_cast<const detail::type_data *>(old_value);
+		}
+		[[nodiscard]] const detail::type_data *type_data() const noexcept
+		{
+			const auto intptr = std::bit_cast<std::uintptr_t>(*m_storage.get<const detail::type_data *, 0>());
+			return std::bit_cast<const detail::type_data *>(intptr & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX));
+		}
 
-		[[nodiscard]] detail::type_flags &flags() noexcept
+		detail::database_impl *database(detail::database_impl *ptr) noexcept
 		{
-			constexpr auto off = -static_cast<std::ptrdiff_t>(sizeof(detail::type_flags));
-			return *m_storage.get<detail::type_flags, off>();
+			return std::exchange(*m_storage.get<detail::database_impl *, sizeof(std::uintptr_t)>(), ptr);
 		}
-		[[nodiscard]] const detail::type_flags &flags() const noexcept
+		[[nodiscard]] detail::database_impl *database() const noexcept
 		{
-			constexpr auto off = -static_cast<std::ptrdiff_t>(sizeof(detail::type_flags));
-			return *m_storage.get<detail::type_flags, off>();
+			return *m_storage.get<detail::database_impl *, sizeof(std::uintptr_t)>();
 		}
+
+		type_info type(type_info value) noexcept
+		{
+			const auto old_data = type_data(value.m_data);
+			const auto old_db = database(value.m_db);
+			return {old_data, old_db};
+		}
+
+		detail::type_flags flags(detail::type_flags value) noexcept
+		{
+			const auto intptr = *m_storage.get<std::uintptr_t, 0>();
+			const auto old_value = static_cast<detail::type_flags>(intptr) & detail::ANY_FAGS_MAX;
+			const auto old_intptr = (intptr & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX));
+			*m_storage.get<std::uintptr_t, 0>() = old_intptr | static_cast<std::uintptr_t>(value);
+			return old_value;
+		}
+		[[nodiscard]] detail::type_flags flags() const noexcept
+		{
+			return static_cast<detail::type_flags>(std::bit_cast<std::uintptr_t>(*m_storage.get<void *, 0>()) & detail::ANY_FAGS_MAX);
+		}
+
+		[[nodiscard]] void *local() noexcept { return m_storage.bytes + sizeof(std::uintptr_t) * 2; }
+		[[nodiscard]] const void *local() const noexcept { return m_storage.bytes + sizeof(std::uintptr_t) * 2; }
+
+		template<typename T = void(void *)>
+		T *deleter(T *ptr) noexcept { return std::exchange(*m_storage.get<T *, sizeof(std::uintptr_t) * 2>(), ptr); }
+		template<typename T = void(void *)>
+		[[nodiscard]] T *deleter() const noexcept { return *m_storage.get<T *, sizeof(std::uintptr_t) * 2>(); }
+		template<typename T = void>
+		T *external(T *ptr) noexcept { return std::exchange(*m_storage.get<T *, sizeof(std::uintptr_t) * 3>(), ptr); }
+		template<typename T = void>
+		[[nodiscard]] T *external() const noexcept { return *m_storage.get<T *, sizeof(std::uintptr_t) * 3>(); }
 
 		template<typename T, typename... Args>
 		void init_owned(type_info type, Args &&...args)
 		{
-			m_type = type;
-			flags() = detail::IS_OWNED | (std::is_const_v<T> ? detail::IS_CONST : detail::type_flags{});
-			if constexpr (!is_by_value<T>)
+			this->type(type);
+			auto flags = detail::IS_OWNED | (std::is_const_v<T> ? detail::IS_CONST : detail::type_flags{});
+			if constexpr (!is_by_value < T >)
 			{
-				external().data = static_cast<void *>(new std::remove_cv_t<T>(std::forward<Args>(args)...));
-				external().deleter = +[](void *ptr) { delete static_cast<std::remove_cv_t<T> *>(ptr); };
+				deleter(+[](void *ptr) { delete static_cast<std::remove_cv_t<T> *>(ptr); });
+				external(new std::remove_cv_t<T>(std::forward<Args>(args)...));
 			}
 			else
 			{
 				std::construct_at(std::launder(static_cast<T *>(local())), std::forward<Args>(args)...);
-				flags() |= detail::IS_VALUE;
+				flags |= detail::IS_VALUE;
 			}
+			this->flags(flags);
 		}
 		template<typename T>
 		inline void copy_init(type_info type, T *ptr);
@@ -496,7 +532,6 @@ namespace reflex
 		[[nodiscard]] REFLEX_PUBLIC void *base_cast(std::string_view) const;
 		[[nodiscard]] REFLEX_PUBLIC any value_conv(std::string_view) const;
 
-		type_info m_type = {};
 		storage_t m_storage;
 	};
 

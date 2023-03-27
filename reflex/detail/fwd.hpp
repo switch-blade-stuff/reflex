@@ -77,6 +77,7 @@ namespace reflex
 
 			/* Used by any */
 			IS_OWNED = 0x4,
+			ANY_FAGS_MAX = 0x7,
 
 			/* Used by type_data */
 			IS_NULL = 0x8,

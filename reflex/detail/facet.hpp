@@ -316,5 +316,5 @@ namespace reflex
 	}
 
 	template<typename F>
-	F any::facet() { return detail::make_facet<F>(*this, m_type.m_data); }
+	F any::facet() { return detail::make_facet<F>(*this, type_data()); }
 }
