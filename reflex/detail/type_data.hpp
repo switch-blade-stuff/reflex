@@ -9,7 +9,6 @@
 #include <list>
 
 #include "any.hpp"
-#include "type_info.hpp"
 
 namespace reflex
 {
@@ -23,8 +22,8 @@ namespace reflex
 		std::size_t str_cmp::operator()(const type_info &a, const std::string_view &b) const { return a == b; }
 		std::size_t str_cmp::operator()(const std::string_view &a, const type_info &b) const { return a == b; }
 
-		using facet_table = tpp::stable_map<std::string_view, const void *, str_hash, str_cmp>;
-		using enum_table = tpp::stable_map<std::string, any, str_hash, str_cmp>;
+		using facet_table = tpp::dense_map<std::string_view, const void *, str_hash, str_cmp>;
+		using enum_table = tpp::dense_map<std::string, any, str_hash, str_cmp>;
 
 		struct type_base
 		{
@@ -32,7 +31,7 @@ namespace reflex
 			base_cast cast_func;
 		};
 
-		using base_table = tpp::stable_map<std::string_view, type_base, str_hash, str_cmp>;
+		using base_table = tpp::dense_map<std::string_view, type_base, str_hash, str_cmp>;
 
 		template<typename T, typename B>
 		[[nodiscard]] inline static type_base make_type_base() noexcept
@@ -60,7 +59,7 @@ namespace reflex
 			std::function<any(const void *)> conv_func;
 		};
 
-		using conv_table = tpp::stable_map<std::string_view, type_conv, str_hash, str_cmp>;
+		using conv_table = tpp::dense_map<std::string_view, type_conv, str_hash, str_cmp>;
 
 		template<typename From, typename To, typename F>
 		[[nodiscard]] inline static type_conv make_type_conv(F &&conv)
@@ -202,7 +201,7 @@ namespace reflex
 			std::function<void(void *, any)> setter_func;
 		};
 
-		using prop_table = tpp::stable_map<std::string, type_prop, str_hash, str_cmp>;
+		using prop_table = tpp::dense_map<std::string, type_prop, str_hash, str_cmp>;
 
 		template<typename T, typename GF, typename SF>
 		[[nodiscard]] inline static type_prop make_type_prop(GF &&getter, SF &&setter)

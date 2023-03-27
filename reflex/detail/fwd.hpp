@@ -8,6 +8,7 @@
 
 #define TPP_STL_HASH_ALL
 #include <tpp/stable_map.hpp>
+#include <tpp/dense_map.hpp>
 #include <tpp/dense_set.hpp>
 #include <tpp/stl_hash.hpp>
 
