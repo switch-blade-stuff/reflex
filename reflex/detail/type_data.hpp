@@ -113,47 +113,29 @@ namespace reflex
 				return construct<T, Ts...>(std::make_index_sequence<sizeof...(Ts)>{}, std::forward<F>(f), args);
 			}
 
-			template<typename T, typename... Ts, typename F, std::size_t... Is>
-			inline static void construct_at(std::index_sequence<Is...>, F &&f, T *ptr, std::span<any> args)
-			{
-				std::invoke(f, ptr, (std::forward<Ts>(*args[Is].cast<Ts>().template get<Ts>()))...);
-			}
-			template<typename T, typename... Ts, typename F>
-			inline static void construct_at(F &&f, T *ptr, std::span<any> args)
-			{
-				construct_at<T, Ts...>(std::make_index_sequence<sizeof...(Ts)>{}, std::forward<F>(f), ptr, args);
-			}
-
 			type_ctor() noexcept = default;
-			template<typename T, typename... Ts, typename AF, typename PF>
-			type_ctor(std::in_place_type_t<T>, type_pack_t<Ts...>, AF &&allocating, PF &&placement) : args(arg_list<Ts...>::value)
+			template<typename T, typename... Ts, typename F>
+			type_ctor(std::in_place_type_t<T>, type_pack_t<Ts...>, F &&func) : args(arg_list<Ts...>::value)
 			{
-				allocating_func = [f = std::forward<AF>(allocating)](std::span<any> any_args) -> any
+				this->func = [f = std::forward<F>(func)](std::span<any> any_args) -> any
 				{
 					return construct<T, std::remove_reference_t<Ts>...>(f, any_args);
-				};
-				placement_func = [f = std::forward<PF>(placement)](void *ptr, std::span<any> any_args)
-				{
-					construct_at<T, std::remove_reference_t<Ts>...>(f, void_cast<T>(ptr), any_args);
 				};
 			}
 
 			std::span<const arg_data> args;
-			std::function<any(std::span<any>)> allocating_func;
-			std::function<void(void *, std::span<any>)> placement_func;
+			std::function<any(std::span<any>)> func;
 		};
 
-		template<typename T, typename... Ts, typename AF, typename PF>
-		[[nodiscard]] inline static type_ctor make_type_ctor(AF &&allocating, PF &&placement)
+		template<typename T, typename... Ts, typename F>
+		[[nodiscard]] inline static type_ctor make_type_ctor(F &&func)
 		{
-			return {std::in_place_type<T>, type_pack<Ts...>, std::forward<AF>(allocating), std::forward<PF>(placement)};
+			return {std::in_place_type<T>, type_pack<Ts...>, std::forward<F>(func)};
 		}
 		template<typename T, typename... Ts>
 		[[nodiscard]] inline static type_ctor make_type_ctor() noexcept
 		{
-			constexpr auto placement = [](T *ptr, Ts ...as) { std::construct_at(ptr, as...); };
-			constexpr auto allocating = [](Ts ...as) -> any { return make_any<T>(as...); };
-			return make_type_ctor<T, Ts...>(allocating, placement);
+			return make_type_ctor<T, Ts...>([](Ts ...as) -> any { return make_any<T>(as...); });
 		}
 
 		struct type_prop

@@ -161,21 +161,6 @@ namespace reflex
 		template<typename... Args>
 		[[nodiscard]] inline any construct(Args &&...args) const;
 
-		/** Constructs an object of the referenced type from arguments \a args at location pointed to by \a ptr.
-		 * @return `true` on success, `false` if `this` is not valid or the referenced type is not constructible from \a args.
-		 * @warning Memory pointed to by \a ptr must be large enough and have appropriate alignment for an object of the referenced type. */
-		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool construct_at(void *ptr, std::span<any> args) const;
-		/** @cpoydoc construct */
-		template<std::size_t N>
-		[[nodiscard]] inline bool construct_at(void *ptr, std::span<any, N> args) const;
-		/** @cpoydoc construct */
-		template<typename... Args>
-		[[nodiscard]] inline bool construct_at(void *ptr, Args &&...args) const;
-
-		/** Destroys an object of the referenced type pointed to by \a ptr.
-		 * @warning Memory pointed to by \a ptr must contain an object of the referenced type. */
-		REFLEX_PUBLIC_OR_INLINE void destroy_at(void *ptr) const;
-
 		/** Checks if the referenced type has a property with name \a name. */
 		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool has_property(std::string_view name) const noexcept;
 

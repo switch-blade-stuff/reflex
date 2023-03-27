@@ -71,13 +71,12 @@ namespace reflex
 			add_ctor<Args...>();
 			return *this;
 		}
-		/** Makes the underlying type info constructible via allocating & placement factory functions \a alloc_func and \a place_func.
-		 * \a alloc_func must be invocable with arguments \a Args and return an instance of `any`, and
-		 * \a place_func must be invocable with pointer to \a T, and arguments \a Args. */
-		template<typename... Args, typename Fa, typename Fp>
-		type_factory &ctor(Fa &&alloc_func, Fp &&place_func) requires (std::is_invocable_r_v<any, Fa, Args...> && std::is_invocable_v<Fp, T *, Args...>)
+		/** Makes the underlying type info constructible via factory function \a ctor_func.
+		 * \a ctor_func must be invocable with arguments \a Args and return an instance of `any`. */
+		template<typename... Args, typename F>
+		type_factory &ctor(F &&ctor_func) requires (std::is_invocable_r_v<any, F, Args...> && std::is_invocable_v<F, T *, Args...>)
 		{
-			add_ctor<Args...>(std::forward<Fa>(alloc_func), std::forward<Fp>(place_func));
+			add_ctor<Args...>(std::forward<F>(ctor_func));
 			return *this;
 		}
 
@@ -134,7 +133,10 @@ namespace reflex
 		static void make_convertible(type_factory<T> factory)
 		{
 			if constexpr (!std::same_as<T, U> && std::convertible_to<T, U>)
+			{
 				factory.template conv<U>();
+				factory.template ctor<U>();
+			}
 		}
 
 	public:

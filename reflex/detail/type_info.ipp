@@ -82,22 +82,8 @@ namespace reflex
 		if (valid()) [[likely]]
 		{
 			const auto *ctor = m_data->find_ctor(args);
-			if (ctor != nullptr) return ctor->allocating_func(args);
+			if (ctor != nullptr) return ctor->func(args);
 		}
 		return {};
 	}
-	bool type_info::construct_at(void *ptr, std::span<any> args) const
-	{
-		if (valid()) [[likely]]
-		{
-			if (const auto *ctor = m_data->find_ctor(args); ctor != nullptr)
-			{
-				ctor->placement_func(ptr, args);
-				return true;
-			}
-		}
-		return false;
-	}
-
-	void type_info::destroy_at(void *ptr) const { if (valid()) [[likely]] m_data->dtor(ptr); }
 }
