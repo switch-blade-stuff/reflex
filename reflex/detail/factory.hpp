@@ -159,6 +159,12 @@ namespace reflex
 			make_convertible<std::uint16_t>(factory);
 			make_convertible<std::uint32_t>(factory);
 			make_convertible<std::uint64_t>(factory);
+			make_convertible<std::intmax_t>(factory);
+			make_convertible<std::uintmax_t>(factory);
+			make_convertible<std::intptr_t>(factory);
+			make_convertible<std::uintptr_t>(factory);
+			make_convertible<std::ptrdiff_t>(factory);
+			make_convertible<std::size_t>(factory);
 
 			/* Conversions to floats. */
 			make_convertible<float>(factory);
