@@ -110,5 +110,14 @@ namespace reflex
 			Iter m_iter;
 			Sent m_sent;
 		};
+
+		template<typename, template<typename...> typename>
+		struct template_instance_impl : std::false_type {};
+		template<template<typename...> typename T, typename... Ts>
+		struct template_instance_impl<T<Ts...>, T> : std::true_type {};
 	}
+
+	/** Concept used to check if \a I is an instance of template \a T. */
+	template<typename I, template<typename...> typename T>
+	concept template_instance = detail::template_instance_impl<I, T>::value;
 }

@@ -403,6 +403,10 @@ namespace reflex
 				return static_cast<std::add_const_t<T> *>(data());
 		}
 
+		/** Returns facet \a F for the managed object. */
+		template<typename F>
+		[[nodiscard]] inline F facet();
+
 		/** If the managed object of `this` is equal to the managed object of \a other, or if `this` and \a other are empty,
 		 * returns `true`. Otherwise returns `false`. */
 		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool operator==(const any &other) const;

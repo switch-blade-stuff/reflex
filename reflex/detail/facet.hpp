@@ -8,6 +8,7 @@
 #include <tuple>
 
 #include "database.hpp"
+#include "factory.hpp"
 #include "any.hpp"
 
 namespace reflex
@@ -117,7 +118,8 @@ namespace reflex
 	class facet : detail::facet_instance
 	{
 		template<typename...>
-		friend class facet_group;
+		friend
+		class facet_group;
 
 	public:
 		using vtable_type = Vtable;
@@ -229,4 +231,71 @@ namespace reflex
 	/** Alias for `impl_facet<Facet, T>::value`. */
 	template<typename Facet, typename T>
 	inline constexpr typename Facet::vtable_type impl_facet_v = impl_facet<Facet, T>::value;
+
+	/** Overload of `impl_facet` for facet groups. */
+	template<typename T, typename... Fs>
+	struct impl_facet<facet_group<Fs...>, T> { constexpr static auto value = std::make_tuple(&impl_facet_v<Fs, T>...); };
+
+	template<typename T>
+	template<typename F>
+	type_factory<T> &type_factory<T>::facet() { return facet<F>(impl_facet_v<F, T>); }
+	template<typename T>
+	template<typename F>
+	type_factory<T> &type_factory<T>::facet(const typename F::vtable_type &vtab)
+	{
+		add_facet(std::make_tuple(&vtab));
+		return *this;
+	}
+
+	template<typename T>
+	template<template_instance<facet_group> G>
+	type_factory<T> &type_factory<T>::facet() { return facet<G>(impl_facet_v<G, T>); }
+	template<typename T>
+	template<template_instance<facet_group> G>
+	type_factory<T> &type_factory<T>::facet(const typename G::vtable_type &vtab)
+	{
+		add_facet(vtab);
+		return *this;
+	}
+
+	template<typename T>
+	template<typename... Vt>
+	void type_factory<T>::add_facet(const std::tuple<const Vt *...> &vtab)
+	{
+		(m_data->facet_list.emplace(type_name_v<Vt>, std::get<const Vt *>(vtab)), ...);
+	}
+
+	namespace detail
+	{
+		template<typename V>
+		inline void get_vtable(const V *&vtab, const type_data *type)
+		{
+			vtab = static_cast<const V *>(type->find_facet(type_name_v<V>));
+		}
+		template<typename... Vs>
+		inline void get_vtable(std::tuple<const Vs *...> &vtab, const type_data *type)
+		{
+			(get_vtable(std::get<const Vs *>(vtab), type), ...);
+		}
+
+		template<typename F>
+		[[nodiscard]] inline F make_facet(any &obj, const type_data *type)
+		{
+			if constexpr (template_instance<F, facet_group>)
+			{
+				typename F::vtable_type vtab = {};
+				get_vtable(vtab, type);
+				return F{obj.ref(), vtab};
+			}
+			else
+			{
+				const typename F::vtable_type *vtab = {};
+				get_vtable(vtab, type);
+				return F{obj.ref(), vtab};
+			}
+		}
+	}
+
+	template<typename F>
+	F any::facet() { return detail::make_facet<F>(*this, m_type.m_data); }
 }

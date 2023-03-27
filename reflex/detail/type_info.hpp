@@ -45,6 +45,14 @@ namespace reflex
 		template<typename T>
 		[[nodiscard]] inline static type_info get();
 
+		/** Resets type info for type with name \a name to it's initial state. */
+		inline static void reset(std::string_view name);
+		/** Resets type info for type \a T to it's initial state. */
+		template<typename T>
+		inline static void reset();
+		/** Resets all reflected `type_info`s to their initial state. */
+		inline static void reset();
+
 	private:
 		type_info(detail::type_handle handle, detail::database_impl &db) : m_data(handle(db)), m_db(&db) {}
 		constexpr type_info(const detail::type_data *data, detail::database_impl *db) noexcept : m_data(data), m_db(db) {}
