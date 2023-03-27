@@ -66,8 +66,8 @@ int main()
 
 	auto i0 = reflex::make_any<int>(1);
 	err += !i0.type().convertible_to<double>();
-	err += !i0.type().convertible_to<std::intptr_t>();
-	err += !i0.type().convertible_to<std::uintptr_t>();
+	err += !i0.type().convertible_to<std::intmax_t>();
+	err += !i0.type().convertible_to<std::uintmax_t>();
 
 	err += !(reflex::type_of(i0) == reflex::type_info::get<int>());
 	err += !(reflex::type_of(i0) == reflex::type_of(int{}));

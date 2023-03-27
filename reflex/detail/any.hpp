@@ -29,7 +29,7 @@ namespace reflex
 	}
 
 	/** Exception type thrown when the managed object of `any` cannot be cast to the desired type. */
-	class REFLEX_PUBLIC bad_any_cast : public std::runtime_error
+	class bad_any_cast : public std::runtime_error
 	{
 		[[nodiscard]] static std::string make_msg(type_info from_type, type_info to_type)
 		{
@@ -52,7 +52,7 @@ namespace reflex
 		/** Initializes the any cast exception from source type info and destination type info. */
 		bad_any_cast(type_info from_type, type_info to_type) : std::runtime_error(make_msg(from_type, to_type)), m_from_type(from_type), m_to_type(to_type) {}
 
-		~bad_any_cast() override = default;
+		REFLEX_PUBLIC ~bad_any_cast() override = default;
 
 		/** Returns type info of the converted-from type. */
 		[[nodiscard]] constexpr type_info from_type() const noexcept { return m_from_type; }

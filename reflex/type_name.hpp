@@ -147,7 +147,8 @@ namespace reflex
 				constexpr auto value_name = type_name_v<value_type>;
 				constexpr auto ref = std::string_view{std::is_reference_v<T> ? (std::is_rvalue_reference_v<T> == 2 ? "(&&)" : "(&)") : ""};
 				constexpr auto infix = ref.empty() ? ref : std::string_view{auto_constant<make_array_prefix<value_type>() + const_string<ref.size()>{ref}>::value};
-				if constexpr (constexpr auto extent = std::extent_v<std::remove_reference_t<T>>; extent != 0)
+				constexpr auto extent = std::extent_v<std::remove_reference_t<T>>;
+				if constexpr (extent != 0)
 					return const_string<value_name.size()>{value_name} + const_string<infix.size()>{infix} + basic_const_string{"["} + const_itoa<extent>() + basic_const_string{"]"};
 				else
 					return const_string<value_name.size()>{value_name} + const_string<infix.size()>{infix} + basic_const_string{"[]"};
