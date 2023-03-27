@@ -228,32 +228,32 @@ namespace reflex
 			if constexpr (requires(const T &a, const T &b){ a == b; })
 				result.cmp_eq = +[](const any &a, const any &b)
 				{
-					return *a.get<T>() == *b.as<T>();
+					return *a.get<T>() == *b.cast<T>().template get<const T>();
 				};
 			if constexpr (requires(const T &a, const T &b){ a != b; })
 				result.cmp_ne = +[](const any &a, const any &b)
 				{
-					return *a.get<T>() != *b.as<T>();
+					return *a.get<T>() != *b.cast<T>().template get<const T>();
 				};
 			if constexpr (requires(const T &a, const T &b){ a >= b; })
 				result.cmp_ge = +[](const any &a, const any &b)
 				{
-					return *a.get<T>() >= *b.as<T>();
+					return *a.get<T>() >= *b.cast<T>().template get<const T>();
 				};
 			if constexpr (requires(const T &a, const T &b){ a <= b; })
 				result.cmp_le = +[](const any &a, const any &b)
 				{
-					return *a.get<T>() <= *b.as<T>();
+					return *a.get<T>() <= *b.cast<T>().template get<const T>();
 				};
 			if constexpr (requires(const T &a, const T &b){ a > b; })
 				result.cmp_gt = +[](const any &a, const any &b)
 				{
-					return *a.get<T>() > *b.as<T>();
+					return *a.get<T>() > *b.cast<T>().template get<const T>();
 				};
 			if constexpr (requires(const T &a, const T &b){ a < b; })
 				result.cmp_lt = +[](const any &a, const any &b)
 				{
-					return *a.get<T>() < *b.as<T>();
+					return *a.get<T>() < *b.cast<T>().template get<const T>();
 				};
 
 			return result;
