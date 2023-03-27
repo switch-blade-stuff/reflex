@@ -6,22 +6,12 @@
 #include <reflex/object.hpp>
 #include <reflex/facet.hpp>
 
-struct test_vtable
-{
-	int (*get_value)() noexcept;
-	void (*set_value)(int i) noexcept;
-};
-
-class test_facet : public reflex::facet<test_vtable>
-{
-	using base_t = reflex::facet<test_vtable>;
-
-public:
-	void value(int i) noexcept { base_t::checked_invoke<&test_vtable::set_value, "void value(int) noexcept">(i); }
-	int value() const noexcept { return base_t::checked_invoke<&test_vtable::get_value, "int value() const noexcept">(); }
-};
-
-static_assert(std::same_as<test_facet::vtable_type, test_vtable>);
+#ifndef NDEBUG
+#include <cassert>
+#define TEST_ASSERT(cnd) assert((cnd))
+#else
+#define TEST_ASSERT(cnd) do { if (!(cnd)) std::terminate(); } while (false)
+#endif
 
 static_assert(reflex::type_name_v<int> == "int");
 static_assert(reflex::type_name_v<int *> == "int *");
@@ -43,29 +33,33 @@ struct reflex::type_name<std::string> { static constexpr std::string_view value 
 static_assert(reflex::type_name_v<std::string> == "std::string");
 static_assert(reflex::type_name_v<std::wstring> != "std::wstring");
 
-class test_base : public reflex::object
+struct test_vtable
 {
-	REFLEX_DEFINE_OBJECT(test_base)
-
-public:
-	constexpr test_base() noexcept = default;
-	~test_base() noexcept override = default;
-};
-class test_child : public test_base
-{
-	REFLEX_DEFINE_OBJECT(test_child)
-
-public:
-	constexpr test_child() noexcept = default;
-	~test_child() noexcept override = default;
+	void (*set_value)(reflex::any &, int);
+	int (*get_value)(const reflex::any &);
 };
 
-#ifndef NDEBUG
-#include <cassert>
-#define TEST_ASSERT(cnd) assert((cnd))
-#else
-#define TEST_ASSERT(cnd) do { if (!(cnd)) std::terminate(); } while (false)
-#endif
+class test_facet : public reflex::facet<test_vtable>
+{
+	using base_t = reflex::facet<test_vtable>;
+
+public:
+	using base_t::facet;
+
+	void value(int i) noexcept { base_t::checked_invoke<&test_vtable::set_value, "void value(int) noexcept">(instance(), i); }
+	int value() const noexcept { return base_t::checked_invoke<&test_vtable::get_value, "int value() const noexcept">(instance()); }
+};
+
+static_assert(std::same_as<test_facet::vtable_type, test_vtable>);
+
+template<>
+struct reflex::impl_facet<test_facet, int>
+{
+	constexpr static auto value = test_vtable{
+			.set_value = +[](any &obj, int i) { *obj.get<int>() = i; },
+			.get_value = +[](const any &obj) { return *obj.get<int>(); },
+	};
+};
 
 int main()
 {
@@ -109,11 +103,28 @@ int main()
 	}
 
 	{
+		class test_base : public reflex::object
+		{
+			REFLEX_DEFINE_OBJECT(test_base)
+
+		public:
+			constexpr test_base() noexcept = default;
+			~test_base() noexcept override = default;
+		};
+		class test_child : public test_base
+		{
+			REFLEX_DEFINE_OBJECT(test_child)
+
+		public:
+			constexpr test_child() noexcept = default;
+			~test_child() noexcept override = default;
+		};
+
 		const auto base = test_base{};
 		TEST_ASSERT(reflex::type_of(base) == reflex::type_info::get<test_base>());
 		TEST_ASSERT(reflex::type_of(base).inherits_from<reflex::object>());
 
-		reflex::type_info::reflect<test_child>().base<test_base>();
+		const auto child_ti = reflex::type_info::reflect<test_child>().base<test_base>().type();
 
 		auto *base_ptr = &base;
 		TEST_ASSERT(reflex::type_of(*base_ptr) == reflex::type_info::get<test_base>());
@@ -123,12 +134,12 @@ int main()
 		TEST_ASSERT(reflex::object_cast<const test_base>(base_ptr) != nullptr);
 
 		const auto child = test_child{};
-		TEST_ASSERT(reflex::type_of(child) == reflex::type_info::get<test_child>());
+		TEST_ASSERT(reflex::type_of(child) == child_ti);
 		TEST_ASSERT(reflex::type_of(child).inherits_from<reflex::object>());
 		TEST_ASSERT(reflex::type_of(child).inherits_from<test_base>());
 
 		base_ptr = &child;
-		TEST_ASSERT(reflex::type_of(*base_ptr) == reflex::type_info::get<test_child>());
+		TEST_ASSERT(reflex::type_of(*base_ptr) == child_ti);
 		TEST_ASSERT(reflex::type_of(child) == reflex::type_of(*base_ptr));
 		TEST_ASSERT(reflex::object_cast<const reflex::object>(base_ptr) != nullptr);
 		TEST_ASSERT(reflex::object_cast<const test_child>(base_ptr) != nullptr);
@@ -142,11 +153,14 @@ int main()
 		TEST_ASSERT(reflex::object_cast<const test_base>(object_ptr) != nullptr);
 
 		object_ptr = &child;
-		TEST_ASSERT(reflex::type_of(*object_ptr) == reflex::type_info::get<test_child>());
+		TEST_ASSERT(reflex::type_of(*object_ptr) == child_ti);
 		TEST_ASSERT(reflex::type_of(child) == reflex::type_of(*object_ptr));
 		TEST_ASSERT(reflex::object_cast<const reflex::object>(object_ptr) != nullptr);
 		TEST_ASSERT(reflex::object_cast<const test_child>(object_ptr) != nullptr);
 		TEST_ASSERT(reflex::object_cast<const test_base>(object_ptr) != nullptr);
+
+		reflex::type_info::reset<test_child>();
+		TEST_ASSERT(!child_ti.inherits_from<test_base>());
 	}
 
 	{
@@ -164,5 +178,29 @@ int main()
 		const auto str1 = str_ti.construct("hello, world", 12);
 		TEST_ASSERT(!str1.empty() && *str1.get<std::string>() == "hello, world");
 		TEST_ASSERT(str0 == str1);
+
+		reflex::type_info::reset<std::string>();
+
+		TEST_ASSERT((!str_ti.constructible_from<const char *, std::size_t>()));
+		TEST_ASSERT((!str_ti.constructible_from<const char *>()));
+	}
+
+	{
+		const auto int_ti = reflex::type_info::reflect<int>().facet<test_facet>().type();
+		TEST_ASSERT(int_ti.implements_facet<test_facet>());
+
+		auto i = reflex::make_any<int>();
+		auto fi = i.facet<test_facet>();
+
+		TEST_ASSERT(fi.instance().data() == i.data());
+		TEST_ASSERT(fi.instance().is_ref());
+
+		fi.value(0);
+		TEST_ASSERT(fi.value() == 0);
+		fi.value(1);
+		TEST_ASSERT(fi.value() == 1);
+
+		reflex::type_info::reset<int>();
+		TEST_ASSERT(!int_ti.implements_facet<test_facet>());
 	}
 }

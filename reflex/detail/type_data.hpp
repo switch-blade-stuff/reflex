@@ -264,7 +264,7 @@ namespace reflex
 			[[nodiscard]] const void *find_facet(std::string_view type) const
 			{
 				if (auto iter = facet_list.find(type); iter != facet_list.end())
-					return &iter->second;
+					return iter->second;
 				else
 					return nullptr;
 			}

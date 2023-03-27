@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "type_factory.hpp"
+#include "factory.hpp"
 
 namespace reflex
 {
@@ -155,4 +155,9 @@ namespace reflex
 		auto *db = detail::database_impl::instance();
 		return {detail::make_type_data<std::decay_t<T>>, *db};
 	}
+
+	void type_info::reset(std::string_view name) { detail::database_impl::instance()->reset(name); }
+	template<typename T>
+	void type_info::reset() { reset(type_name_v<std::decay_t<T>>); }
+	void type_info::reset() { detail::database_impl::instance()->reset(); }
 }
