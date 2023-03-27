@@ -71,7 +71,7 @@ namespace reflex
 		template<typename>
 		friend detail::any_funcs_t detail::make_any_funcs() noexcept;
 
-		struct storage_t
+		struct alignas(std::max(alignof(std::uintptr_t), alignof(std::uintmax_t))) storage_t
 		{
 			template<typename T, std::ptrdiff_t Off>
 			[[nodiscard]] T *get() noexcept
@@ -90,7 +90,7 @@ namespace reflex
 					return reinterpret_cast<const T *>(bytes + Off);
 			}
 
-			alignas(std::uintptr_t) std::byte bytes[sizeof(std::uintptr_t) * 3] = {};
+			std::byte bytes[std::max(sizeof(std::uintptr_t), sizeof(std::uintmax_t)) * 3] = {};
 		};
 
 		struct ptr_storage
