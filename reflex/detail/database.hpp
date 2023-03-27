@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "type_data.hpp"
+#include "type_factory.hpp"
 
 namespace reflex
 {
@@ -39,8 +39,6 @@ namespace reflex
 
 		struct database_impl : shared_spinlock
 		{
-			using data_factory = type_data (*)();
-
 			static database_impl *local_ptr() noexcept
 			{
 				static database_impl value;
@@ -62,76 +60,88 @@ namespace reflex
 			REFLEX_PUBLIC_OR_INLINE const type_data *reset(std::string_view name);
 			REFLEX_PUBLIC_OR_INLINE const type_data *find(std::string_view name) const;
 
-			REFLEX_PUBLIC_OR_INLINE type_data *reflect(std::string_view name, data_factory factory);
+			REFLEX_PUBLIC_OR_INLINE type_data *reflect(std::string_view name, type_data (*factory)(database_impl &));
 
-			tpp::stable_map<std::string_view, std::pair<type_data, data_factory>> m_types;
+			tpp::stable_map<std::string_view, std::pair<type_data, type_data (*)(database_impl &)>> m_types;
 		};
 
 		template<typename T>
 		[[nodiscard]] inline static type_data *make_type_data(database_impl &db)
 		{
-			constinit static type_data *data = nullptr;
-			if (data == nullptr) [[unlikely]]
+			static type_data *data = db.reflect(type_name<T>::value, +[](database_impl &db) -> type_data
 			{
-				data = db.reflect(type_name<T>::value, +[]() -> type_data
+				auto result = type_data{type_name_v<T>};
+				if constexpr (std::same_as<T, void>)
+					result.flags |= type_flags::IS_VOID;
+				else
 				{
-					auto result = type_data{type_name_v<T>};
-					if constexpr (std::same_as<T, void>)
-						result.flags |= type_flags::IS_VOID;
-					else
+					result.alignment = alignof(T);
+					if constexpr (!std::is_empty_v<T>) result.size = sizeof(T);
+
+					if constexpr (std::is_null_pointer_v<T>) result.flags |= type_flags::IS_NULL;
+
+					if constexpr (std::is_class_v<T>) result.flags |= type_flags::IS_CLASS;
+					if constexpr (std::is_pointer_v<T>) result.flags |= type_flags::IS_POINTER;
+					if constexpr (std::is_abstract_v<T>) result.flags |= type_flags::IS_ABSTRACT;
+
+					result.remove_pointer = make_type_data<std::remove_pointer_t<T>>;
+					result.remove_extent = make_type_data<std::remove_extent_t<T>>;
+					result.extent = std::extent_v<T>;
+				}
+
+				/* Constructors, destructors & conversions are only created for object types. */
+				if constexpr (std::is_object_v<T>)
+				{
+					if constexpr (std::is_enum_v<T>)
 					{
-						result.alignment = alignof(T);
-						if constexpr (!std::is_empty_v<T>) result.size = sizeof(T);
-
-						if constexpr (std::is_null_pointer_v<T>) result.flags |= type_flags::IS_NULL;
-						if constexpr (std::is_enum_v<T>) result.flags |= type_flags::IS_ENUM;
-						if constexpr (std::is_class_v<T>) result.flags |= type_flags::IS_CLASS;
-						if constexpr (std::is_pointer_v<T>) result.flags |= type_flags::IS_POINTER;
-						if constexpr (std::is_abstract_v<T>) result.flags |= type_flags::IS_ABSTRACT;
-
-						result.remove_pointer = make_type_data<std::remove_pointer_t<T>>;
-						result.remove_extent = make_type_data<std::remove_extent_t<T>>;
-						result.extent = std::extent_v<T>;
+						result.flags |= type_flags::IS_ENUM;
+						result.conv_list.emplace(type_name_v<std::underlying_type_t<T>>, make_type_conv<T, std::underlying_type_t<T>>());
+					}
+					if constexpr (std::convertible_to<T, std::intmax_t>)
+					{
+						result.flags |= type_flags::IS_SIGNED_INT;
+						result.conv_list.emplace(type_name_v<std::intmax_t>, make_type_conv<T, std::intmax_t>());
+					}
+					if constexpr (std::convertible_to<T, std::uintmax_t>)
+					{
+						result.flags |= type_flags::IS_UNSIGNED_INT;
+						result.conv_list.emplace(type_name_v<std::uintmax_t>, make_type_conv<T, std::uintmax_t>());
+					}
+					if constexpr (std::convertible_to<T, double>)
+					{
+						result.flags |= type_flags::IS_ARITHMETIC;
+						result.conv_list.emplace(type_name_v<double>, make_type_conv<T, double>());
 					}
 
-					/* Constructors, destructors & conversions are only created for object types. */
-					if constexpr (std::is_object_v<T>)
-					{
-						/* If `T` is derived from `object`, add `object` to the list of parent types. */
-						if constexpr (std::derived_from<T, object>)
-							result.base_list.emplace(type_name_v<object>, make_type_base<T, object>());
+					/* If `T` is derived from `object`, add `object` to the list of parent types. */
+					if constexpr (std::derived_from<T, object> && !std::same_as<T, object>)
+						result.base_list.emplace(type_name_v<object>, make_type_base<T, object>());
 
-						if constexpr (std::convertible_to<T, std::intmax_t>)
-						{
-							result.flags |= type_flags::IS_SIGNED_INT;
-							result.conv_list.emplace(type_name_v<std::intmax_t>, make_type_conv<T, std::intmax_t>());
-						}
-						if constexpr (std::convertible_to<T, std::uintmax_t>)
-						{
-							result.flags |= type_flags::IS_UNSIGNED_INT;
-							result.conv_list.emplace(type_name_v<std::uintmax_t>, make_type_conv<T, std::uintmax_t>());
-						}
-						if constexpr (std::convertible_to<T, double>)
-						{
-							result.flags |= type_flags::IS_ARITHMETIC;
-							result.conv_list.emplace(type_name_v<double>, make_type_conv<T, double>());
-						}
+					/* Add default & copy constructors. */
+					if constexpr (std::is_default_constructible_v<T>)
+						result.default_ctor = &result.ctor_list.emplace_back(make_type_ctor<T>());
+					if constexpr (std::is_copy_constructible_v<T>)
+						result.copy_ctor = &result.ctor_list.emplace_back(make_type_ctor<T, std::add_const_t<T> &>());
 
-						/* Add default & copy constructors. */
-						if constexpr (std::is_default_constructible_v<T>)
-							result.default_ctor = &result.ctor_list.emplace_back(make_type_ctor<T>());
-						if constexpr (std::is_copy_constructible_v<T>)
-							result.copy_ctor = &result.ctor_list.emplace_back(make_type_ctor<T, std::add_const_t<T> &>());
+					result.dtor = make_type_dtor<T>();
+					result.any_funcs = make_any_funcs<T>();
+				}
 
-						result.dtor = make_type_dtor<T>();
-						result.any_funcs = make_any_funcs<T>();
-					}
+				/* Invoke user type initializer. */
+				if constexpr (requires(type_factory<T> f) { type_init<T>{}(f); })
+					type_init<T>{}(type_factory<T>{&result, &db});
 
-					return result;
-				});
-			}
+				return result;
+			});
 			return data;
 		}
+	}
+
+	template<typename T>
+	type_factory<T> type_info::reflect()
+	{
+		auto *db = detail::database_impl::instance();
+		return {detail::make_type_data<std::remove_cvref_t<T>>, *db};
 	}
 
 	type_info type_info::get(std::string_view name)

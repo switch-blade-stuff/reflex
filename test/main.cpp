@@ -105,15 +105,19 @@ int main()
 	err += !(reflex::type_of(base) == reflex::type_info::get<test_base>());
 	err += !(reflex::type_of(base).inherits_from<reflex::object>());
 
+	reflex::type_info::reflect<test_child>().base<test_base>();
+
 	auto *base_ptr = &base;
 	err += !(reflex::type_of(*base_ptr) == reflex::type_info::get<test_base>());
 	err += !(reflex::type_of(base) == reflex::type_of(*base_ptr));
 	err += reflex::object_cast<const reflex::object>(base_ptr) == nullptr;
+	err += reflex::object_cast<const test_child>(base_ptr) != nullptr;
 	err += reflex::object_cast<const test_base>(base_ptr) == nullptr;
 
 	const auto child = test_child{};
 	err += !(reflex::type_of(child) == reflex::type_info::get<test_child>());
 	err += !(reflex::type_of(child).inherits_from<reflex::object>());
+	err += !(reflex::type_of(child).inherits_from<test_base>());
 
 	base_ptr = &child;
 	err += !(reflex::type_of(*base_ptr) == reflex::type_info::get<test_child>());
@@ -121,6 +125,20 @@ int main()
 	err += reflex::object_cast<const reflex::object>(base_ptr) == nullptr;
 	err += reflex::object_cast<const test_child>(base_ptr) == nullptr;
 	err += reflex::object_cast<const test_base>(base_ptr) == nullptr;
+
+	const reflex::object *object_ptr = &base;
+	err += !(reflex::type_of(*object_ptr) == reflex::type_info::get<test_base>());
+	err += !(reflex::type_of(base) == reflex::type_of(*object_ptr));
+	err += reflex::object_cast<const reflex::object>(object_ptr) == nullptr;
+	err += reflex::object_cast<const test_child>(object_ptr) != nullptr;
+	err += reflex::object_cast<const test_base>(object_ptr) == nullptr;
+
+	object_ptr = &child;
+	err += !(reflex::type_of(*object_ptr) == reflex::type_info::get<test_child>());
+	err += !(reflex::type_of(child) == reflex::type_of(*object_ptr));
+	err += reflex::object_cast<const reflex::object>(object_ptr) == nullptr;
+	err += reflex::object_cast<const test_child>(object_ptr) == nullptr;
+	err += reflex::object_cast<const test_base>(object_ptr) == nullptr;
 
 	return err;
 }

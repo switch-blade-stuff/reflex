@@ -98,7 +98,7 @@ namespace reflex::detail
 	void database_impl::reset()
 	{
 		const auto g = spinlock_guard::make_unique(*this);
-		for (auto &[_, entry]: m_types) entry.first = entry.second();
+		for (auto &[_, entry]: m_types) entry.first = entry.second(*this);
 	}
 	const type_data *database_impl::reset(std::string_view name)
 	{
@@ -106,7 +106,7 @@ namespace reflex::detail
 		const auto iter = m_types.find(name);
 		if (iter == m_types.end()) return nullptr;
 
-		iter->second.first = iter->second.second();
+		iter->second.first = iter->second.second(*this);
 		return &iter->second.first;
 	}
 	const type_data *database_impl::find(std::string_view name) const
@@ -118,7 +118,7 @@ namespace reflex::detail
 			return nullptr;
 	}
 
-	type_data *database_impl::reflect(std::string_view name, data_factory factory)
+	type_data *database_impl::reflect(std::string_view name, type_data (*factory)(database_impl &))
 	{
 		auto g = spinlock_guard::make_shared(*this);
 		auto iter = m_types.find(name);
@@ -126,7 +126,7 @@ namespace reflex::detail
 		{
 			/* Unable to find existing entry, lock for writing & insert. */
 			g.relock();
-			iter = m_types.try_emplace(name, std::make_pair(factory(), factory)).first;
+			iter = m_types.try_emplace(name, std::make_pair(factory(*this), factory)).first;
 		}
 		return &iter->second.first;
 	}

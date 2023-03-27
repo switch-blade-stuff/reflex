@@ -23,6 +23,11 @@ namespace reflex
 
 	class type_database;
 
+	template<typename T>
+	class type_factory;
+	template<typename T>
+	struct type_init;
+
 	template<typename Vtable>
 	class facet;
 	template<typename... Fs>

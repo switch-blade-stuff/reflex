@@ -30,9 +30,15 @@ namespace reflex
 	/** Handle to reflected type information. */
 	class type_info
 	{
+		template<typename>
+		friend class type_factory;
 		friend class any;
 
 	public:
+		/** Reflects type info for type \a T and returns a type factory used for initialization. */
+		template<typename T>
+		[[nodiscard]] inline static type_factory<T> reflect();
+
 		/** Returns type info for type with name \a name, or an invalid type info if the type has not been reflected yet. */
 		[[nodiscard]] inline static type_info get(std::string_view name);
 		/** Returns type info for type \a T. */
