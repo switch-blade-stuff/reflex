@@ -38,7 +38,7 @@ namespace reflex
 		/** Reflects type info for type \a T and returns a type factory used for initialization.
 		 * @note Modifications of type info made through the type factory are not thread-safe and must be synchronized externally. */
 		template<typename T>
-		[[nodiscard]] inline static type_factory<T> reflect();
+		inline static type_factory<T> reflect();
 
 		/** Returns type info for type with name \a name, or an invalid type info if the type has not been reflected yet. */
 		[[nodiscard]] inline static type_info get(std::string_view name);
