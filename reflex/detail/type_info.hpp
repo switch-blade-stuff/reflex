@@ -35,7 +35,8 @@ namespace reflex
 		friend class any;
 
 	public:
-		/** Reflects type info for type \a T and returns a type factory used for initialization. */
+		/** Reflects type info for type \a T and returns a type factory used for initialization.
+		 * @note Modifications of type info made through the type factory are not thread-safe and must be synchronized externally. */
 		template<typename T>
 		[[nodiscard]] inline static type_factory<T> reflect();
 
