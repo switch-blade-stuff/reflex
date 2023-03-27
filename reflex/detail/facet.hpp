@@ -268,6 +268,25 @@ namespace reflex
 	namespace detail
 	{
 		template<typename V>
+		inline bool has_vtable(type_pack_t<V>, const type_data *type)
+		{
+			return type->find_facet(type_name_v<V>);
+		}
+		template<typename... Vs>
+		inline bool has_vtable(type_pack_t<std::tuple<const Vs *...>>, const type_data *type)
+		{
+			return (type->find_facet(type_name_v<Vs>) && ...);
+		}
+	}
+
+	template<typename T>
+	bool type_info::implements_facet() const noexcept { return detail::has_vtable(type_pack<typename T::vtable_type>, m_data); }
+	template<template_instance<facet_group> G>
+	bool type_info::implements_facet() const noexcept { return detail::has_vtable(type_pack<typename G::vtable_type>, m_data); }
+
+	namespace detail
+	{
+		template<typename V>
 		inline void get_vtable(const V *&vtab, const type_data *type)
 		{
 			vtab = static_cast<const V *>(type->find_facet(type_name_v<V>));

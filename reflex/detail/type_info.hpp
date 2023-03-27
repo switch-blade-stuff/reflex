@@ -116,7 +116,10 @@ namespace reflex
 
 		/** Checks if the referenced type implements a facet type \a T. */
 		template<typename T>
-		[[nodiscard]] bool implements_facet() const noexcept { return has_facet_vtable(type_name_v<typename T::vtable_type>); }
+		[[nodiscard]] inline bool implements_facet() const noexcept;
+		/** Checks if the referenced type implements all facets in facet group \a G. */
+		template<template_instance<facet_group> G>
+		[[nodiscard]] inline bool implements_facet() const noexcept;
 
 		/** Checks if the referenced type inherits from a base type \a T. */
 		template<typename T>
