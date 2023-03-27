@@ -103,7 +103,7 @@ namespace reflex
 			[[nodiscard]] constexpr auto size() const
 			{
 				const auto diff = std::distance(m_iter, m_sent);
-				return static_cast<std::make_unsigned_t<std::remove_cvref_t<decltype(diff)>>>(diff);
+				return static_cast<std::make_unsigned_t<std::decay_t<decltype(diff)>>>(diff);
 			}
 
 		private:

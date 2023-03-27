@@ -223,8 +223,8 @@ namespace reflex
 	struct impl_facet<range_facet, T>
 	{
 	private:
-		using iterator = std::remove_cvref_t<decltype(std::ranges::begin(std::declval<T>()))>;
-		using const_iterator = std::remove_cvref_t<decltype(std::ranges::begin(std::declval<const T>()))>;
+		using iterator = std::decay_t<decltype(std::ranges::begin(std::declval<T>()))>;
+		using const_iterator = std::decay_t<decltype(std::ranges::begin(std::declval<const T>()))>;
 		using difference_type = std::ranges::range_difference_t<T>;
 
 		template<typename Iter>

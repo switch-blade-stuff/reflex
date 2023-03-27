@@ -77,15 +77,10 @@ namespace reflex
 		/* Bail if empty or non-owning. */
 		if (empty() || is_ref()) return;
 
-		if (flags() & detail::IS_VALUE)
-			m_type->dtor.placement_func(local());
-		else if (external().deleter == nullptr)
-			m_type->dtor.deleting_func(external().data);
-		else
-		{
-			m_type->dtor.placement_func(external().data);
+		if (!(flags() & detail::IS_VALUE))
 			external().deleter(external().data);
-		}
+		else
+			m_type->dtor(local());
 	}
 
 	bool any::operator==(const any &other) const

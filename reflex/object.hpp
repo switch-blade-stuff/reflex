@@ -9,7 +9,7 @@
 namespace reflex
 {
 	template<typename T>
-	[[nodiscard]] inline type_info type_of(T &&) requires std::derived_from<std::remove_cvref_t<T>, object>;
+	[[nodiscard]] inline type_info type_of(T &&) requires std::derived_from<std::decay_t<T>, object>;
 
 	/** @brief Base type used to attach reflection type info to an object instance.
 	 *
@@ -19,7 +19,7 @@ namespace reflex
 	class REFLEX_PUBLIC object
 	{
 		template<typename T>
-		friend type_info type_of(T &&) requires std::derived_from<std::remove_cvref_t<T>, object>;
+		friend type_info type_of(T &&) requires std::derived_from<std::decay_t<T>, object>;
 
 	public:
 		virtual ~object() = 0;
@@ -31,7 +31,7 @@ namespace reflex
 
 	/** Returns the underlying type of \a value. */
 	template<typename T>
-	[[nodiscard]] type_info type_of(T &&obj) requires std::derived_from<std::remove_cvref_t<T>, object>
+	[[nodiscard]] type_info type_of(T &&obj) requires std::derived_from<std::decay_t<T>, object>
 	{
 		return static_cast<const object &>(obj).do_type_of();
 	}

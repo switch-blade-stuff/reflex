@@ -84,8 +84,8 @@ namespace reflex
 					if constexpr (std::is_pointer_v<T>) result.flags |= type_flags::IS_POINTER;
 					if constexpr (std::is_abstract_v<T>) result.flags |= type_flags::IS_ABSTRACT;
 
-					result.remove_pointer = make_type_data<std::remove_pointer_t<T>>;
-					result.remove_extent = make_type_data<std::remove_extent_t<T>>;
+					result.remove_pointer = make_type_data<std::decay_t<std::remove_pointer_t<T>>>;
+					result.remove_extent = make_type_data<std::decay_t<std::remove_extent_t<T>>>;
 					result.extent = std::extent_v<T>;
 				}
 
@@ -123,7 +123,7 @@ namespace reflex
 					if constexpr (std::is_copy_constructible_v<T>)
 						result.copy_ctor = &result.ctor_list.emplace_back(make_type_ctor<T, std::add_const_t<T> &>());
 
-					result.dtor = make_type_dtor<T>();
+					result.dtor = [](void *ptr) { std::destroy_at(static_cast<T *>(ptr)); };
 					result.any_funcs = make_any_funcs<T>();
 				}
 
@@ -141,7 +141,7 @@ namespace reflex
 	type_factory<T> type_info::reflect()
 	{
 		auto *db = detail::database_impl::instance();
-		return {detail::make_type_data<std::remove_cvref_t<T>>, *db};
+		return {detail::make_type_data<std::decay_t<T>>, *db};
 	}
 
 	type_info type_info::get(std::string_view name)
@@ -153,6 +153,6 @@ namespace reflex
 	type_info type_info::get()
 	{
 		auto *db = detail::database_impl::instance();
-		return {detail::make_type_data<std::remove_cvref_t<T>>, *db};
+		return {detail::make_type_data<std::decay_t<T>>, *db};
 	}
 }

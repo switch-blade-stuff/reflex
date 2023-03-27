@@ -9,6 +9,7 @@
 #include <list>
 
 #include "any.hpp"
+#include "type_info.hpp"
 
 namespace reflex
 {
@@ -75,9 +76,11 @@ namespace reflex
 		struct arg_data
 		{
 			/* Return false when types are not compatible, or mutable ref is required, but got a constant. */
-			[[nodiscard]] constexpr static bool is_invocable(const arg_data &a, const any &b) noexcept { return !(a.flags == IS_CONST && !b.is_const()) && b.type().compatible_with(a.type); }
+			[[nodiscard]] constexpr static bool is_invocable(const arg_data &a, const any &b) noexcept { return (!b.is_const() || (a.flags & (IS_CONST | IS_VALUE))) && b.type().compatible_with(a.type); }
 			/* Return false when types don't exactly match, or mutable ref is required, but got a constant. */
-			[[nodiscard]] constexpr static bool is_exact_invocable(const arg_data &a, const any &b) noexcept { return !(a.flags == IS_CONST && !b.is_const()) && b.type().name() != a.type; }
+			[[nodiscard]] constexpr static bool is_exact_invocable(const arg_data &a, const any &b) noexcept { return (!b.is_const() || (a.flags & (IS_CONST | IS_VALUE))) && b.type().name() == a.type; }
+
+			[[nodiscard]] constexpr bool operator==(const arg_data &other) const noexcept { return type == other.type && flags == other.flags; }
 
 			std::string_view type;
 			type_flags flags;
@@ -89,7 +92,7 @@ namespace reflex
 			type_flags flags = {};
 			if constexpr (std::is_const_v<T>) flags |= IS_CONST;
 			if constexpr (!std::is_reference_v<T>) flags |= IS_VALUE;
-			return {type_name_v<T>, flags};
+			return {type_name_v<std::decay_t<T>>, flags};
 		}
 
 		template<typename... Ts>
@@ -153,31 +156,6 @@ namespace reflex
 			return make_type_ctor<T, Ts...>(allocating, placement);
 		}
 
-		struct type_dtor
-		{
-			type_dtor() noexcept = default;
-			template<typename T, typename DF, typename PF>
-			type_dtor(std::in_place_type_t<T>, DF &&deleting, PF &&placement)
-			{
-				deleting_func = [f = std::forward<DF>(deleting)](void *ptr) { std::invoke(f, void_cast<T>(ptr)); };
-				placement_func = [f = std::forward<PF>(placement)](void *ptr) { std::invoke(f, void_cast<T>(ptr)); };
-			}
-
-			std::function<void(void *)> deleting_func;
-			std::function<void(void *)> placement_func;
-		};
-
-		template<typename T, typename DF, typename PF>
-		[[nodiscard]] inline static type_dtor make_type_dtor(DF &&deleting, PF &&placement)
-		{
-			return {std::in_place_type<T>, std::forward<DF>(deleting), std::forward<PF>(placement)};
-		}
-		template<typename T>
-		[[nodiscard]] inline static type_dtor make_type_dtor() noexcept
-		{
-			return make_type_dtor<T>([](T *ptr) { delete ptr; }, [](T *ptr) { std::destroy_at(ptr); });
-		}
-
 		struct type_prop
 		{
 			type_prop() noexcept = default;
@@ -211,7 +189,7 @@ namespace reflex
 		template<typename T, auto T::*Member>
 		[[nodiscard]] inline static type_prop make_type_prop() noexcept
 		{
-			using mem_t = std::remove_cvref_t<decltype(std::declval<T>().*Member)>;
+			using mem_t = std::decay_t<decltype(std::declval<T>().*Member)>;
 			constexpr auto getter = [](const void *cdata, void *data) -> any
 			{
 				if (cdata != nullptr)
@@ -316,28 +294,33 @@ namespace reflex
 			{
 				const auto exact_pred = [&](const type_ctor &ctor)
 				{
-					if (ctor.args.empty() && args.empty()) return true;
+					if (ctor.args.size() != args.size()) return false;
 					for (std::size_t i = 0; i < ctor.args.size() && i < args.size(); ++i)
 					{
-						if (arg_data::is_exact_invocable(ctor.args[i], args[i]))
-							return true;
+						if (!arg_data::is_exact_invocable(ctor.args[i], args[i]))
+							return false;
 					}
-					return false;
+					return true;
 				};
 				const auto compat_pred = [&](const type_ctor &ctor)
 				{
-					if (ctor.args.empty() && args.empty()) return true;
+					if (ctor.args.size() != args.size()) return false;
 					for (std::size_t i = 0; i < ctor.args.size() && i < args.size(); ++i)
 					{
-						if (arg_data::is_invocable(ctor.args[i], args[i]))
-							return true;
+						if (!arg_data::is_invocable(ctor.args[i], args[i]))
+							return false;
 					}
-					return false;
+					return true;
 				};
 
 				/* First search for exact matches, then search for matches with conversion. */
 				for (const auto &ctor: ctor_list) if (exact_pred(ctor)) return &ctor;
 				for (const auto &ctor: ctor_list) if (compat_pred(ctor)) return &ctor;
+				return nullptr;
+			}
+			[[nodiscard]] const type_ctor *find_ctor(std::span<const arg_data> args) const
+			{
+				for (const auto &ctor: ctor_list) if (std::ranges::equal(ctor.args, args)) return &ctor;
 				return nullptr;
 			}
 
@@ -361,10 +344,10 @@ namespace reflex
 			conv_table conv_list;
 
 			/* Constructors & destructors. */
+			std::function<void(void *)> dtor;
 			std::list<type_ctor> ctor_list;
 			type_ctor *default_ctor = nullptr;
 			type_ctor *copy_ctor = nullptr;
-			type_dtor dtor;
 
 			/* Instance properties. */
 			prop_table prop_list;
@@ -396,6 +379,9 @@ namespace reflex
 
 	type_info type_info::remove_extent() const noexcept { return valid() && m_data->remove_extent ? type_info{m_data->remove_extent, *m_db} : type_info{}; }
 	type_info type_info::remove_pointer() const noexcept { return valid() && m_data->remove_pointer ? type_info{m_data->remove_pointer, *m_db} : type_info{}; }
+
+	template<typename... Args>
+	bool type_info::constructible_from() const { return constructible_from(detail::arg_list<Args...>::value); }
 
 	template<typename T>
 	void any::copy_init(type_info type, T *ptr)

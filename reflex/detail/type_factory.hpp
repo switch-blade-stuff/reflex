@@ -5,6 +5,7 @@
 #pragma once
 
 #include "type_data.hpp"
+#include "facet.hpp"
 
 namespace reflex
 {
@@ -32,7 +33,7 @@ namespace reflex
 
 		/** Adds enumeration constant named \a name constructed from arguments \a args to the underlying type info. */
 		template<typename... Args>
-		type_factory &enumerate(std::string_view name, Args &&...args) requires std::constructible_from<T, Args &&...>
+		type_factory &enumerate(std::string_view name, Args &&...args) requires std::constructible_from<T, Args...>
 		{
 			m_data->conv_list.try_emplace(name, type(), std::in_place_type<T>, std::forward<Args>(args)...);
 			return *this;
@@ -57,14 +58,40 @@ namespace reflex
 		}
 		/** Makes the underlying type info convertible to \a U using `static_cast<U>(value)`. */
 		template<typename U>
-		type_factory &conv() requires (std::convertible_to<T, U> && std::same_as<std::remove_cvref_t<U>, U>)
+		type_factory &conv() requires (std::convertible_to<T, U> && std::same_as<std::decay_t<U>, U>)
 		{
 			if (const auto name = type_name_v<U>; !m_data->conv_list.contains(name))
 				m_data->conv_list.emplace(name, detail::make_type_conv<T, U>());
 			return *this;
 		}
 
+		/** Makes the underlying type info constructible via constructor `T(Args...)`. */
+		template<typename... Args>
+		type_factory &ctor() requires std::constructible_from<T, Args...>
+		{
+			add_ctor<Args...>();
+			return *this;
+		}
+		/** Makes the underlying type info constructible via allocating & placement factory functions \a alloc_func and \a place_func.
+		 * \a alloc_func must be invocable with arguments \a Args and return an instance of `any`, and
+		 * \a place_func must be invocable with pointer to \a T, and arguments \a Args. */
+		template<typename... Args, typename Fa, typename Fp>
+		type_factory &ctor(Fa &&alloc_func, Fp &&place_func) requires (std::is_invocable_r_v<any, Fa, Args...> && std::is_invocable_v<Fp, T *, Args...>)
+		{
+			add_ctor<Args...>(std::forward<Fa>(alloc_func), std::forward<Fp>(place_func));
+			return *this;
+		}
+
 	private:
+		template<typename... Ts, typename... Args>
+		void add_ctor(Args &&...args)
+		{
+			constexpr auto args_data = detail::arg_list<Ts...>::value;
+			if (m_data->find_ctor(args_data) != nullptr) return;
+
+			m_data->ctor_list.emplace_back(detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...));
+		}
+
 		detail::type_data *m_data;
 		detail::database_impl *m_db;
 	};

@@ -71,6 +71,11 @@ namespace reflex
 		if (!valid()) [[unlikely]] return false;
 		return m_data->find_ctor(args) != nullptr;
 	}
+	bool type_info::constructible_from(std::span<const detail::arg_data> args) const
+	{
+		if (!valid()) [[unlikely]] return false;
+		return m_data->find_ctor(args) != nullptr;
+	}
 
 	any type_info::construct(std::span<any> args) const
 	{
@@ -94,5 +99,5 @@ namespace reflex
 		return false;
 	}
 
-	void type_info::destroy_at(void *ptr) const { if (valid()) [[likely]] m_data->dtor.placement_func(ptr); }
+	void type_info::destroy_at(void *ptr) const { if (valid()) [[likely]] m_data->dtor(ptr); }
 }

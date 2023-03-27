@@ -112,7 +112,7 @@ namespace reflex
 
 		/** Checks if the referenced type inherits from a base type \a T. */
 		template<typename T>
-		[[nodiscard]] bool inherits_from() const noexcept { return inherits_from(type_name_v<std::remove_cvref_t<T>>); }
+		[[nodiscard]] bool inherits_from() const noexcept { return inherits_from(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type inherits from a base type \a type. */
 		[[nodiscard]] bool inherits_from(type_info type) const noexcept { return type.valid() && inherits_from(type.name()); }
 		/** Checks if the referenced type inherits from a base type with name \a name. */
@@ -120,7 +120,7 @@ namespace reflex
 
 		/** Checks if the referenced type is convertible to type \a T, or inherits from a type convertible to \a T. */
 		template<typename T>
-		[[nodiscard]] bool convertible_to() const noexcept { return convertible_to(type_name_v<std::remove_cvref_t<T>>); }
+		[[nodiscard]] bool convertible_to() const noexcept { return convertible_to(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is convertible to type \a type, or inherits from a type convertible to \a type. */
 		[[nodiscard]] bool convertible_to(type_info type) const noexcept { return type.valid() && convertible_to(type.name()); }
 		/** Checks if the referenced type is convertible to type with name \a name, or inherits from a type convertible to \a name. */
@@ -128,12 +128,15 @@ namespace reflex
 
 		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type \a T. */
 		template<typename T>
-		[[nodiscard]] bool compatible_with() const noexcept { return compatible_with(type_name_v<std::remove_cvref_t<T>>); }
+		[[nodiscard]] bool compatible_with() const noexcept { return compatible_with(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type \a type. */
 		[[nodiscard]] bool compatible_with(type_info type) const noexcept { return *this == type || inherits_from(type) || convertible_to(type); }
 		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type with name \a name. */
 		[[nodiscard]] bool compatible_with(std::string_view name) const noexcept { return this->name() == name || inherits_from(name) || convertible_to(name); }
 
+		/** Checks if the referenced type is constructible from arguments \a Args. */
+		template<typename... Args>
+		[[nodiscard]] inline bool constructible_from() const;
 		/** Checks if the referenced type is constructible from arguments \a args. */
 		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool constructible_from(std::span<any> args) const;
 
@@ -174,6 +177,8 @@ namespace reflex
 
 		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool has_facet_vtable(std::string_view name) const noexcept;
 		inline void fill_parents(tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> &result) const;
+
+		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool constructible_from(std::span<const detail::arg_data> args) const;
 
 		const detail::type_data *m_data = nullptr;
 		detail::database_impl *m_db = nullptr;

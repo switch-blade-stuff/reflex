@@ -60,85 +60,109 @@ public:
 	~test_child() noexcept override = default;
 };
 
+#ifndef NDEBUG
+#include <cassert>
+#define TEST_ASSERT(cnd) assert((cnd))
+#else
+#define TEST_ASSERT(cnd) do { if (!(cnd)) std::terminate(); } while (false)
+#endif
+
 int main()
 {
-	int err = 0;
+	{
+		auto i0 = reflex::make_any<int>(1);
+		TEST_ASSERT(i0.type().convertible_to<double>());
+		TEST_ASSERT(i0.type().convertible_to<std::intmax_t>());
+		TEST_ASSERT(i0.type().convertible_to<std::uintmax_t>());
 
-	auto i0 = reflex::make_any<int>(1);
-	err += !i0.type().convertible_to<double>();
-	err += !i0.type().convertible_to<std::intmax_t>();
-	err += !i0.type().convertible_to<std::uintmax_t>();
+		TEST_ASSERT(reflex::type_of(i0) == reflex::type_info::get<int>());
+		TEST_ASSERT(reflex::type_of(i0) == reflex::type_of(int{}));
+		TEST_ASSERT(reflex::type_of(i0) == i0.type());
 
-	err += !(reflex::type_of(i0) == reflex::type_info::get<int>());
-	err += !(reflex::type_of(i0) == reflex::type_of(int{}));
-	err += !(reflex::type_of(i0) == i0.type());
+		auto d0 = i0.try_cast<double>();
+		TEST_ASSERT(!d0.empty() && *d0.get<double>() == 1);
 
-	auto d0 = i0.try_cast<double>();
-	err += d0.empty() || *d0.get<double>() != 1;
+		TEST_ASSERT(reflex::type_of(d0) == reflex::type_info::get<double>());
+		TEST_ASSERT(reflex::type_of(d0) == reflex::type_of(double{}));
+		TEST_ASSERT(reflex::type_of(d0) == d0.type());;
 
-	err += !(reflex::type_of(d0) == reflex::type_info::get<double>());
-	err += !(reflex::type_of(d0) == reflex::type_of(double{}));
-	err += !(reflex::type_of(d0) == d0.type());;
+		TEST_ASSERT(i0.cast<std::intmax_t>() == d0.cast<std::intmax_t>());
+		TEST_ASSERT(i0 != reflex::any{});
+		TEST_ASSERT(i0 >= reflex::any{});
+		TEST_ASSERT(i0 > reflex::any{});
 
-	err += i0.cast<std::intmax_t>() != d0.cast<std::intmax_t>();
-	err += !(i0 >= reflex::any{});
-	err += !(i0 > reflex::any{});
-	err += i0 == reflex::any{};
+		TEST_ASSERT(reflex::type_info::get<reflex::object>().is_abstract());
 
-	err += !reflex::type_info::get<reflex::object>().is_abstract();
+		auto i1 = i0.type().construct(i0);
+		TEST_ASSERT(reflex::type_of(i1) == reflex::type_info::get<int>());
+		TEST_ASSERT(reflex::type_of(i1) == reflex::type_of(int{}));
+		TEST_ASSERT(reflex::type_of(i1) == i0.type());
+		TEST_ASSERT(!i1.empty() && *i1.get<int>() == 1);
+		TEST_ASSERT(i1 == i0);
 
-	auto i1 = i0.type().construct(i0);
-	err += !(reflex::type_of(i1) == reflex::type_info::get<int>());
-	err += !(reflex::type_of(i1) == reflex::type_of(int{}));
-	err += !(reflex::type_of(i1) == i0.type());
-	err += i1.empty() || *i1.get<int>() != 1;
-	err += i1 != i0;
+		auto i2 = i0.type().construct();
+		TEST_ASSERT(reflex::type_of(i2) == reflex::type_info::get<int>());
+		TEST_ASSERT(reflex::type_of(i2) == reflex::type_of(int{}));
+		TEST_ASSERT(reflex::type_of(i2) == i0.type());
+		TEST_ASSERT(!i2.empty() && *i2.get<int>() == 0);
+		TEST_ASSERT(i2 != i0);
+	}
 
-	auto i2 = i0.type().construct();
-	err += !(reflex::type_of(i2) == reflex::type_info::get<int>());
-	err += !(reflex::type_of(i2) == reflex::type_of(int{}));
-	err += !(reflex::type_of(i2) == i0.type());
-	err += i2.empty() || *i2.get<int>() != 0;
-	err += i2 == i0;
+	{
+		const auto base = test_base{};
+		TEST_ASSERT(reflex::type_of(base) == reflex::type_info::get<test_base>());
+		TEST_ASSERT(reflex::type_of(base).inherits_from<reflex::object>());
 
-	const auto base = test_base{};
-	err += !(reflex::type_of(base) == reflex::type_info::get<test_base>());
-	err += !(reflex::type_of(base).inherits_from<reflex::object>());
+		reflex::type_info::reflect<test_child>().base<test_base>();
 
-	reflex::type_info::reflect<test_child>().base<test_base>();
+		auto *base_ptr = &base;
+		TEST_ASSERT(reflex::type_of(*base_ptr) == reflex::type_info::get<test_base>());
+		TEST_ASSERT(reflex::type_of(base) == reflex::type_of(*base_ptr));
+		TEST_ASSERT(reflex::object_cast<const reflex::object>(base_ptr) != nullptr);
+		TEST_ASSERT(reflex::object_cast<const test_child>(base_ptr) == nullptr);
+		TEST_ASSERT(reflex::object_cast<const test_base>(base_ptr) != nullptr);
 
-	auto *base_ptr = &base;
-	err += !(reflex::type_of(*base_ptr) == reflex::type_info::get<test_base>());
-	err += !(reflex::type_of(base) == reflex::type_of(*base_ptr));
-	err += reflex::object_cast<const reflex::object>(base_ptr) == nullptr;
-	err += reflex::object_cast<const test_child>(base_ptr) != nullptr;
-	err += reflex::object_cast<const test_base>(base_ptr) == nullptr;
+		const auto child = test_child{};
+		TEST_ASSERT(reflex::type_of(child) == reflex::type_info::get<test_child>());
+		TEST_ASSERT(reflex::type_of(child).inherits_from<reflex::object>());
+		TEST_ASSERT(reflex::type_of(child).inherits_from<test_base>());
 
-	const auto child = test_child{};
-	err += !(reflex::type_of(child) == reflex::type_info::get<test_child>());
-	err += !(reflex::type_of(child).inherits_from<reflex::object>());
-	err += !(reflex::type_of(child).inherits_from<test_base>());
+		base_ptr = &child;
+		TEST_ASSERT(reflex::type_of(*base_ptr) == reflex::type_info::get<test_child>());
+		TEST_ASSERT(reflex::type_of(child) == reflex::type_of(*base_ptr));
+		TEST_ASSERT(reflex::object_cast<const reflex::object>(base_ptr) != nullptr);
+		TEST_ASSERT(reflex::object_cast<const test_child>(base_ptr) != nullptr);
+		TEST_ASSERT(reflex::object_cast<const test_base>(base_ptr) != nullptr);
 
-	base_ptr = &child;
-	err += !(reflex::type_of(*base_ptr) == reflex::type_info::get<test_child>());
-	err += !(reflex::type_of(child) == reflex::type_of(*base_ptr));
-	err += reflex::object_cast<const reflex::object>(base_ptr) == nullptr;
-	err += reflex::object_cast<const test_child>(base_ptr) == nullptr;
-	err += reflex::object_cast<const test_base>(base_ptr) == nullptr;
+		const reflex::object *object_ptr = &base;
+		TEST_ASSERT(reflex::type_of(*object_ptr) == reflex::type_info::get<test_base>());
+		TEST_ASSERT(reflex::type_of(base) == reflex::type_of(*object_ptr));
+		TEST_ASSERT(reflex::object_cast<const reflex::object>(object_ptr) != nullptr);
+		TEST_ASSERT(reflex::object_cast<const test_child>(object_ptr) == nullptr);
+		TEST_ASSERT(reflex::object_cast<const test_base>(object_ptr) != nullptr);
 
-	const reflex::object *object_ptr = &base;
-	err += !(reflex::type_of(*object_ptr) == reflex::type_info::get<test_base>());
-	err += !(reflex::type_of(base) == reflex::type_of(*object_ptr));
-	err += reflex::object_cast<const reflex::object>(object_ptr) == nullptr;
-	err += reflex::object_cast<const test_child>(object_ptr) != nullptr;
-	err += reflex::object_cast<const test_base>(object_ptr) == nullptr;
+		object_ptr = &child;
+		TEST_ASSERT(reflex::type_of(*object_ptr) == reflex::type_info::get<test_child>());
+		TEST_ASSERT(reflex::type_of(child) == reflex::type_of(*object_ptr));
+		TEST_ASSERT(reflex::object_cast<const reflex::object>(object_ptr) != nullptr);
+		TEST_ASSERT(reflex::object_cast<const test_child>(object_ptr) != nullptr);
+		TEST_ASSERT(reflex::object_cast<const test_base>(object_ptr) != nullptr);
+	}
 
-	object_ptr = &child;
-	err += !(reflex::type_of(*object_ptr) == reflex::type_info::get<test_child>());
-	err += !(reflex::type_of(child) == reflex::type_of(*object_ptr));
-	err += reflex::object_cast<const reflex::object>(object_ptr) == nullptr;
-	err += reflex::object_cast<const test_child>(object_ptr) == nullptr;
-	err += reflex::object_cast<const test_base>(object_ptr) == nullptr;
+	{
+		const auto str_ti = reflex::type_info::reflect<std::string>()
+				.ctor<const char *, std::size_t>()
+				.ctor<const char *>()
+				.type();
 
-	return err;
+		TEST_ASSERT((str_ti.constructible_from<const char *, std::size_t>()));
+		TEST_ASSERT((str_ti.constructible_from<const char *>()));
+
+		const auto str0 = str_ti.construct("hello, world");
+		TEST_ASSERT(!str0.empty() && *str0.get<std::string>() == "hello, world");
+
+		const auto str1 = str_ti.construct("hello, world", 12);
+		TEST_ASSERT(!str1.empty() && *str1.get<std::string>() == "hello, world");
+		TEST_ASSERT(str0 == str1);
+	}
 }

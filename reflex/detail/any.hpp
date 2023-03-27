@@ -99,7 +99,7 @@ namespace reflex
 			void *data = nullptr;
 		};
 
-		template<typename T, typename U = std::remove_cvref_t<T>>
+		template<typename T, typename U = std::decay_t<T>>
 		static constexpr auto valid_deleter = std::is_empty_v<U> || detail::any_deleter_func<U>::value;
 		template<typename T>
 		static constexpr auto is_by_value = alignof(T) <= alignof(storage_t) && sizeof(T) <= (sizeof(storage_t) - sizeof(detail::type_flags)) &&
@@ -129,10 +129,10 @@ namespace reflex
 
 		/** Initializes `any` to manage a reference to \a ref. */
 		template<typename T>
-		any(T &ref) requires (!std::same_as<std::remove_cv_t<T>, any>) : any(type_of(ref), ref) {}
+		any(T &ref) requires (!std::same_as<std::decay_t<T>, any>) : any(type_of(ref), ref) {}
 		/** Initializes `any` to manage a reference to \a ref using type info \a type. */
 		template<typename T>
-		any(type_info type, T &ref) requires (!std::same_as<std::remove_cv_t<T>, any>) : m_type(type)
+		any(type_info type, T &ref) requires (!std::same_as<std::decay_t<T>, any>) : m_type(type)
 		{
 			if constexpr (!std::is_const_v<T>)
 				external().data = std::addressof(ref);
@@ -145,10 +145,10 @@ namespace reflex
 
 		/** Initializes `any` to manage an instance of \a T move-constructed from \a value. */
 		template<typename T>
-		any(T &&value) requires (!std::same_as<std::remove_cv_t<T>, any>) : any(std::in_place_type<std::remove_cvref_t<T>>, std::forward<T>(value)) {}
+		any(T &&value) requires (!std::same_as<std::decay_t<T>, any>) : any(std::in_place_type<std::decay_t<T>>, std::forward<T>(value)) {}
 		/** Initializes `any` to manage an instance of \a T move-constructed from \a value using type info \a type. */
 		template<typename T>
-		any(type_info type, T &&value) requires (!std::same_as<std::remove_cv_t<T>, any>) : any(type, std::in_place_type<std::remove_cvref_t<T>>, std::forward<T>(value)) {}
+		any(type_info type, T &&value) requires (!std::same_as<std::decay_t<T>, any>) : any(type, std::in_place_type<std::decay_t<T>>, std::forward<T>(value)) {}
 
 		/** Initializes `any` to manage in-place constructed instance of \a T with arguments \a args. */
 		template<typename T, typename... Args>
@@ -367,7 +367,7 @@ namespace reflex
 		{
 			if constexpr (std::is_const_v<T>)
 				return std::as_const(*this).get<T>();
-			else if (type().name() == type_name_v<std::remove_cvref_t<T>>)
+			else if (type().name() == type_name_v<std::decay_t<T>>)
 				return static_cast<T *>(data());
 			else
 				return nullptr;
@@ -376,7 +376,7 @@ namespace reflex
 		template<typename T>
 		[[nodiscard]] std::add_const_t<T> *get() const noexcept
 		{
-			if (type().name() == type_name_v<std::remove_cvref_t<T>>)
+			if (type().name() == type_name_v<std::decay_t<T>>)
 				return static_cast<std::add_const_t<T> *>(data());
 			else
 				return nullptr;
@@ -388,8 +388,8 @@ namespace reflex
 		{
 			if constexpr (std::is_const_v<T>)
 				return std::as_const(*this).as<T>();
-			else if (type().name() != type_name_v<std::remove_cvref_t<T>>)
-				return static_cast<T *>(base_cast(type_name_v<std::remove_cvref_t<T>>));
+			else if (type().name() != type_name_v<std::decay_t<T>>)
+				return static_cast<T *>(base_cast(type_name_v<std::decay_t<T>>));
 			else
 				return static_cast<T *>(data());
 		}
@@ -397,8 +397,8 @@ namespace reflex
 		template<typename T>
 		[[nodiscard]] std::add_const_t<T> *as() const
 		{
-			if (type().name() != type_name_v<std::remove_cvref_t<T>>)
-				return static_cast<std::add_const_t<T> *>(base_cast(type_name_v<std::remove_cvref_t<T>>));
+			if (type().name() != type_name_v<std::decay_t<T>>)
+				return static_cast<std::add_const_t<T> *>(base_cast(type_name_v<std::decay_t<T>>));
 			else
 				return static_cast<std::add_const_t<T> *>(data());
 		}
@@ -444,7 +444,10 @@ namespace reflex
 			m_type = type;
 			flags() = detail::IS_OWNED | (std::is_const_v<T> ? detail::IS_CONST : detail::type_flags{});
 			if constexpr (!is_by_value<T>)
+			{
 				external().data = static_cast<void *>(new std::remove_cv_t<T>(std::forward<Args>(args)...));
+				external().deleter = +[](void *ptr) { delete static_cast<std::remove_cv_t<T> *>(ptr); };
+			}
 			else
 			{
 				std::construct_at(std::launder(static_cast<T *>(local())), std::forward<Args>(args)...);
@@ -536,18 +539,18 @@ namespace reflex
 
 	/** Returns the type info of the object managed by \a value. Equivalent to `value.type()`. */
 	template<typename T>
-	[[nodiscard]] inline type_info type_of(T &&value) requires std::same_as<std::remove_cvref_t<T>, any> { return value.type(); }
+	[[nodiscard]] inline type_info type_of(T &&value) requires std::same_as<std::decay_t<T>, any> { return value.type(); }
 
 	/** Returns an `any` referencing the object managed by \a other. */
 	template<typename T>
 	[[nodiscard]] inline any forward_any(T &other) requires(std::same_as<std::decay_t<T>, any>) { return other.ref(); }
 	/** Returns an `any` referencing the object at \a instance. */
 	template<typename T>
-	[[nodiscard]] inline any forward_any(T &instance) requires (!std::same_as<std::decay_t<T>, any>) { return any{instance}; }
+	[[nodiscard]] inline any forward_any(T &instance) requires (!std::same_as<std::decay_t<T>, any>) { return any{std::forward<std::decay_t<T>>(instance)}; }
 
 	/** Returns an `any` containing a move-constructed instance of \a value. */
 	template<typename T>
-	[[nodiscard]] inline any forward_any(T &&value) { return any{std::forward<T>(value)}; }
+	[[nodiscard]] inline any forward_any(T &&value) { return any{std::forward<std::decay_t<T>>(value)}; }
 	/** Forwards \a value. */
 	template<typename T>
 	[[nodiscard]] inline any &&forward_any(any &&value) { return std::forward<any>(value); }
