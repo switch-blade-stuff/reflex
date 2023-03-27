@@ -54,7 +54,7 @@ namespace reflex
 	}
 
 	/** Exception type thrown when a function cannot be invoked on a facet. */
-	class REFLEX_PUBLIC bad_facet_function : public std::runtime_error
+	class bad_facet_function : public std::runtime_error
 	{
 		template<auto F, basic_const_string FuncName>
 		friend inline bad_facet_function detail::make_facet_error();
@@ -72,7 +72,7 @@ namespace reflex
 		/** @copydoc bad_facet_function */
 		bad_facet_function(const std::string &msg, std::string_view name) : std::runtime_error(msg), m_name(name) {}
 
-		~bad_facet_function() override = default;
+		REFLEX_PUBLIC ~bad_facet_function() override = default;
 
 		/** Returns name of the offending facet function. */
 		[[nodiscard]] constexpr std::string_view name() const noexcept { return m_name; }

@@ -112,7 +112,7 @@ namespace reflex
 		[[nodiscard]] constexpr std::size_t extent() const noexcept;
 
 		/** Returns a set of the referenced type's parents (including the parents' parents). */
-		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE auto parents() const -> tpp::dense_set<type_info, detail::str_hash, detail::str_cmp>;
+		[[nodiscard]] REFLEX_PUBLIC auto parents() const -> tpp::dense_set<type_info, detail::str_hash, detail::str_cmp>;
 
 		/** Checks if the referenced type implements a facet type \a T. */
 		template<typename T>
@@ -127,7 +127,7 @@ namespace reflex
 		/** Checks if the referenced type inherits from a base type \a type. */
 		[[nodiscard]] bool inherits_from(type_info type) const noexcept { return type.valid() && inherits_from(type.name()); }
 		/** Checks if the referenced type inherits from a base type with name \a name. */
-		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool inherits_from(std::string_view name) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool inherits_from(std::string_view name) const noexcept;
 
 		/** Checks if the referenced type is convertible to type \a T, or inherits from a type convertible to \a T. */
 		template<typename T>
@@ -135,7 +135,7 @@ namespace reflex
 		/** Checks if the referenced type is convertible to type \a type, or inherits from a type convertible to \a type. */
 		[[nodiscard]] bool convertible_to(type_info type) const noexcept { return type.valid() && convertible_to(type.name()); }
 		/** Checks if the referenced type is convertible to type with name \a name, or inherits from a type convertible to \a name. */
-		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool convertible_to(std::string_view name) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool convertible_to(std::string_view name) const noexcept;
 
 		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type \a T. */
 		template<typename T>
@@ -149,11 +149,11 @@ namespace reflex
 		template<typename... Args>
 		[[nodiscard]] inline bool constructible_from() const;
 		/** Checks if the referenced type is constructible from arguments \a args. */
-		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool constructible_from(std::span<any> args) const;
+		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(std::span<any> args) const;
 
 		/** Constructs an object of the referenced type from arguments \a args.
 		 * @return `any` containing the constructed object instance, or an empty `any` if `this` is not valid or the referenced type is not constructible from \a args. */
-		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE any construct(std::span<any> args) const;
+		[[nodiscard]] REFLEX_PUBLIC any construct(std::span<any> args) const;
 		/** @cpoydoc construct */
 		template<std::size_t N>
 		[[nodiscard]] inline any construct(std::span<any, N> args) const;
@@ -162,7 +162,7 @@ namespace reflex
 		[[nodiscard]] inline any construct(Args &&...args) const;
 
 		/** Checks if the referenced type has a property with name \a name. */
-		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool has_property(std::string_view name) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool has_property(std::string_view name) const noexcept;
 
 		[[nodiscard]] constexpr bool operator==(const type_info &other) const noexcept = default;
 		[[nodiscard]] constexpr bool operator!=(const type_info &other) const noexcept = default;
@@ -171,10 +171,10 @@ namespace reflex
 		/* Convenience operator for access to underlying type_data. */
 		[[nodiscard]] constexpr const detail::type_data *operator->() const noexcept { return m_data; }
 
-		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool has_facet_vtable(std::string_view name) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool has_facet_vtable(std::string_view name) const noexcept;
 		inline void fill_parents(tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> &result) const;
 
-		[[nodiscard]] REFLEX_PUBLIC_OR_INLINE bool constructible_from(std::span<const detail::arg_data> args) const;
+		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(std::span<const detail::arg_data> args) const;
 
 		const detail::type_data *m_data = nullptr;
 		detail::database_impl *m_db = nullptr;
