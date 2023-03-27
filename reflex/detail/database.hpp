@@ -119,9 +119,9 @@ namespace reflex
 
 					/* Add default & copy constructors. */
 					if constexpr (std::is_default_constructible_v<T>)
-						result.default_ctor = &result.ctor_list.emplace_back(make_type_ctor<T>());
+						result.ctor_list.emplace_back(make_type_ctor<T>());
 					if constexpr (std::is_copy_constructible_v<T>)
-						result.copy_ctor = &result.ctor_list.emplace_back(make_type_ctor<T, std::add_const_t<T> &>());
+						result.ctor_list.emplace_back(make_type_ctor<T, std::add_const_t<T> &>());
 
 					result.dtor = [](void *ptr) { std::destroy_at(static_cast<T *>(ptr)); };
 					result.any_funcs = make_any_funcs<T>();

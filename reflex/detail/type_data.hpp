@@ -328,8 +328,6 @@ namespace reflex
 			/* Constructors & destructors. */
 			std::function<void(void *)> dtor;
 			std::list<type_ctor> ctor_list;
-			type_ctor *default_ctor = nullptr;
-			type_ctor *copy_ctor = nullptr;
 
 			/* Instance properties. */
 			prop_table prop_list;

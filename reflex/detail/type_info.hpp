@@ -173,9 +173,8 @@ namespace reflex
 		[[nodiscard]] constexpr const detail::type_data *operator->() const noexcept { return m_data; }
 
 		[[nodiscard]] REFLEX_PUBLIC bool has_facet_vtable(std::string_view name) const noexcept;
-		inline void fill_parents(tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> &result) const;
-
 		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(std::span<const detail::arg_data> args) const;
+		inline void fill_parents(tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> &result) const;
 
 		const detail::type_data *m_data = nullptr;
 		detail::database_impl *m_db = nullptr;
