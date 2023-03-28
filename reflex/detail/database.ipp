@@ -126,7 +126,7 @@ namespace reflex::detail
 		{
 			/* Unable to find existing entry, lock for writing & insert. */
 			g.relock();
-			iter = m_types.try_emplace(name, std::make_pair(factory(*this), factory)).first;
+			iter = m_types.emplace(name, std::make_pair(factory(*this), factory)).first;
 		}
 		return &iter->second.first;
 	}

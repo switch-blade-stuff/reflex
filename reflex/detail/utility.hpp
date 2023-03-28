@@ -12,13 +12,6 @@
 
 namespace reflex
 {
-	/** Metaprogramming utility used to group a pack of types \a Ts. */
-	template<typename... Ts>
-	struct type_pack_t {};
-	/** Instance of `type_pack_t<Ts...>`. */
-	template<typename... Ts>
-	inline constexpr auto type_pack = type_pack_t<Ts...>{};
-
 	/** Metaprogramming utility used to take const qualifier from \a From and apply it to \a To. */
 	template<typename To, typename From>
 	struct take_const { using type = std::conditional_t<std::is_const_v<From>, std::add_const_t<To>, To>; };
@@ -120,4 +113,40 @@ namespace reflex
 	/** Concept used to check if \a I is an instance of template \a T. */
 	template<typename I, template<typename...> typename T>
 	concept template_instance = detail::template_instance_impl<I, T>::value;
+
+	/** Metaprogramming utility used to group a pack of types \a Ts. */
+	template<typename... Ts>
+	struct type_pack_t {};
+	/** Instance of `type_pack_t<Ts...>`. */
+	template<typename... Ts>
+	inline constexpr auto type_pack = type_pack_t<Ts...>{};
+
+	namespace detail
+	{
+		template<typename, typename...>
+		struct is_in_impl;
+
+		template<typename U, typename T, typename... Ts>
+		struct is_in_impl<U, T, Ts...> : is_in_impl<U, Ts...> {};
+		template<typename U, typename... Ts>
+		struct is_in_impl<U, U, Ts...> : std::true_type {};
+		template<typename T>
+		struct is_in_impl<T> : std::false_type {};
+
+		template<typename, typename>
+		struct unique_type_pack_impl;
+		template<typename... Ts, typename U, typename... Us> requires(is_in_impl<U, Ts...>::value)
+		struct unique_type_pack_impl<type_pack_t<Ts...>, type_pack_t<U, Us...>> : unique_type_pack_impl<type_pack_t<Ts...>, type_pack_t<Us...>> {};
+		template<typename... Ts, typename U, typename... Us> requires (!is_in_impl<U, Ts...>::value)
+		struct unique_type_pack_impl<type_pack_t<Ts...>, type_pack_t<U, Us...>> : unique_type_pack_impl<type_pack_t<U, Ts...>, type_pack_t<Us...>> {};
+		template<typename... Ts>
+		struct unique_type_pack_impl<type_pack_t<Ts...>, type_pack_t<>> { using type = type_pack_t<Ts...>; };
+	}
+
+	/** Metaprogramming utility used to filter duplicate types from type pack `P`. */
+	template<typename P>
+	using unique_type_pack_t = typename detail::unique_type_pack_impl<type_pack_t<>, P>::type;
+	/** Instance of `unique_type_pack_t<P>`. */
+	template<typename P>
+	inline constexpr auto unique_type_pack = unique_type_pack_t<P>{};
 }
