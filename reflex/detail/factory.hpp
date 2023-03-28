@@ -34,9 +34,12 @@ namespace reflex
 		template<typename... Args>
 		type_factory &enumerate(std::string_view name, Args &&...args) requires std::constructible_from<T, Args...>
 		{
-			m_data->conv_list.emplace_or_replace(name, type(), std::in_place_type<T>, std::forward<Args>(args)...);
+			m_data->enum_list.emplace_or_replace(name, type(), std::in_place_type<T>, std::forward<Args>(args)...);
 			return *this;
 		}
+		/** Adds enumeration constant named \a name initialized with \a Value to the underlying type info. */
+		template<auto Value>
+		type_factory &enumerate(std::string_view name) { return enumerate(name, Value); }
 
 		/** Adds base type \a U to the list of bases of the underlying type info. */
 		template<typename U>
@@ -74,24 +77,6 @@ namespace reflex
 		type_factory &ctor(F &&ctor_func) requires std::is_invocable_r_v<any, F, Args...>
 		{
 			add_ctor<Args...>(std::forward<F>(ctor_func));
-			return *this;
-		}
-
-		/** Adds a member object pointer \a M as a property with name \a name for the underlying type info.  */
-		template<auto M>
-		type_factory &prop(std::string_view name) requires (std::is_member_object_pointer_v<decltype(M)> && requires(T *p) { (p->*M); })
-		{
-			m_data->prop_list.emplace_or_replace(name, detail::make_type_prop<T, M>());
-			return *this;
-		}
-		/** Adds a property defined by getter \a get_func and setter \a set_func with name \a name for the underlying type info.
-		 * \a get_func must be invocable with a (possibly const-qualified) pointer to `T` and must return a non-void value, and
-		 * is used to get value of the property. \a set_func must be invocable with a mutable pointer to `T` and an instance
-		 * of `any`, and is used to set value of the property. */
-		template<typename Fg, typename Fs>
-		type_factory &prop(std::string_view name, Fg &&get_func, Fs &&set_func) requires (requires(Fg &&g, Fs &&s, T *p, any v) { forward_any(g(p)); s(p, std::move(v)); })
-		{
-			m_data->prop_list.emplace_or_replace(name, detail::make_type_prop<T>(std::forward<Fg>(get_func), std::forward<Fs>(set_func)));
 			return *this;
 		}
 

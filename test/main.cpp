@@ -7,7 +7,9 @@
 #include <reflex/facet.hpp>
 
 #ifndef NDEBUG
+
 #include <cassert>
+
 #define TEST_ASSERT(cnd) assert((cnd))
 #else
 #define TEST_ASSERT(cnd) do { if (!(cnd)) std::terminate(); } while (false)
@@ -202,5 +204,37 @@ int main()
 
 		reflex::type_info::reset<int>();
 		TEST_ASSERT(!int_ti.implements_facet<test_facet>());
+	}
+
+	{
+		enum test_enum
+		{
+			TEST_VALUE_0,
+			TEST_VALUE_1,
+		};
+
+		const auto enum_ti = reflex::type_info::reflect<test_enum>()
+				.enumerate<TEST_VALUE_0>("TEST_VALUE_0")
+				.enumerate<TEST_VALUE_1>("TEST_VALUE_1")
+				.type();
+
+		TEST_ASSERT(enum_ti.is_enum());
+		TEST_ASSERT(enum_ti.is_integral());
+		TEST_ASSERT(enum_ti.has_enumeration("TEST_VALUE_0"));
+		TEST_ASSERT(enum_ti.has_enumeration("TEST_VALUE_1"));
+		TEST_ASSERT(enum_ti.has_enumeration(reflex::forward_any(TEST_VALUE_0)));
+		TEST_ASSERT(enum_ti.has_enumeration(reflex::forward_any(TEST_VALUE_1)));
+
+		const auto e0 = enum_ti.enumerate("TEST_VALUE_0");
+		const auto e1 = enum_ti.enumerate("TEST_VALUE_1");
+
+		TEST_ASSERT(!e0.empty());
+		TEST_ASSERT(!e1.empty());
+		TEST_ASSERT(e0.is_ref());
+		TEST_ASSERT(e1.is_ref());
+		TEST_ASSERT(e0.type() == enum_ti);
+		TEST_ASSERT(e1.type() == enum_ti);
+		TEST_ASSERT(*e0.get<test_enum>() == TEST_VALUE_0);
+		TEST_ASSERT(*e1.get<test_enum>() == TEST_VALUE_1);
 	}
 }

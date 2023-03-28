@@ -29,6 +29,30 @@ namespace reflex
 		}
 	}
 
+	tpp::dense_map<std::string_view, any, detail::str_hash, detail::str_cmp> type_info::enumerations() const
+	{
+		tpp::dense_map<std::string_view, any, detail::str_hash, detail::str_cmp> result;
+		result.reserve(m_data->enum_list.size());
+		for (const auto &[name, value]: m_data->enum_list)
+			result.emplace(name, value.ref());
+		return result;
+	}
+
+	bool type_info::has_enumeration(const any &value) const
+	{
+		return std::ranges::any_of(m_data->enum_list, [&](auto &entry) { return entry.second == value; });
+	}
+	bool type_info::has_enumeration(std::string_view name) const
+	{
+		return m_data->enum_list.contains(name);
+	}
+
+	any type_info::enumerate(std::string_view name) const
+	{
+		const auto pos = m_data->enum_list.find(name);
+		return pos != m_data->enum_list.end() ? pos->second.ref() : any{};
+	}
+
 	bool type_info::has_facet_vtable(std::string_view name) const noexcept
 	{
 		if (!valid()) [[unlikely]] return false;
@@ -54,15 +78,6 @@ namespace reflex
 			return true;
 
 		const auto pred = [&](auto e) { return type_info{e.second.type, *m_db}.convertible_to(name); };
-		return std::ranges::any_of(m_data->base_list, pred);
-	}
-	bool type_info::has_property(std::string_view name) const noexcept
-	{
-		if (!valid()) [[unlikely]] return false;
-		if (m_data->find_prop(name) != nullptr)
-			return true;
-
-		const auto pred = [&](auto e) { return type_info{e.second.type, *m_db}.has_property(name); };
 		return std::ranges::any_of(m_data->base_list, pred);
 	}
 

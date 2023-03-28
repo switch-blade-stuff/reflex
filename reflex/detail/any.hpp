@@ -134,7 +134,7 @@ namespace reflex
 
 		/** Initializes `any` to manage a reference to \a ref. */
 		template<typename T>
-		any(T &ref) requires (!std::same_as<std::decay_t<T>, any>) : any(type_of(ref), ref) {}
+		explicit any(T &ref) requires (!std::same_as<std::decay_t<T>, any>) : any(type_of(ref), ref) {}
 		/** Initializes `any` to manage a reference to \a ref using type info \a type. */
 		template<typename T>
 		any(type_info type, T &ref) requires (!std::same_as<std::decay_t<T>, any>)
@@ -147,14 +147,14 @@ namespace reflex
 
 		/** Initializes `any` to manage an instance of \a T move-constructed from \a value. */
 		template<typename T>
-		any(T &&value) requires (!std::same_as<std::decay_t<T>, any>) : any(std::in_place_type<std::decay_t<T>>, std::forward<T>(value)) {}
+		explicit any(T &&value) requires (!std::same_as<std::decay_t<T>, any>) : any(std::in_place_type<std::decay_t<T>>, std::forward<T>(value)) {}
 		/** Initializes `any` to manage an instance of \a T move-constructed from \a value using type info \a type. */
 		template<typename T>
 		any(type_info type, T &&value) requires (!std::same_as<std::decay_t<T>, any>) : any(type, std::in_place_type<std::decay_t<T>>, std::forward<T>(value)) {}
 
 		/** Initializes `any` to manage in-place constructed instance of \a T with arguments \a args. */
 		template<typename T, typename... Args>
-		any(std::in_place_type_t<T>, Args &&...args) requires std::constructible_from<T, Args...> : any(type_info::get<T>(), std::in_place_type<T>, std::forward<Args>(args)...) {}
+		explicit any(std::in_place_type_t<T>, Args &&...args) requires std::constructible_from<T, Args...> : any(type_info::get<T>(), std::in_place_type<T>, std::forward<Args>(args)...) {}
 		/** Initializes `any` to manage in-place constructed instance of \a T with arguments \a args using type info \a type. */
 		template<typename T, typename... Args>
 		any(type_info type, std::in_place_type_t<T>, Args &&...args) requires std::constructible_from<T, Args...> { init_owned<T>(type, std::forward<Args>(args)...); }

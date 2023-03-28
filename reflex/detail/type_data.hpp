@@ -24,7 +24,7 @@ namespace reflex
 		std::size_t str_cmp::operator()(const std::string_view &a, const type_info &b) const { return a == b; }
 
 		using facet_table = tpp::dense_map<std::string_view, const void *, str_hash, str_cmp>;
-		using enum_table = tpp::dense_map<std::string, any, str_hash, str_cmp>;
+		using enum_table = tpp::stable_map<std::string, any, str_hash, str_cmp>;
 
 		struct type_base
 		{
@@ -138,54 +138,6 @@ namespace reflex
 			return make_type_ctor<T, Ts...>([](Ts ...as) -> any { return make_any<T>(as...); });
 		}
 
-		struct type_prop
-		{
-			type_prop() noexcept = default;
-			template<typename T, typename GF, typename SF>
-			type_prop(std::in_place_type_t<T>, GF &&getter, SF &&setter)
-			{
-				getter_func = [f = std::forward<GF>(getter)](const void *cdata, void *data) -> any
-				{
-					if (cdata != nullptr)
-						return forward_any(std::invoke(f, static_cast<std::add_const_t<T> *>(cdata)));
-					else
-						return forward_any(std::invoke(f, static_cast<T *>(data)));
-				};
-				setter_func = [f = std::forward<SF>(setter)](void *obj, any value)
-				{
-					std::invoke(f, void_cast<T>(obj), std::move(value));
-				};
-			}
-
-			std::function<any(const void *, void *)> getter_func;
-			std::function<void(void *, any)> setter_func;
-		};
-
-		using prop_table = tpp::dense_map<std::string, type_prop, str_hash, str_cmp>;
-
-		template<typename T, typename GF, typename SF>
-		[[nodiscard]] inline static type_prop make_type_prop(GF &&getter, SF &&setter)
-		{
-			return {std::in_place_type<T>, std::forward<GF>(getter), std::forward<SF>(setter)};
-		}
-		template<typename T, auto T::*Member>
-		[[nodiscard]] inline static type_prop make_type_prop() noexcept
-		{
-			using mem_t = std::decay_t<decltype(std::declval<T>().*Member)>;
-			constexpr auto getter = [](const void *cdata, void *data) -> any
-			{
-				if (cdata != nullptr)
-					return forward_any(static_cast<std::add_const_t<T> *>(cdata)->*Member);
-				else
-					return forward_any(static_cast<T *>(data)->*Member);
-			};
-			constexpr auto setter = [](void *obj, any value)
-			{
-				(void_cast<T>(obj)->*Member) = *value.cast<mem_t>().template get<const mem_t>();
-			};
-			return {getter, setter};
-		}
-
 		struct any_funcs_t
 		{
 			void (any::*copy_init)(type_info, const void *, void *) = nullptr;
@@ -264,13 +216,6 @@ namespace reflex
 				else
 					return nullptr;
 			}
-			[[nodiscard]] const type_prop *find_prop(std::string_view type) const
-			{
-				if (auto iter = prop_list.find(type); iter != prop_list.end())
-					return &iter->second;
-				else
-					return nullptr;
-			}
 
 			[[nodiscard]] const type_ctor *find_ctor(std::span<any> args) const
 			{
@@ -337,9 +282,6 @@ namespace reflex
 			/* Constructors & destructors. */
 			std::function<void(void *)> dtor;
 			std::list<type_ctor> ctor_list;
-
-			/* Instance properties. */
-			prop_table prop_list;
 
 			/* `any` functions. */
 			any_funcs_t any_funcs;

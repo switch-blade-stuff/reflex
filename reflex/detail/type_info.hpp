@@ -114,6 +114,16 @@ namespace reflex
 
 		/** Returns a set of the referenced type's parents (including the parents' parents). */
 		[[nodiscard]] REFLEX_PUBLIC auto parents() const -> tpp::dense_set<type_info, detail::str_hash, detail::str_cmp>;
+		/** Returns a map of the referenced type's enumerations. */
+		[[nodiscard]] REFLEX_PUBLIC auto enumerations() const -> tpp::dense_map<std::string_view, any, detail::str_hash, detail::str_cmp>;
+
+		/** Checks if the referenced type has an enumeration with value \a value. */
+		[[nodiscard]] REFLEX_PUBLIC bool has_enumeration(const any &value) const;
+		/** Checks if the referenced type has an enumeration with name \a name. */
+		[[nodiscard]] REFLEX_PUBLIC bool has_enumeration(std::string_view name) const;
+
+		/** Returns value of the enumeration with name \a name, or an empty `any` if no such enumeration exists. */
+		[[nodiscard]] REFLEX_PUBLIC any enumerate(std::string_view name) const;
 
 		/** Checks if the referenced type implements a facet type \a T. */
 		template<typename T>
@@ -161,9 +171,6 @@ namespace reflex
 		/** @cpoydoc construct */
 		template<typename... Args>
 		[[nodiscard]] inline any construct(Args &&...args) const;
-
-		/** Checks if the referenced type has a property with name \a name. */
-		[[nodiscard]] REFLEX_PUBLIC bool has_property(std::string_view name) const noexcept;
 
 		[[nodiscard]] constexpr bool operator==(const type_info &other) const noexcept = default;
 		[[nodiscard]] constexpr bool operator!=(const type_info &other) const noexcept = default;
