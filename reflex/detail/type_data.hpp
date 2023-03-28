@@ -76,9 +76,9 @@ namespace reflex
 		struct arg_data
 		{
 			/* Return false when types are not compatible, or mutable ref is required, but got a constant. */
-			[[nodiscard]] constexpr static bool is_invocable(const arg_data &a, const any &b) noexcept { return (!b.is_const() || (a.flags & (IS_CONST | IS_VALUE))) && b.type().compatible_with(a.type); }
+			[[nodiscard]] static bool is_invocable(const arg_data &a, const any &b) noexcept { return (!b.is_const() || (a.flags & (IS_CONST | IS_VALUE))) && b.type().compatible_with(a.type); }
 			/* Return false when types don't exactly match, or mutable ref is required, but got a constant. */
-			[[nodiscard]] constexpr static bool is_exact_invocable(const arg_data &a, const any &b) noexcept { return (!b.is_const() || (a.flags & (IS_CONST | IS_VALUE))) && b.type().name() == a.type; }
+			[[nodiscard]] static bool is_exact_invocable(const arg_data &a, const any &b) noexcept { return (!b.is_const() || (a.flags & (IS_CONST | IS_VALUE))) && b.type().name() == a.type; }
 
 			[[nodiscard]] constexpr bool operator==(const arg_data &other) const noexcept { return type == other.type && flags == other.flags; }
 

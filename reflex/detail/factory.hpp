@@ -71,7 +71,7 @@ namespace reflex
 		/** Makes the underlying type info constructible via factory function \a ctor_func.
 		 * \a ctor_func must be invocable with arguments \a Args and return an instance of `any`. */
 		template<typename... Args, typename F>
-		type_factory &ctor(F &&ctor_func) requires (std::is_invocable_r_v<any, F, Args...> && std::is_invocable_v<F, T *, Args...>)
+		type_factory &ctor(F &&ctor_func) requires std::is_invocable_r_v<any, F, Args...>
 		{
 			add_ctor<Args...>(std::forward<F>(ctor_func));
 			return *this;
@@ -148,10 +148,12 @@ namespace reflex
 		template<typename U>
 		static void make_convertible(type_factory<T> factory)
 		{
-			if constexpr (!std::same_as<T, U> && std::convertible_to<T, U>)
+			if constexpr (!std::same_as<T, U>)
 			{
-				factory.template conv<U>();
-				factory.template ctor<U>();
+				if constexpr (std::constructible_from<T, U>)
+					factory.template ctor<U>([](auto &&value) { return make_any<T>(static_cast<T>(value)); });
+				if constexpr (std::convertible_to<T, U>)
+					factory.template conv<U>();
 			}
 		}
 

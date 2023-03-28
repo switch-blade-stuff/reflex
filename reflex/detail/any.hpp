@@ -260,10 +260,10 @@ namespace reflex
 		}
 
 		/** Returns type of the managed object. */
-		[[nodiscard]] constexpr type_info type() const noexcept { return {type_data(), database()}; }
+		[[nodiscard]] type_info type() const noexcept { return {type_data(), database()}; }
 
 		/** Checks if the `any` has a managed object (either value or reference). */
-		[[nodiscard]] constexpr bool empty() const noexcept { return type_data() == nullptr; }
+		[[nodiscard]] bool empty() const noexcept { return type_data() == nullptr; }
 		/** Checks if the managed object is const-qualified. */
 		[[nodiscard]] bool is_const() const noexcept { return flags() & detail::IS_CONST; }
 		/** Checks if the `any` contains a reference to an external object. */
