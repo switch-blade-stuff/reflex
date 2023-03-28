@@ -312,14 +312,17 @@ namespace reflex
 				return nullptr;
 			}
 
+			type_data() = default;
+			explicit type_data(std::string_view name) : name(name) {}
+
 			std::string_view name;
 			type_flags flags = {};
 
 			std::size_t size = 0;
 			std::size_t alignment = 0;
 
-			type_handle remove_pointer;
-			type_handle remove_extent;
+			type_handle remove_pointer = nullptr;
+			type_handle remove_extent = nullptr;
 			std::size_t extent = 0;
 
 			/* Facet vtables. */
