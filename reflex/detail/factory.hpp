@@ -34,7 +34,7 @@ namespace reflex
 		template<typename... Args>
 		type_factory &enumerate(std::string_view name, Args &&...args) requires std::constructible_from<T, Args...>
 		{
-			m_data->conv_list.try_emplace(name, type(), std::in_place_type<T>, std::forward<Args>(args)...);
+			m_data->conv_list.emplace_or_replace(name, type(), std::in_place_type<T>, std::forward<Args>(args)...);
 			return *this;
 		}
 
@@ -42,8 +42,7 @@ namespace reflex
 		template<typename U>
 		type_factory &base() requires std::derived_from<T, U>
 		{
-			if (const auto name = type_name_v<U>; !m_data->base_list.contains(name))
-				m_data->base_list.emplace(name, detail::make_type_base<T, U>());
+			m_data->base_list.emplace_or_replace(type_name_v<U>, detail::make_type_base<T, U>());
 			return *this;
 		}
 
@@ -51,16 +50,14 @@ namespace reflex
 		template<typename U, typename F>
 		type_factory &conv(F &&conv) requires (std::invocable<F, const T &> && std::constructible_from<U, std::invoke_result_t<F, const T &>>)
 		{
-			if (const auto name = type_name_v<U>; !m_data->conv_list.contains(name))
-				m_data->conv_list.emplace(name, detail::make_type_conv<T, U>(std::forward<F>(conv)));
+			m_data->conv_list.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>(std::forward<F>(conv)));
 			return *this;
 		}
 		/** Makes the underlying type info convertible to \a U using `static_cast<U>(value)`. */
 		template<typename U>
 		type_factory &conv() requires (std::convertible_to<T, U> && std::same_as<std::decay_t<U>, U>)
 		{
-			if (const auto name = type_name_v<U>; !m_data->conv_list.contains(name))
-				m_data->conv_list.emplace(name, detail::make_type_conv<T, U>());
+			m_data->conv_list.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>());
 			return *this;
 		}
 
@@ -77,6 +74,24 @@ namespace reflex
 		type_factory &ctor(F &&ctor_func) requires (std::is_invocable_r_v<any, F, Args...> && std::is_invocable_v<F, T *, Args...>)
 		{
 			add_ctor<Args...>(std::forward<F>(ctor_func));
+			return *this;
+		}
+
+		/** Adds a member object pointer \a M as a property with name \a name for the underlying type info.  */
+		template<auto M>
+		type_factory &prop(std::string_view name) requires (std::is_member_object_pointer_v<decltype(M)> && requires(T *p) { (p->*M); })
+		{
+			m_data->prop_list.emplace_or_replace(name, detail::make_type_prop<T, M>());
+			return *this;
+		}
+		/** Adds a property defined by getter \a get_func and setter \a set_func with name \a name for the underlying type info.
+		 * \a get_func must be invocable with a (possibly const-qualified) pointer to `T` and must return a non-void value, and
+		 * is used to get value of the property. \a set_func must be invocable with a mutable pointer to `T` and an instance
+		 * of `any`, and is used to set value of the property. */
+		template<typename Fg, typename Fs>
+		type_factory &prop(std::string_view name, Fg &&get_func, Fs &&set_func) requires (requires(Fg &&g, Fs &&s, T *p, any v) { forward_any(g(p)); s(p, std::move(v)); })
+		{
+			m_data->prop_list.emplace_or_replace(name, detail::make_type_prop<T>(std::forward<Fg>(get_func), std::forward<Fs>(set_func)));
 			return *this;
 		}
 
@@ -104,9 +119,10 @@ namespace reflex
 		void add_ctor(Args &&...args)
 		{
 			constexpr auto args_data = detail::arg_list<Ts...>::value;
-			if (m_data->find_ctor(args_data) != nullptr) return;
-
-			m_data->ctor_list.emplace_back(detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...));
+			if (auto existing = m_data->find_ctor(args_data); existing == nullptr)
+				m_data->ctor_list.emplace_back(detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...));
+			else
+				*existing = detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...);
 		}
 
 		template<typename... Vt>

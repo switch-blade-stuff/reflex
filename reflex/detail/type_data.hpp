@@ -300,9 +300,15 @@ namespace reflex
 				for (const auto &ctor: ctor_list) if (compat_pred(ctor)) return &ctor;
 				return nullptr;
 			}
+
+			[[nodiscard]] type_ctor *find_ctor(std::span<const arg_data> args)
+			{
+				for (auto &ctor: ctor_list) if (std::ranges::equal(ctor.args, args)) return &ctor;
+				return nullptr;
+			}
 			[[nodiscard]] const type_ctor *find_ctor(std::span<const arg_data> args) const
 			{
-				for (const auto &ctor: ctor_list) if (std::ranges::equal(ctor.args, args)) return &ctor;
+				for (auto &ctor: ctor_list) if (std::ranges::equal(ctor.args, args)) return &ctor;
 				return nullptr;
 			}
 
