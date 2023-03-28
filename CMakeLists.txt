@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.20)
 project(reflex)
 
 # Library options
-option(REFLEX_NO_THREADS "Disables multithreaded synchronization features" OFF)
-if (${REFLEX_NO_THREADS})
-    add_compile_definitions(REFLEX_NO_THREADS)
+option(REFLEX_NO_ARITHMETIC_CONV "Disables default conversions for arithmetic types" OFF)
+if (${REFLEX_NO_ARITHMETIC_CONV})
+    add_compile_definitions(REFLEX_NO_ARITHMETIC_CONV)
 endif ()
 
 option(REFLEX_HEADER_ONLY "Toggles the header-only library target" ON)
