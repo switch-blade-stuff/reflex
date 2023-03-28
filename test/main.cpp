@@ -112,6 +112,7 @@ int main()
 		TEST_ASSERT(reflex::type_of(i1) == i0.type());
 		TEST_ASSERT(!i1.empty() && *i1.get<int>() == 1);
 		TEST_ASSERT(i1 == i0);
+		TEST_ASSERT(i1 == d0);
 
 		auto i2 = i0.type().construct();
 		TEST_ASSERT(reflex::type_of(i2) == reflex::type_info::get<int>());
@@ -119,6 +120,7 @@ int main()
 		TEST_ASSERT(reflex::type_of(i2) == i0.type());
 		TEST_ASSERT(!i2.empty() && *i2.get<int>() == 0);
 		TEST_ASSERT(i2 != i0);
+		TEST_ASSERT(i2 != d0);
 	}
 
 	{
@@ -126,7 +128,8 @@ int main()
 		TEST_ASSERT(reflex::type_of(base) == reflex::type_info::get<test_base>());
 		TEST_ASSERT(reflex::type_of(base).inherits_from<reflex::object>());
 
-		const auto child_ti = reflex::type_info::reflect<test_child>().base<test_base>().type();
+		const auto child_ti = reflex::type_info::reflect<test_child>()
+		        .add_parent<test_base>().type();
 
 		auto *base_ptr = &base;
 		TEST_ASSERT(reflex::type_of(*base_ptr) == reflex::type_info::get<test_base>());
@@ -167,8 +170,8 @@ int main()
 
 	{
 		const auto str_ti = reflex::type_info::reflect<std::string>()
-				.ctor<const char *, std::size_t>()
-				.ctor<const char *>()
+				.make_constructible<const char *, std::size_t>()
+				.make_constructible<const char *>()
 				.type();
 
 		TEST_ASSERT((str_ti.constructible_from<const char *, std::size_t>()));

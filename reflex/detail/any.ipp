@@ -89,50 +89,94 @@ namespace reflex
 
 	bool any::operator==(const any &other) const
 	{
-		const auto *data = type_data();
-		if (other.type().compatible_with(type()) && data->any_funcs.cmp_eq)
-			return data->any_funcs.cmp_eq(*this, other);
-		else
-			return empty() == other.empty();
+		const auto other_type = other.type();
+		const auto this_type = type();
+
+		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
+		{
+			if (cmp->cmp_eq != nullptr)
+				return cmp->cmp_eq(data(), other.data());
+			else if (cmp->cmp_ne != nullptr)
+				return !cmp->cmp_ne(data(), other.data());
+		}
+		return empty() == other.empty();
 	}
 	bool any::operator!=(const any &other) const
 	{
-		const auto *data = type_data();
-		if (other.type().compatible_with(type()) && data->any_funcs.cmp_ne)
-			return data->any_funcs.cmp_ne(*this, other);
-		else
-			return empty() != other.empty();
+		const auto other_type = other.type();
+		const auto this_type = type();
+
+		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
+		{
+			if (cmp->cmp_ne != nullptr)
+				return cmp->cmp_ne(data(), other.data());
+			else if (cmp->cmp_eq != nullptr)
+				return !cmp->cmp_eq(data(), other.data());
+		}
+		return empty() != other.empty();
 	}
 	bool any::operator>=(const any &other) const
 	{
-		const auto *data = type_data();
-		if (other.type().compatible_with(type()) && data->any_funcs.cmp_ge)
-			return data->any_funcs.cmp_ge(*this, other);
-		else
-			return empty() <= other.empty();
+		const auto other_type = other.type();
+		const auto this_type = type();
+
+		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
+		{
+			if (cmp->cmp_ge != nullptr)
+				return cmp->cmp_ge(data(), other.data());
+			else if (cmp->cmp_gt != nullptr && cmp->cmp_eq != nullptr)
+				return cmp->cmp_gt(data(), other.data()) || cmp->cmp_eq(data(), other.data());
+			else if (cmp->cmp_lt != nullptr)
+				return !cmp->cmp_lt(data(), other.data());
+		}
+		return empty() <= other.empty();
 	}
 	bool any::operator<=(const any &other) const
 	{
-		const auto *data = type_data();
-		if (other.type().compatible_with(type()) && data->any_funcs.cmp_le)
-			return data->any_funcs.cmp_le(*this, other);
-		else
-			return empty() >= other.empty();
+		const auto other_type = other.type();
+		const auto this_type = type();
+
+		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
+		{
+			if (cmp->cmp_le != nullptr)
+				return cmp->cmp_le(data(), other.data());
+			else if (cmp->cmp_lt != nullptr && cmp->cmp_eq != nullptr)
+				return cmp->cmp_lt(data(), other.data()) || cmp->cmp_eq(data(), other.data());
+			else if (cmp->cmp_gt != nullptr)
+				return !cmp->cmp_gt(data(), other.data());
+		}
+		return empty() >= other.empty();
 	}
 	bool any::operator>(const any &other) const
 	{
-		const auto *data = type_data();
-		if (other.type().compatible_with(type()) && data->any_funcs.cmp_gt)
-			return data->any_funcs.cmp_gt(*this, other);
-		else
-			return !empty() && other.empty();
+		const auto other_type = other.type();
+		const auto this_type = type();
+
+		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
+		{
+			if (cmp->cmp_gt != nullptr)
+				return cmp->cmp_gt(data(), other.data());
+			else if (cmp->cmp_le != nullptr)
+				return !cmp->cmp_le(data(), other.data());
+			else if (cmp->cmp_lt != nullptr && cmp->cmp_eq != nullptr)
+				return !cmp->cmp_lt(data(), other.data()) && !cmp->cmp_eq(data(), other.data());
+		}
+		return !empty() && other.empty();
 	}
 	bool any::operator<(const any &other) const
 	{
-		const auto *data = type_data();
-		if (other.type().compatible_with(type()) && data->any_funcs.cmp_lt)
-			return data->any_funcs.cmp_lt(*this, other);
-		else
-			return empty() && !other.empty();
+		const auto other_type = other.type();
+		const auto this_type = type();
+
+		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
+		{
+			if (cmp->cmp_lt != nullptr)
+				return cmp->cmp_lt(data(), other.data());
+			else if (cmp->cmp_ge != nullptr)
+				return !cmp->cmp_ge(data(), other.data());
+			else if (cmp->cmp_gt != nullptr && cmp->cmp_eq != nullptr)
+				return !cmp->cmp_gt(data(), other.data()) && !cmp->cmp_eq(data(), other.data());
+		}
+		return empty() && !other.empty();
 	}
 }

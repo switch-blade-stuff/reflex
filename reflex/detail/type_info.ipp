@@ -101,4 +101,45 @@ namespace reflex
 		}
 		return {};
 	}
+
+	bool type_info::comparable_with(std::string_view name) const noexcept
+	{
+		if (!valid()) [[unlikely]] return false;
+		return m_data->find_cmp(name);
+	}
+	bool type_info::eq_comparable_with(std::string_view name) const noexcept
+	{
+		if (!valid()) [[unlikely]] return false;
+
+		const auto cmp = m_data->find_cmp(name);
+		return cmp && cmp->cmp_eq && cmp->cmp_ne;
+	}
+	bool type_info::ge_comparable_with(std::string_view name) const noexcept
+	{
+		if (!valid()) [[unlikely]] return false;
+
+		const auto cmp = m_data->find_cmp(name);
+		return cmp && cmp->cmp_ge;
+	}
+	bool type_info::le_comparable_with(std::string_view name) const noexcept
+	{
+		if (!valid()) [[unlikely]] return false;
+
+		const auto cmp = m_data->find_cmp(name);
+		return cmp && cmp->cmp_le;
+	}
+	bool type_info::gt_comparable_with(std::string_view name) const noexcept
+	{
+		if (!valid()) [[unlikely]] return false;
+
+		const auto cmp = m_data->find_cmp(name);
+		return cmp && cmp->cmp_gt;
+	}
+	bool type_info::lt_comparable_with(std::string_view name) const noexcept
+	{
+		if (!valid()) [[unlikely]] return false;
+
+		const auto cmp = m_data->find_cmp(name);
+		return cmp && cmp->cmp_lt;
+	}
 }

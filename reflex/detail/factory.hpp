@@ -43,7 +43,7 @@ namespace reflex
 
 		/** Adds base type \a U to the list of bases of the underlying type info. */
 		template<typename U>
-		type_factory &base() requires std::derived_from<T, U>
+		type_factory &add_parent() requires std::derived_from<T, U>
 		{
 			m_data->base_list.emplace_or_replace(type_name_v<U>, detail::make_type_base<T, U>());
 			return *this;
@@ -51,14 +51,14 @@ namespace reflex
 
 		/** Makes the underlying type info convertible to \a U using conversion functor \a conv. */
 		template<typename U, typename F>
-		type_factory &conv(F &&conv) requires (std::invocable<F, const T &> && std::constructible_from<U, std::invoke_result_t<F, const T &>>)
+		type_factory &make_convertible(F &&conv) requires (std::invocable<F, const T &> && std::constructible_from<U, std::invoke_result_t<F, const T &>>)
 		{
 			m_data->conv_list.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>(std::forward<F>(conv)));
 			return *this;
 		}
 		/** Makes the underlying type info convertible to \a U using `static_cast<U>(value)`. */
 		template<typename U>
-		type_factory &conv() requires (std::convertible_to<T, U> && std::same_as<std::decay_t<U>, U>)
+		type_factory &make_convertible() requires (std::convertible_to<T, U> && std::same_as<std::decay_t<U>, U>)
 		{
 			m_data->conv_list.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>());
 			return *this;
@@ -66,7 +66,7 @@ namespace reflex
 
 		/** Makes the underlying type info constructible via constructor `T(Args...)`. */
 		template<typename... Args>
-		type_factory &ctor() requires std::constructible_from<T, Args...>
+		type_factory &make_constructible() requires std::constructible_from<T, Args...>
 		{
 			add_ctor<Args...>();
 			return *this;
@@ -74,9 +74,18 @@ namespace reflex
 		/** Makes the underlying type info constructible via factory function \a ctor_func.
 		 * \a ctor_func must be invocable with arguments \a Args and return an instance of `any`. */
 		template<typename... Args, typename F>
-		type_factory &ctor(F &&ctor_func) requires std::is_invocable_r_v<any, F, Args...>
+		type_factory &make_constructible(F &&ctor_func) requires std::is_invocable_r_v<any, F, Args...>
 		{
 			add_ctor<Args...>(std::forward<F>(ctor_func));
+			return *this;
+		}
+
+		/** Makes the underlying type info comparable with objects of type \a U.
+		 * @note Types \a T and \a U must be three-way and/or equality comparable. */
+		template<typename U>
+		type_factory &make_comparable() requires ((std::equality_comparable_with<T, U> || std::three_way_comparable_with<T, U>) && std::same_as<std::decay_t<U>, U>)
+		{
+			m_data->cmp_list.emplace_or_replace(type_name_v<U>, detail::make_type_cmp<T, U>());
 			return *this;
 		}
 
@@ -124,7 +133,7 @@ namespace reflex
 	template<typename T>
 	struct type_init;
 
-#ifndef REFLEX_NO_ARITHMETIC_CONV
+#ifndef REFLEX_NO_ARITHMETIC
 	/** Specialization of `type_init` for arithmetic types. */
 	template<typename T> requires std::is_arithmetic_v<T>
 	struct type_init<T>
@@ -136,9 +145,11 @@ namespace reflex
 			if constexpr (!std::same_as<T, U>)
 			{
 				if constexpr (std::constructible_from<T, U>)
-					factory.template ctor<U>([](auto &&value) { return make_any<T>(static_cast<T>(value)); });
+					factory.template make_constructible<U>([](auto &&value) { return make_any<T>(static_cast<T>(value)); });
 				if constexpr (std::convertible_to<T, U>)
-					factory.template conv<U>();
+					factory.template make_convertible<U>();
+				if constexpr (std::three_way_comparable_with<T, U>)
+					factory.template make_comparable<U>();
 			}
 		}
 		template<typename... Ts>

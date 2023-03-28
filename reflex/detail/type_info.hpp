@@ -156,6 +156,54 @@ namespace reflex
 		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type with name \a name. */
 		[[nodiscard]] bool compatible_with(std::string_view name) const noexcept { return this->name() == name || inherits_from(name) || convertible_to(name); }
 
+		/** Checks if the referenced type is directly (without conversion) comparable (using any comparison operator) with type \a T. */
+		template<typename T>
+		[[nodiscard]] bool comparable_with() const noexcept { return comparable_with(type_name_v<std::decay_t<T>>); }
+		/** Checks if the referenced type is directly (without conversion) comparable (using any comparison operator) with type \a type. */
+		[[nodiscard]] bool comparable_with(type_info type) const noexcept { return comparable_with(type.name()); }
+		/** Checks if the referenced type is directly (without conversion) comparable (using any comparison operator) with type with name \a name. */
+		[[nodiscard]] REFLEX_PUBLIC bool comparable_with(std::string_view name) const noexcept;
+
+		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator==` and `operator!=`. */
+		template<typename T>
+		[[nodiscard]] bool eq_comparable_with() const noexcept { return eq_comparable_with(type_name_v<std::decay_t<T>>); }
+		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator==` and `operator!=`. */
+		[[nodiscard]] bool eq_comparable_with(type_info type) const noexcept { return eq_comparable_with(type.name()); }
+		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator==` and `operator!=`. */
+		[[nodiscard]] REFLEX_PUBLIC bool eq_comparable_with(std::string_view name) const noexcept;
+
+		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator>=`. */
+		template<typename T>
+		[[nodiscard]] bool ge_comparable_with() const noexcept { return ge_comparable_with(type_name_v<std::decay_t<T>>); }
+		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator>=`. */
+		[[nodiscard]] bool ge_comparable_with(type_info type) const noexcept { return ge_comparable_with(type.name()); }
+		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator>=`. */
+		[[nodiscard]] REFLEX_PUBLIC bool ge_comparable_with(std::string_view name) const noexcept;
+
+		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator<=`. */
+		template<typename T>
+		[[nodiscard]] bool le_comparable_with() const noexcept { return le_comparable_with(type_name_v<std::decay_t<T>>); }
+		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator<=`. */
+		[[nodiscard]] bool le_comparable_with(type_info type) const noexcept { return le_comparable_with(type.name()); }
+		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator<=`. */
+		[[nodiscard]] REFLEX_PUBLIC bool le_comparable_with(std::string_view name) const noexcept;
+
+		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator>`. */
+		template<typename T>
+		[[nodiscard]] bool gt_comparable_with() const noexcept { return gt_comparable_with(type_name_v<std::decay_t<T>>); }
+		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator>`. */
+		[[nodiscard]] bool gt_comparable_with(type_info type) const noexcept { return gt_comparable_with(type.name()); }
+		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator>`. */
+		[[nodiscard]] REFLEX_PUBLIC bool gt_comparable_with(std::string_view name) const noexcept;
+
+		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator<`. */
+		template<typename T>
+		[[nodiscard]] bool lt_comparable_with() const noexcept { return lt_comparable_with(type_name_v<std::decay_t<T>>); }
+		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator<`. */
+		[[nodiscard]] bool lt_comparable_with(type_info type) const noexcept { return lt_comparable_with(type.name()); }
+		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator<`. */
+		[[nodiscard]] REFLEX_PUBLIC bool lt_comparable_with(std::string_view name) const noexcept;
+
 		/** Checks if the referenced type is constructible from arguments \a Args. */
 		template<typename... Args>
 		[[nodiscard]] inline bool constructible_from() const;

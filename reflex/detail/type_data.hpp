@@ -138,58 +138,49 @@ namespace reflex
 			return make_type_ctor<T, Ts...>([](Ts ...as) -> any { return make_any<T>(as...); });
 		}
 
+		struct type_cmp
+		{
+			bool (*cmp_eq)(const void *, const void *) = nullptr;
+			bool (*cmp_ne)(const void *, const void *) = nullptr;
+			bool (*cmp_ge)(const void *, const void *) = nullptr;
+			bool (*cmp_le)(const void *, const void *) = nullptr;
+			bool (*cmp_gt)(const void *, const void *) = nullptr;
+			bool (*cmp_lt)(const void *, const void *) = nullptr;
+		};
+
+		using cmp_table = tpp::dense_map<std::string_view, type_cmp, str_hash, str_cmp>;
+
+		template<typename T, typename U = T>
+		[[nodiscard]] inline static type_cmp make_type_cmp() noexcept
+		{
+			type_cmp result;
+			if constexpr (requires(const T &a, const U &b){ a == b; })
+				result.cmp_eq = +[](const void *a, const void *b) { return *static_cast<const T *>(a) == *static_cast<const U *>(b); };
+			if constexpr (requires(const T &a, const U &b){ a != b; })
+				result.cmp_ne = +[](const void *a, const void *b) { return *static_cast<const T *>(a) != *static_cast<const U *>(b); };
+			if constexpr (requires(const T &a, const U &b){ a >= b; })
+				result.cmp_ge = +[](const void *a, const void *b) { return *static_cast<const T *>(a) >= *static_cast<const U *>(b); };
+			if constexpr (requires(const T &a, const U &b){ a <= b; })
+				result.cmp_le = +[](const void *a, const void *b) { return *static_cast<const T *>(a) <= *static_cast<const U *>(b); };
+			if constexpr (requires(const T &a, const U &b){ a > b; })
+				result.cmp_gt = +[](const void *a, const void *b) { return *static_cast<const T *>(a) > *static_cast<const U *>(b); };
+			if constexpr (requires(const T &a, const U &b){ a < b; })
+				result.cmp_lt = +[](const void *a, const void *b) { return *static_cast<const T *>(a) < *static_cast<const U *>(b); };
+			return result;
+		}
+
 		struct any_funcs_t
 		{
 			void (any::*copy_init)(type_info, const void *, void *) = nullptr;
 			void (any::*copy_assign)(type_info, const void *, void *) = nullptr;
-
-			bool (*cmp_eq)(const any &, const any &) = nullptr;
-			bool (*cmp_ne)(const any &, const any &) = nullptr;
-			bool (*cmp_ge)(const any &, const any &) = nullptr;
-			bool (*cmp_le)(const any &, const any &) = nullptr;
-			bool (*cmp_gt)(const any &, const any &) = nullptr;
-			bool (*cmp_lt)(const any &, const any &) = nullptr;
 		};
 
 		template<typename T>
 		[[nodiscard]] inline static any_funcs_t make_any_funcs() noexcept
 		{
 			any_funcs_t result;
-
 			result.copy_init = &any::copy_from<T>;
 			result.copy_assign = &any::assign_from<T>;
-
-			if constexpr (requires(const T &a, const T &b){ a == b; })
-				result.cmp_eq = +[](const any &a, const any &b)
-				{
-					return *a.get<T>() == *b.cast<T>().template get<const T>();
-				};
-			if constexpr (requires(const T &a, const T &b){ a != b; })
-				result.cmp_ne = +[](const any &a, const any &b)
-				{
-					return *a.get<T>() != *b.cast<T>().template get<const T>();
-				};
-			if constexpr (requires(const T &a, const T &b){ a >= b; })
-				result.cmp_ge = +[](const any &a, const any &b)
-				{
-					return *a.get<T>() >= *b.cast<T>().template get<const T>();
-				};
-			if constexpr (requires(const T &a, const T &b){ a <= b; })
-				result.cmp_le = +[](const any &a, const any &b)
-				{
-					return *a.get<T>() <= *b.cast<T>().template get<const T>();
-				};
-			if constexpr (requires(const T &a, const T &b){ a > b; })
-				result.cmp_gt = +[](const any &a, const any &b)
-				{
-					return *a.get<T>() > *b.cast<T>().template get<const T>();
-				};
-			if constexpr (requires(const T &a, const T &b){ a < b; })
-				result.cmp_lt = +[](const any &a, const any &b)
-				{
-					return *a.get<T>() < *b.cast<T>().template get<const T>();
-				};
-
 			return result;
 		}
 
@@ -212,6 +203,13 @@ namespace reflex
 			[[nodiscard]] const type_conv *find_conv(std::string_view type) const
 			{
 				if (auto iter = conv_list.find(type); iter != conv_list.end())
+					return &iter->second;
+				else
+					return nullptr;
+			}
+			[[nodiscard]] const type_cmp *find_cmp(std::string_view type) const
+			{
+				if (auto iter = cmp_list.find(type); iter != cmp_list.end())
 					return &iter->second;
 				else
 					return nullptr;
@@ -282,6 +280,9 @@ namespace reflex
 			/* Constructors & destructors. */
 			std::function<void(void *)> dtor;
 			std::list<type_ctor> ctor_list;
+
+			/* Comparison functions. */
+			cmp_table cmp_list;
 
 			/* `any` functions. */
 			any_funcs_t any_funcs;
