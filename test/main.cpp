@@ -61,6 +61,23 @@ struct reflex::impl_facet<test_facet, int>
 	};
 };
 
+class test_base : public reflex::object
+{
+	REFLEX_DEFINE_OBJECT(test_base)
+
+public:
+	constexpr test_base() noexcept = default;
+	~test_base() noexcept override = default;
+};
+class test_child : public test_base
+{
+	REFLEX_DEFINE_OBJECT(test_child)
+
+public:
+	constexpr test_child() noexcept = default;
+	~test_child() noexcept override = default;
+};
+
 int main()
 {
 	{
@@ -103,23 +120,6 @@ int main()
 	}
 
 	{
-		class test_base : public reflex::object
-		{
-			REFLEX_DEFINE_OBJECT(test_base)
-
-		public:
-			constexpr test_base() noexcept = default;
-			~test_base() noexcept override = default;
-		};
-		class test_child : public test_base
-		{
-			REFLEX_DEFINE_OBJECT(test_child)
-
-		public:
-			constexpr test_child() noexcept = default;
-			~test_child() noexcept override = default;
-		};
-
 		const auto base = test_base{};
 		TEST_ASSERT(reflex::type_of(base) == reflex::type_info::get<test_base>());
 		TEST_ASSERT(reflex::type_of(base).inherits_from<reflex::object>());

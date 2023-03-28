@@ -16,17 +16,17 @@ namespace reflex
 	 * Children of this type must implement the `type_info do_type_of() const` protected virtual function.
 	 * This function is used to obtain the actual instance type of the children of `object`. A convenience macro
 	 * `REFLEX_DEFINE_OBJECT(T)` is provided and can be used to generate the required overloads. */
-	class object
+	class REFLEX_PUBLIC object
 	{
 		template<typename T>
 		friend type_info type_of(T &&) requires std::derived_from<std::decay_t<T>, object>;
 
 	public:
-		REFLEX_PUBLIC virtual ~object() = 0;
+		virtual ~object() = 0;
 
 	protected:
 		/** Function used to obtain the instance type of `this`. */
-		[[nodiscard]] virtual type_info do_type_of() const = 0;
+		[[nodiscard]] virtual type_info do_type_of() const { return type_info::get<object>(); }
 	};
 
 	/** Returns the underlying type of \a value. */

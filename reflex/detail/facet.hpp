@@ -72,7 +72,11 @@ namespace reflex
 		/** @copydoc bad_facet_function */
 		bad_facet_function(const std::string &msg, std::string_view name) : std::runtime_error(msg), m_name(name) {}
 
-		REFLEX_PUBLIC ~bad_facet_function() override = default;
+#ifndef REFLEX_HEADER_ONLY
+		REFLEX_PUBLIC ~bad_facet_function() override;
+#else
+		~bad_facet_function() override = default;
+#endif
 
 		/** Returns name of the offending facet function. */
 		[[nodiscard]] constexpr std::string_view name() const noexcept { return m_name; }
