@@ -140,6 +140,7 @@ namespace reflex
 	template<typename T>
 	struct type_init;
 
+#ifndef REFLEX_NO_ARITHMETIC_CONV
 	/** Specialization of `type_init` for arithmetic types. */
 	template<typename T> requires std::is_arithmetic_v<T>
 	struct type_init<T>
@@ -156,40 +157,24 @@ namespace reflex
 					factory.template conv<U>();
 			}
 		}
+		template<typename... Ts>
+		static void make_convertible(type_pack_t<Ts...>, type_factory<T> factory)
+		{
+			(make_convertible<Ts>(factory), ...);
+		}
 
 	public:
 		void operator()(type_factory<T> factory) const
 		{
-			/* Conversion to bool. */
 			make_convertible<bool>(factory);
-
-			/* Conversions to characters. */
-			make_convertible<char>(factory);
-			make_convertible<wchar_t>(factory);
-			make_convertible<char8_t>(factory);
-			make_convertible<char16_t>(factory);
-			make_convertible<char32_t>(factory);
-
-			/* Conversions to integers. */
-			make_convertible<std::int8_t>(factory);
-			make_convertible<std::int16_t>(factory);
-			make_convertible<std::int32_t>(factory);
-			make_convertible<std::int64_t>(factory);
-			make_convertible<std::uint8_t>(factory);
-			make_convertible<std::uint16_t>(factory);
-			make_convertible<std::uint32_t>(factory);
-			make_convertible<std::uint64_t>(factory);
-			make_convertible<std::intmax_t>(factory);
-			make_convertible<std::uintmax_t>(factory);
-			make_convertible<std::intptr_t>(factory);
-			make_convertible<std::uintptr_t>(factory);
-			make_convertible<std::ptrdiff_t>(factory);
-			make_convertible<std::size_t>(factory);
-
-			/* Conversions to floats. */
-			make_convertible<float>(factory);
-			make_convertible<double>(factory);
-			make_convertible<long double>(factory);
+			make_convertible(unique_type_pack<type_pack_t<
+					char, wchar_t, char8_t, char16_t, char32_t,
+					std::int8_t, std::int16_t, std::int32_t, std::int64_t,
+					std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t,
+					std::intmax_t, std::uintmax_t, std::intptr_t, std::uintptr_t,
+					std::ptrdiff_t, std::size_t>>, factory);
+			make_convertible(type_pack<float, double, long double>, factory);
 		}
 	};
+#endif
 }
