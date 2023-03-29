@@ -7,6 +7,7 @@
 
 namespace reflex
 {
+	bad_any_copy::~bad_any_copy() noexcept = default;
 	bad_any_cast::~bad_any_cast() noexcept = default;
 
 	any any::try_cast(type_info type)

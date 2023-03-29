@@ -18,7 +18,7 @@
 namespace reflex
 {
 	class bad_facet_function;
-	class bad_argument_list;
+	class bad_any_copy;
 	class bad_any_cast;
 
 	class type_database;

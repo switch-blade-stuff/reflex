@@ -10,27 +10,6 @@
 
 namespace reflex
 {
-	/** Exception type thrown when dynamic invocation of a constructor or assignment operator fails due to invalid arguments. */
-	class bad_argument_list : public std::runtime_error
-	{
-	public:
-		bad_argument_list(const bad_argument_list &) = default;
-		bad_argument_list &operator=(const bad_argument_list &) = default;
-		bad_argument_list(bad_argument_list &&) = default;
-		bad_argument_list &operator=(bad_argument_list &&) = default;
-
-		/** Initializes the argument list exception with message \a msg. */
-		explicit bad_argument_list(const char *msg) : std::runtime_error(msg) {}
-		/** @copydoc bad_argument_list */
-		explicit bad_argument_list(const std::string &msg) : std::runtime_error(msg) {}
-
-#ifndef REFLEX_HEADER_ONLY
-		REFLEX_PUBLIC ~bad_argument_list() override;
-#else
-		~bad_argument_list() override = default;
-#endif
-	};
-
 	/** Handle to reflected type information. */
 	class type_info
 	{

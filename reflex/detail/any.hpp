@@ -22,11 +22,46 @@ namespace reflex
 		struct any_deleter_func<void (*)(void *)> : std::true_type {};
 		template<>
 		struct any_deleter_func<void (*)(const void *)> : std::true_type {};
-
-		[[nodiscard]] inline static bad_argument_list make_ctor_error(type_info, std::span<any>);
-		template<typename T, typename... Ts>
-		[[nodiscard]] inline static bad_argument_list make_ctor_error();
 	}
+
+	/** Exception type thrown when the managed object of `any` cannot be copied. */
+	class bad_any_copy : public std::runtime_error
+	{
+		[[nodiscard]] static std::string make_msg(const type_info &type)
+		{
+			std::string result;
+			result.append("Type `");
+			result.append(type.name());
+			result.append("` is not copy-constructible");
+			return result;
+		}
+
+	public:
+		bad_any_copy(const bad_any_copy &) = default;
+		bad_any_copy &operator=(const bad_any_copy &) = default;
+		bad_any_copy(bad_any_copy &&) = default;
+		bad_any_copy &operator=(bad_any_copy &&) = default;
+
+		/** Initializes the argument list exception with message \a msg and offending type \a type. */
+		bad_any_copy(const char *msg, type_info type) : std::runtime_error(msg), m_type(type) {}
+		/** @copydoc bad_any_copy */
+		bad_any_copy(const std::string &msg, type_info type) : std::runtime_error(msg), m_type(type) {}
+
+		/** Initializes the argument list exception with offending type \a type. */
+		explicit bad_any_copy(type_info type) : bad_any_copy(make_msg(type), type) {}
+
+#ifndef REFLEX_HEADER_ONLY
+		REFLEX_PUBLIC ~bad_any_copy() override;
+#else
+		~bad_any_copy() override = default;
+#endif
+
+		/** Returns type info of the offending (non-copyable) type. */
+		[[nodiscard]] constexpr type_info type() const noexcept { return m_type; }
+
+	private:
+		type_info m_type;
+	};
 
 	/** Exception type thrown when the managed object of `any` cannot be cast to the desired type. */
 	class bad_any_cast : public std::runtime_error
@@ -127,11 +162,11 @@ namespace reflex
 		}
 
 		/** Copies value of the managed object of \a other.
-		 * @throw bad_argument_list If the underlying type of \a other is not copy-constructible. */
+		 * @throw bad_any_copy If the underlying type of \a other is not copy-constructible. */
 		any(const any &other) : any(other.type(), std::in_place, other.cdata()) {}
 		/** If types of `this` and \a other are the same and `this` is not a reference, copy-assigns the managed object.
 		 * Otherwise, destroys `this` and copy-constructs the managed object from \a other.
-		 * @throw bad_argument_list If the managed object cannot be copy-assigned and the underlying type of \a other is not copy-constructible. */
+		 * @throw bad_any_copy If the managed object cannot be copy-assigned and the underlying type of \a other is not copy-constructible. */
 		any &operator=(const any &other) { return assign(other.type(), std::in_place, other.cdata()); }
 
 		~any() { destroy(); }
@@ -511,7 +546,7 @@ namespace reflex
 			if constexpr (std::is_constructible_v<T, other_t &>)
 				init_owned<T>(type, *static_cast<other_t *>(data));
 			else
-				throw detail::make_ctor_error<T, other_t &>();
+				throw bad_any_copy(type);
 		}
 		template<typename T>
 		void copy_from(type_info type, const void *cdata, void *data)
@@ -538,47 +573,6 @@ namespace reflex
 
 		storage_t m_storage;
 	};
-
-	namespace detail
-	{
-		[[nodiscard]] inline static bad_argument_list make_ctor_error(type_info type, std::span<any> args)
-		{
-			std::string msg;
-			msg.append("Type `");
-			msg.append(type.name());
-			msg.append("` is not constructible from arguments {");
-
-			/* Decorate args. */
-			for (std::size_t i = 0; i < args.size();)
-			{
-				const auto &arg = args[i];
-				if (arg.is_const())
-					msg.append("const ");
-				msg.append(arg.type().name());
-				if (arg.is_ref())
-					msg.append(" &");
-				if (++i != args.size())
-					msg.append(1, ',');
-			}
-
-			msg.append(1, '}');
-			return bad_argument_list{msg};
-		}
-		template<typename T, typename... Ts>
-		[[nodiscard]] inline static bad_argument_list make_ctor_error()
-		{
-			constexpr auto name_cs = []<typename U>(std::in_place_type_t<U>)
-			{
-				constexpr auto name = type_name_v<U>;
-				return const_string<name.size()>{name};
-			};
-
-			constexpr auto msg = basic_const_string{"Type `"} + name_cs(std::in_place_type<T>) +
-			                     basic_const_string{"` is not constructible from arguments {"} +
-			                     (name_cs(std::in_place_type<Ts>) + ... + basic_const_string{"}"});
-			return bad_argument_list{msg.data()};
-		}
-	}
 
 	/** Returns the type info of the object managed by \a value. Equivalent to `value.type()`. */
 	template<typename T>
