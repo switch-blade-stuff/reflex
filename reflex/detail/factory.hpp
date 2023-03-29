@@ -138,38 +138,63 @@ namespace reflex
 	template<typename T> requires std::is_arithmetic_v<T>
 	struct type_init<T>
 	{
-	private:
-		template<typename U>
-		static void make_convertible(type_factory<T> factory)
-		{
-			if constexpr (!std::same_as<T, U>)
-			{
-				if constexpr (std::constructible_from<T, U>)
-					factory.template make_constructible<U>([](auto &&value) { return make_any<T>(static_cast<T>(value)); });
-				if constexpr (std::convertible_to<T, U>)
-					factory.template make_convertible<U>();
-				if constexpr (std::three_way_comparable_with<T, U>)
-					factory.template make_comparable<U>();
-			}
-		}
-		template<typename... Ts>
-		static void make_convertible(type_pack_t<Ts...>, type_factory<T> factory)
-		{
-			(make_convertible<Ts>(factory), ...);
-		}
-
-	public:
 		void operator()(type_factory<T> factory) const
 		{
-			make_convertible<bool>(factory);
-			make_convertible(unique_type_pack<type_pack_t<
+			const auto init_metadata = [&]<typename U>(std::in_place_type_t<U>)
+			{
+				if constexpr (!std::same_as<T, U>)
+				{
+					if constexpr (std::constructible_from<T, U>)
+						factory.template make_constructible<U>([](auto &&value) { return make_any<T>(static_cast<T>(value)); });
+					if constexpr (std::convertible_to<T, U>)
+						factory.template make_convertible<U>();
+					if constexpr (std::three_way_comparable_with<T, U>)
+						factory.template make_comparable<U>();
+				}
+			};
+			const auto init_unwrap = [&]<typename... Ts>(type_pack_t<Ts...>) { (init_metadata(std::in_place_type<Ts>), ...); };
+
+			init_metadata(std::in_place_type<bool>);
+			init_unwrap(unique_type_pack<type_pack_t<
 					char, wchar_t, char8_t, char16_t, char32_t,
 					std::int8_t, std::int16_t, std::int32_t, std::int64_t,
 					std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t,
 					std::intmax_t, std::uintmax_t, std::intptr_t, std::uintptr_t,
-					std::ptrdiff_t, std::size_t>>, factory);
-			make_convertible(type_pack<float, double, long double>, factory);
+					std::ptrdiff_t, std::size_t>>);
+			init_unwrap(type_pack<float, double, long double>);
 		}
 	};
+
+#ifndef REFLEX_HEADER_ONLY
+	extern template struct REFLEX_PUBLIC type_init<bool>;
+
+	extern template struct REFLEX_PUBLIC type_init<char>;
+	extern template struct REFLEX_PUBLIC type_init<wchar_t>;
+	extern template struct REFLEX_PUBLIC type_init<char8_t>;
+	extern template struct REFLEX_PUBLIC type_init<char16_t>;
+	extern template struct REFLEX_PUBLIC type_init<char32_t>;
+
+	extern template struct REFLEX_PUBLIC type_init<std::int8_t>;
+	extern template struct REFLEX_PUBLIC type_init<std::int16_t>;
+	extern template struct REFLEX_PUBLIC type_init<std::int32_t>;
+	extern template struct REFLEX_PUBLIC type_init<std::int64_t>;
+	extern template struct REFLEX_PUBLIC type_init<std::uint8_t>;
+	extern template struct REFLEX_PUBLIC type_init<std::uint16_t>;
+	extern template struct REFLEX_PUBLIC type_init<std::uint32_t>;
+	extern template struct REFLEX_PUBLIC type_init<std::uint64_t>;
+
+	extern template struct REFLEX_PUBLIC type_init<std::intptr_t>;
+	extern template struct REFLEX_PUBLIC type_init<std::uintptr_t>;
+
+	extern template struct REFLEX_PUBLIC type_init<std::intmax_t>;
+	extern template struct REFLEX_PUBLIC type_init<std::uintmax_t>;
+
+	extern template struct REFLEX_PUBLIC type_init<std::ptrdiff_t>;
+	extern template struct REFLEX_PUBLIC type_init<std::size_t>;
+
+	extern template struct REFLEX_PUBLIC type_init<float>;
+	extern template struct REFLEX_PUBLIC type_init<double>;
+	extern template struct REFLEX_PUBLIC type_init<long double>;
+#endif
 #endif
 }
