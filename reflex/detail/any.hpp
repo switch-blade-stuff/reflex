@@ -52,7 +52,11 @@ namespace reflex
 		/** Initializes the any cast exception from source type info and destination type info. */
 		bad_any_cast(type_info from_type, type_info to_type) : std::runtime_error(make_msg(from_type, to_type)), m_from_type(from_type), m_to_type(to_type) {}
 
-		REFLEX_PUBLIC ~bad_any_cast() override = default;
+#ifndef REFLEX_HEADER_ONLY
+		REFLEX_PUBLIC ~bad_any_cast() override;
+#else
+		~bad_any_cast() override = default;
+#endif
 
 		/** Returns type info of the converted-from type. */
 		[[nodiscard]] constexpr type_info from_type() const noexcept { return m_from_type; }
@@ -109,7 +113,7 @@ namespace reflex
 		static constexpr auto valid_deleter = std::is_empty_v<U> || detail::any_deleter_func<U>::value;
 		template<typename T>
 		static constexpr auto is_by_value = alignof(T) <= alignof(storage_t) && sizeof(T) <= (sizeof(storage_t) - sizeof(detail::type_flags)) &&
-		                                    std::is_trivially_move_constructible_v<T>;
+		                                    std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>;
 
 	public:
 		/** Initializes an empty `any`. */

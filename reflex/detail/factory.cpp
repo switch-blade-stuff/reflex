@@ -3,9 +3,8 @@
  */
 
 #include "database.hpp"
-#include "factory.hpp"
 
-#if !defined(REFLEX_HEADER_ONLY) && !defined(REFLEX_NO_ARITHMETIC)
+#ifndef REFLEX_NO_ARITHMETIC
 namespace reflex
 {
 	template struct type_init<bool>;
@@ -36,7 +35,7 @@ namespace reflex
 #endif
 
 #if PTRDIFF_WIDTH != INT64_WIDTH && PTRDIFF_WIDTH != INTPTR_WIDTH && PTRDIFF_WIDTH != INTMAX_WIDTH
-	template struct type_init<std::ptrdiff_t>;
+	template struct type_init<std::ptrdiff_t>
 #endif
 #if SIZE_WIDTH != UINT64_WIDTH && SIZE_WIDTH != UINTPTR_WIDTH && SIZE_WIDTH != UINTMAX_WIDTH
 	template struct type_init<std::size_t>;

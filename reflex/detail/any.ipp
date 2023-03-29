@@ -7,6 +7,8 @@
 
 namespace reflex
 {
+	bad_any_cast::~bad_any_cast() noexcept = default;
+
 	any any::try_cast(type_info type)
 	{
 		/* If `this` is empty, or `type` is invalid, return empty any. */
@@ -83,8 +85,6 @@ namespace reflex
 
 		if (!(flags() & detail::IS_VALUE))
 			(*deleter())(external());
-		else
-			type_data()->dtor(local());
 	}
 
 	bool any::operator==(const any &other) const

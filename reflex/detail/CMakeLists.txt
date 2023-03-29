@@ -21,4 +21,5 @@ list(APPEND REFLEX_PRIVATE_SOURCES
         ${CMAKE_CURRENT_LIST_DIR}/type_info.cpp
         ${CMAKE_CURRENT_LIST_DIR}/database.cpp
         ${CMAKE_CURRENT_LIST_DIR}/factory.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/facet.cpp
         ${CMAKE_CURRENT_LIST_DIR}/any.cpp)

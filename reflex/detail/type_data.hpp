@@ -150,6 +150,11 @@ namespace reflex
 
 		using cmp_table = tpp::dense_map<std::string_view, type_cmp, str_hash, str_cmp>;
 
+#ifdef _MSC_VER
+		/* Allow signed/unsigned comparison. */
+#pragma warning(push)
+#pragma warning(disable : 4018)
+#endif
 		template<typename T, typename U = T>
 		[[nodiscard]] inline static type_cmp make_type_cmp() noexcept
 		{
@@ -168,6 +173,9 @@ namespace reflex
 				result.cmp_lt = +[](const void *a, const void *b) { return *static_cast<const T *>(a) < *static_cast<const U *>(b); };
 			return result;
 		}
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 		struct any_funcs_t
 		{
@@ -184,7 +192,7 @@ namespace reflex
 			return result;
 		}
 
-		struct type_data
+		struct alignas(8) type_data
 		{
 			[[nodiscard]] const void *find_facet(std::string_view type) const
 			{
@@ -277,8 +285,7 @@ namespace reflex
 			/* Type conversions. */
 			conv_table conv_list;
 
-			/* Constructors & destructors. */
-			std::function<void(void *)> dtor;
+			/* Type constructors. */
 			std::list<type_ctor> ctor_list;
 
 			/* Comparison functions. */

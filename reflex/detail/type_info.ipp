@@ -11,6 +11,8 @@
 
 namespace reflex
 {
+	bad_argument_list::~bad_argument_list() noexcept = default;
+
 	tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> type_info::parents() const
 	{
 		tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> result;

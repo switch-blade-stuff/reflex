@@ -24,7 +24,11 @@ namespace reflex
 		/** @copydoc bad_argument_list */
 		explicit bad_argument_list(const std::string &msg) : std::runtime_error(msg) {}
 
-		REFLEX_PUBLIC ~bad_argument_list() override = default;
+#ifndef REFLEX_HEADER_ONLY
+		REFLEX_PUBLIC ~bad_argument_list() override;
+#else
+		~bad_argument_list() override = default;
+#endif
 	};
 
 	/** Handle to reflected type information. */
