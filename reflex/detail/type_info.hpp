@@ -97,13 +97,17 @@ namespace reflex
 		/** Checks if the referenced type is a pointer type.
 		 * @note For pointer-like class types, check the `pointer_like` facet. */
 		[[nodiscard]] constexpr bool is_pointer() const noexcept;
-		/** Checks if the referenced type is an integral type, or can be converted to `std::intmax_t` or `std::uintmax_t`. */
+		/** Checks if the referenced type is an integral type.
+		 * @note For conversions to integral types, use `convertible_to`. */
 		[[nodiscard]] constexpr bool is_integral() const noexcept;
-		/** Checks if the referenced type is a signed integral type, or can be converted to `std::intmax_t`. */
+		/** Checks if the referenced type is a signed integral type.
+		 * @note For conversions to signed integral types, use `convertible_to`. */
 		[[nodiscard]] constexpr bool is_signed_integral() const noexcept;
-		/** Checks if the referenced type is an unsigned integral type, or can be converted to `std::uintmax_t`. */
+		/** Checks if the referenced type is an unsigned integral type.
+		 * @note For conversions to unsigned integral types, use `convertible_to`. */
 		[[nodiscard]] constexpr bool is_unsigned_integral() const noexcept;
-		/** Checks if the referenced type is an arithmetic type, or can be converted to `double`. */
+		/** Checks if the referenced type is an arithmetic type.
+		 * @note For conversions to arithmetic types, use `convertible_to`. */
 		[[nodiscard]] constexpr bool is_arithmetic() const noexcept;
 
 		/** Removes extent from the referenced type. */

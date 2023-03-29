@@ -49,14 +49,16 @@ namespace reflex
 			return *this;
 		}
 
-		/** Makes the underlying type info convertible to \a U using conversion functor \a conv. */
+		/** Makes the underlying type info convertible to \a U using conversion functor \a conv.
+		 * @note Conversions to `std::intrmax_t`, `std::uintrmax_t`, `double` and underlying type of enums are added by default when available. */
 		template<typename U, typename F>
 		type_factory &make_convertible(F &&conv) requires (std::invocable<F, const T &> && std::constructible_from<U, std::invoke_result_t<F, const T &>>)
 		{
 			m_data->conv_list.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>(std::forward<F>(conv)));
 			return *this;
 		}
-		/** Makes the underlying type info convertible to \a U using `static_cast<U>(value)`. */
+		/** Makes the underlying type info convertible to \a U using `static_cast<U>(value)`.
+		 * @note Conversions to `std::intrmax_t`, `std::uintrmax_t`, `double` and underlying type of enums are added by default when available. */
 		template<typename U>
 		type_factory &make_convertible() requires (std::convertible_to<T, U> && std::same_as<std::decay_t<U>, U>)
 		{
@@ -138,7 +140,7 @@ namespace reflex
 	template<typename T> requires std::is_arithmetic_v<T>
 	struct type_init<T>
 	{
-		void operator()(type_factory<T> factory) const
+		REFLEX_PUBLIC void operator()(type_factory<T> factory) const
 		{
 			const auto init_metadata = [&]<typename U>(std::in_place_type_t<U>)
 			{
@@ -166,35 +168,35 @@ namespace reflex
 	};
 
 #ifndef REFLEX_HEADER_ONLY
-	extern template struct REFLEX_PUBLIC type_init<bool>;
+	extern template struct type_init<bool>;
 
-	extern template struct REFLEX_PUBLIC type_init<char>;
-	extern template struct REFLEX_PUBLIC type_init<wchar_t>;
-	extern template struct REFLEX_PUBLIC type_init<char8_t>;
-	extern template struct REFLEX_PUBLIC type_init<char16_t>;
-	extern template struct REFLEX_PUBLIC type_init<char32_t>;
+	extern template struct type_init<char>;
+	extern template struct type_init<wchar_t>;
+	extern template struct type_init<char8_t>;
+	extern template struct type_init<char16_t>;
+	extern template struct type_init<char32_t>;
 
-	extern template struct REFLEX_PUBLIC type_init<std::int8_t>;
-	extern template struct REFLEX_PUBLIC type_init<std::int16_t>;
-	extern template struct REFLEX_PUBLIC type_init<std::int32_t>;
-	extern template struct REFLEX_PUBLIC type_init<std::int64_t>;
-	extern template struct REFLEX_PUBLIC type_init<std::uint8_t>;
-	extern template struct REFLEX_PUBLIC type_init<std::uint16_t>;
-	extern template struct REFLEX_PUBLIC type_init<std::uint32_t>;
-	extern template struct REFLEX_PUBLIC type_init<std::uint64_t>;
+	extern template struct type_init<std::int8_t>;
+	extern template struct type_init<std::int16_t>;
+	extern template struct type_init<std::int32_t>;
+	extern template struct type_init<std::int64_t>;
+	extern template struct type_init<std::uint8_t>;
+	extern template struct type_init<std::uint16_t>;
+	extern template struct type_init<std::uint32_t>;
+	extern template struct type_init<std::uint64_t>;
 
-	extern template struct REFLEX_PUBLIC type_init<std::intptr_t>;
-	extern template struct REFLEX_PUBLIC type_init<std::uintptr_t>;
+	extern template struct type_init<std::intptr_t>;
+	extern template struct type_init<std::uintptr_t>;
 
-	extern template struct REFLEX_PUBLIC type_init<std::intmax_t>;
-	extern template struct REFLEX_PUBLIC type_init<std::uintmax_t>;
+	extern template struct type_init<std::intmax_t>;
+	extern template struct type_init<std::uintmax_t>;
 
-	extern template struct REFLEX_PUBLIC type_init<std::ptrdiff_t>;
-	extern template struct REFLEX_PUBLIC type_init<std::size_t>;
+	extern template struct type_init<std::ptrdiff_t>;
+	extern template struct type_init<std::size_t>;
 
-	extern template struct REFLEX_PUBLIC type_init<float>;
-	extern template struct REFLEX_PUBLIC type_init<double>;
-	extern template struct REFLEX_PUBLIC type_init<long double>;
+	extern template struct type_init<float>;
+	extern template struct type_init<double>;
+	extern template struct type_init<long double>;
 #endif
 #endif
 }

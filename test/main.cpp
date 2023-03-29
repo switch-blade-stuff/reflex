@@ -222,7 +222,8 @@ int main()
 				.type();
 
 		TEST_ASSERT(enum_ti.is_enum());
-		TEST_ASSERT(enum_ti.is_integral());
+		TEST_ASSERT(enum_ti.convertible_to<std::underlying_type_t<test_enum>>());
+
 		TEST_ASSERT(enum_ti.has_enumeration("TEST_VALUE_0"));
 		TEST_ASSERT(enum_ti.has_enumeration("TEST_VALUE_1"));
 		TEST_ASSERT(enum_ti.has_enumeration(reflex::forward_any(TEST_VALUE_0)));

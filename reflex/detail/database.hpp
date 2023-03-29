@@ -78,11 +78,15 @@ namespace reflex
 					result.alignment = alignof(T);
 					if constexpr (!std::is_empty_v<T>) result.size = sizeof(T);
 
-					if constexpr (std::is_null_pointer_v<T>) result.flags |= type_flags::IS_NULL;
-
+					if constexpr (std::is_enum_v<T>) result.flags |= type_flags::IS_ENUM;
 					if constexpr (std::is_class_v<T>) result.flags |= type_flags::IS_CLASS;
 					if constexpr (std::is_pointer_v<T>) result.flags |= type_flags::IS_POINTER;
 					if constexpr (std::is_abstract_v<T>) result.flags |= type_flags::IS_ABSTRACT;
+					if constexpr (std::is_null_pointer_v<T>) result.flags |= type_flags::IS_NULL;
+
+					if constexpr (std::is_arithmetic_v<T>) result.flags |= type_flags::IS_ARITHMETIC;
+					if constexpr (std::signed_integral<T>) result.flags |= type_flags::IS_SIGNED_INT;
+					if constexpr (std::unsigned_integral<T>) result.flags |= type_flags::IS_UNSIGNED_INT;
 
 					result.remove_pointer = make_type_data<std::decay_t<std::remove_pointer_t<T>>>;
 					result.remove_extent = make_type_data<std::decay_t<std::remove_extent_t<T>>>;
@@ -103,34 +107,19 @@ namespace reflex
 					if constexpr (std::is_copy_constructible_v<T>)
 						result.ctor_list.emplace_back(make_type_ctor<T, std::add_const_t<T> &>());
 
-					/* Add destructor. */
-					result.dtor = [](void *ptr) { std::destroy_at(static_cast<T *>(ptr)); };
-
 					/* Add comparisons. */
 					if constexpr (std::equality_comparable<T> || std::three_way_comparable<T>)
 						result.cmp_list.emplace(type_name_v<T>, make_type_cmp<T>());
 
-					/* Add conversions. */
+					/* Add default conversions. */
 					if constexpr (std::is_enum_v<T>)
-					{
-						result.flags |= type_flags::IS_ENUM;
 						result.conv_list.emplace(type_name_v<std::underlying_type_t<T>>, make_type_conv<T, std::underlying_type_t<T>>());
-					}
 					if constexpr (std::convertible_to<T, std::intmax_t>)
-					{
-						result.flags |= type_flags::IS_SIGNED_INT;
 						result.conv_list.emplace(type_name_v<std::intmax_t>, make_type_conv<T, std::intmax_t>());
-					}
 					if constexpr (std::convertible_to<T, std::uintmax_t>)
-					{
-						result.flags |= type_flags::IS_UNSIGNED_INT;
 						result.conv_list.emplace(type_name_v<std::uintmax_t>, make_type_conv<T, std::uintmax_t>());
-					}
 					if constexpr (std::convertible_to<T, double>)
-					{
-						result.flags |= type_flags::IS_ARITHMETIC;
 						result.conv_list.emplace(type_name_v<double>, make_type_conv<T, double>());
-					}
 
 					/* Add `any` initialization funcions. */
 					result.any_funcs = make_any_funcs<T>();
