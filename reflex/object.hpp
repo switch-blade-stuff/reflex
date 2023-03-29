@@ -16,7 +16,7 @@ namespace reflex
 	 * Children of this type must implement the `type_info do_type_of() const` protected virtual function.
 	 * This function is used to obtain the actual instance type of the children of `object`. A convenience macro
 	 * `REFLEX_DEFINE_OBJECT(T)` is provided and can be used to generate the required overloads. */
-	class object
+	class REFLEX_VISIBLE object
 	{
 		template<typename T>
 		friend type_info type_of(T &&) requires std::derived_from<std::decay_t<T>, object>;
@@ -29,17 +29,13 @@ namespace reflex
 		[[nodiscard]] virtual type_info do_type_of() const { return type_info::get<object>(); }
 	};
 
+#ifdef REFLEX_HEADER_ONLY
+	object::~object() = default;
+#endif
+
 	/** Returns the underlying type of \a value. */
 	template<typename T>
-	[[nodiscard]] type_info type_of(T &&obj) requires std::derived_from<std::decay_t<T>, object>
-	{
-		return static_cast<const object &>(obj).do_type_of();
-	}
-
-	namespace detail
-	{
-		[[nodiscard]] REFLEX_PUBLIC object *checked_object_cast(object *ptr, type_info from, type_info to) noexcept;
-	}
+	[[nodiscard]] type_info type_of(T &&obj) requires std::derived_from<std::decay_t<T>, object> { return static_cast<const object &>(obj).do_type_of(); }
 
 	/** @brief Dynamically casts an object of type \a From to type \a To.
 	 *
@@ -61,23 +57,14 @@ namespace reflex
 		{
 			const auto from_type = type_of(*ptr);
 			const auto to_type = type_info::get<To>();
-			auto *obj = static_cast<take_const_t<object, From> *>(ptr);
-			return static_cast<To *>(detail::checked_object_cast(const_cast<object *>(obj), from_type, to_type));
+			if (from_type == to_type || from_type.inherits_from(to_type))
+			{
+				auto *obj = static_cast<take_const_t<object, From> *>(ptr);
+				return static_cast<To *>(const_cast<object *>(obj));
+			}
 		}
 		return nullptr;
 	}
-
-#ifdef REFLEX_HEADER_ONLY
-	object::~object() = default;
-
-	object *detail::checked_object_cast(object *ptr, type_info from, type_info to) noexcept
-	{
-		if (from == to || from.inherits_from(to))
-			return ptr;
-		else
-			return nullptr;
-	}
-#endif
 }
 
 /** Convenience macro used to implement required `reflex::object` functions for type \a T. */

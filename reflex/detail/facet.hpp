@@ -54,7 +54,7 @@ namespace reflex
 	}
 
 	/** Exception type thrown when a function cannot be invoked on a facet. */
-	class bad_facet_function : public std::runtime_error
+	class REFLEX_VISIBLE bad_facet_function : public std::runtime_error
 	{
 		template<auto F, basic_const_string FuncName>
 		friend inline bad_facet_function detail::make_facet_error();

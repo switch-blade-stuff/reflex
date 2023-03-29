@@ -25,7 +25,7 @@ namespace reflex
 	}
 
 	/** Exception type thrown when the managed object of `any` cannot be copied. */
-	class bad_any_copy : public std::runtime_error
+	class REFLEX_VISIBLE bad_any_copy : public std::runtime_error
 	{
 		[[nodiscard]] static std::string make_msg(const type_info &type)
 		{
@@ -50,11 +50,7 @@ namespace reflex
 		/** Initializes the argument list exception with offending type \a type. */
 		explicit bad_any_copy(type_info type) : bad_any_copy(make_msg(type), type) {}
 
-#ifndef REFLEX_HEADER_ONLY
 		REFLEX_PUBLIC ~bad_any_copy() override;
-#else
-		~bad_any_copy() override = default;
-#endif
 
 		/** Returns type info of the offending (non-copyable) type. */
 		[[nodiscard]] constexpr type_info type() const noexcept { return m_type; }
@@ -64,7 +60,7 @@ namespace reflex
 	};
 
 	/** Exception type thrown when the managed object of `any` cannot be cast to the desired type. */
-	class bad_any_cast : public std::runtime_error
+	class REFLEX_VISIBLE bad_any_cast : public std::runtime_error
 	{
 		[[nodiscard]] static std::string make_msg(type_info from_type, type_info to_type)
 		{
@@ -87,11 +83,7 @@ namespace reflex
 		/** Initializes the any cast exception from source type info and destination type info. */
 		bad_any_cast(type_info from_type, type_info to_type) : std::runtime_error(make_msg(from_type, to_type)), m_from_type(from_type), m_to_type(to_type) {}
 
-#ifndef REFLEX_HEADER_ONLY
 		REFLEX_PUBLIC ~bad_any_cast() override;
-#else
-		~bad_any_cast() override = default;
-#endif
 
 		/** Returns type info of the converted-from type. */
 		[[nodiscard]] constexpr type_info from_type() const noexcept { return m_from_type; }
