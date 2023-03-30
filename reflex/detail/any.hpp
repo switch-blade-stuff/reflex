@@ -62,7 +62,7 @@ namespace reflex
 				}
 			}
 
-			std::byte bytes[sizeof(std::uintptr_t) * 4] = {};
+			std::byte bytes[sizeof(std::uintptr_t) * 2] = {};
 		};
 
 		template<typename T, typename U = std::decay_t<T>>
@@ -223,7 +223,7 @@ namespace reflex
 		}
 
 		/** Returns type of the managed object. */
-		[[nodiscard]] type_info type() const noexcept { return {type_data(), database()}; }
+		[[nodiscard]] type_info type() const noexcept { return {type_data(), m_db}; }
 
 		/** Checks if the `any` has a managed object (either value or reference). */
 		[[nodiscard]] bool empty() const noexcept { return type_data() == nullptr; }
@@ -387,65 +387,53 @@ namespace reflex
 		/* Flags are stored within the type data pointer. */
 		const detail::type_data *type_data(const detail::type_data *ptr) noexcept
 		{
-			const auto intptr = *m_storage.get<std::uintptr_t, 0>();
-			const auto old_value = intptr & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX);
-			const auto old_flags = static_cast<std::uintptr_t>(intptr & detail::ANY_FAGS_MAX);
-			*m_storage.get<std::uintptr_t, 0>() = std::bit_cast<std::uintptr_t>(ptr) | old_flags;
+			const auto old_value = m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX);
+			const auto old_flags = static_cast<std::uintptr_t>(m_data_ptr_flags & detail::ANY_FAGS_MAX);
+			m_data_ptr_flags = std::bit_cast<std::uintptr_t>(ptr) | old_flags;
 			return std::bit_cast<const detail::type_data *>(old_value);
 		}
 		[[nodiscard]] const detail::type_data *type_data() const noexcept
 		{
-			const auto intptr = std::bit_cast<std::uintptr_t>(*m_storage.get<const detail::type_data *, 0>());
-			return std::bit_cast<const detail::type_data *>(intptr & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX));
-		}
-
-		detail::database_impl *database(detail::database_impl *ptr) noexcept
-		{
-			return std::exchange(*m_storage.get<detail::database_impl *, sizeof(std::uintptr_t)>(), ptr);
-		}
-		[[nodiscard]] detail::database_impl *database() const noexcept
-		{
-			return *m_storage.get<detail::database_impl *, sizeof(std::uintptr_t)>();
+			return std::bit_cast<const detail::type_data *>(m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX));
 		}
 
 		type_info type(type_info value) noexcept
 		{
 			const auto old_data = type_data(value.m_data);
-			const auto old_db = database(value.m_db);
+			const auto old_db = std::exchange(m_db, value.m_db);
 			return {old_data, old_db};
 		}
 
 		detail::type_flags flags(detail::type_flags value) noexcept
 		{
-			const auto intptr = *m_storage.get<std::uintptr_t, 0>();
-			const auto old_value = static_cast<detail::type_flags>(intptr) & detail::ANY_FAGS_MAX;
-			const auto old_intptr = (intptr & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX));
-			*m_storage.get<std::uintptr_t, 0>() = old_intptr | static_cast<std::uintptr_t>(value);
+			const auto old_value = static_cast<detail::type_flags>(m_data_ptr_flags) & detail::ANY_FAGS_MAX;
+			const auto old_intptr = (m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX));
+			m_data_ptr_flags = old_intptr | static_cast<std::uintptr_t>(value);
 			return old_value;
 		}
 		[[nodiscard]] detail::type_flags flags() const noexcept
 		{
-			return static_cast<detail::type_flags>(std::bit_cast<std::uintptr_t>(*m_storage.get<void *, 0>()) & detail::ANY_FAGS_MAX);
+			return static_cast<detail::type_flags>(m_data_ptr_flags & detail::ANY_FAGS_MAX);
 		}
 
-		[[nodiscard]] void *local() noexcept { return m_storage.bytes + sizeof(std::uintptr_t) * 2; }
-		[[nodiscard]] const void *local() const noexcept { return m_storage.bytes + sizeof(std::uintptr_t) * 2; }
+		[[nodiscard]] void *local() noexcept { return m_storage.bytes; }
+		[[nodiscard]] const void *local() const noexcept { return m_storage.bytes; }
 
 		template<typename T = void(void *)>
-		T *deleter(T *ptr) noexcept { return std::exchange(*m_storage.get<T *, sizeof(std::uintptr_t) * 2>(), ptr); }
+		T *deleter(T *ptr) noexcept { return std::exchange(*m_storage.get<T *, 0>(), ptr); }
 		template<typename T = void(void *)>
-		[[nodiscard]] T *deleter() const noexcept { return *m_storage.get<T *, sizeof(std::uintptr_t) * 2>(); }
+		[[nodiscard]] T *deleter() const noexcept { return *m_storage.get<T *, 0>(); }
 		template<typename T = void>
-		T *external(T *ptr) noexcept { return std::exchange(*m_storage.get<T *, sizeof(std::uintptr_t) * 3>(), ptr); }
+		T *external(T *ptr) noexcept { return std::exchange(*m_storage.get<T *, sizeof(std::uintptr_t)>(), ptr); }
 		template<typename T = void>
-		[[nodiscard]] T *external() const noexcept { return *m_storage.get<T *, sizeof(std::uintptr_t) * 3>(); }
+		[[nodiscard]] T *external() const noexcept { return *m_storage.get<T *, sizeof(std::uintptr_t)>(); }
 
 		template<typename T, typename... Args>
 		void init_owned(type_info type, Args &&...args)
 		{
 			this->type(type);
 			auto flags = detail::IS_OWNED | (std::is_const_v<T> ? detail::IS_CONST : detail::type_flags{});
-			if constexpr (!is_by_value < T >)
+			if constexpr (!is_by_value<T>)
 			{
 				deleter(+[](void *ptr) { delete static_cast<std::remove_cv_t<T> *>(ptr); });
 				external(new std::remove_cv_t<T>(std::forward<Args>(args)...));
@@ -495,6 +483,8 @@ namespace reflex
 		[[nodiscard]] REFLEX_PUBLIC void *base_cast(std::string_view) const;
 		[[nodiscard]] REFLEX_PUBLIC any value_conv(std::string_view) const;
 
+		std::uintptr_t m_data_ptr_flags = 0;
+		detail::database_impl *m_db = nullptr;
 		storage_t m_storage;
 	};
 

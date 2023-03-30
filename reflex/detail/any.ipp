@@ -51,7 +51,7 @@ namespace reflex
 		for (auto [_, base]: data->base_list)
 		{
 			const auto *base_ptr = base.cast_func(cdata());
-			const auto base_type = type_info{base.type, *database()};
+			const auto base_type = type_info{base.type, *m_db};
 			auto candidate = any{base_type, base_ptr}.base_cast(base_name);
 			if (candidate != nullptr) return candidate;
 		}
@@ -69,7 +69,7 @@ namespace reflex
 		for (auto [_, base]: data->base_list)
 		{
 			const auto *base_ptr = base.cast_func(cdata());
-			const auto base_type = type_info{base.type, *database()};
+			const auto base_type = type_info{base.type, *m_db};
 			auto candidate = any{base_type, base_ptr}.value_conv(base_name);
 			if (!candidate.empty()) return candidate;
 		}
