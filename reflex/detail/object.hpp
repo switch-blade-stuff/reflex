@@ -90,11 +90,11 @@ namespace reflex
 	constexpr dynamic_exception<T>::~dynamic_exception() = default;
 
 	/** Type initializer overload for dynamic object types. */
-	template<std::derived_from<object> T> requires (!std::same_as<T, object> && !std::derived_from<T, detail::dynamic_exception_tag>)
+	template<std::derived_from<object> T> requires (!std::derived_from<T, detail::dynamic_exception_tag> && !std::same_as<T, object>)
 	struct type_init<T> { void operator()(type_factory<T> factory) { factory.template add_parent<object>(); }};
 
 	/** Type initializer overload for dynamic exceptions. */
-	template<std::derived_from<object> T> requires (!std::same_as<T, object> && std::derived_from<T, detail::dynamic_exception_tag>)
+	template<std::derived_from<object> T> requires std::derived_from<T, detail::dynamic_exception_tag>
 	struct type_init<T>
 	{
 	private:
