@@ -7,7 +7,7 @@
 #include "facet.hpp"
 #include "any.hpp"
 
-namespace reflex
+namespace reflex::facets
 {
 	namespace detail
 	{
@@ -24,7 +24,7 @@ namespace reflex
 
 	/** Facet type implementing a generic interface to a string-like type with character type \a C. */
 	template<typename C>
-	class basic_string_facet : public facet<detail::string_vtable<C>>
+	class basic_string : public facet<detail::string_vtable<C>>
 	{
 		using base_t = facet<detail::string_vtable<C>>;
 
@@ -49,12 +49,12 @@ namespace reflex
 	};
 
 	/** Alias for string facet with `char` character type. */
-	using string_facet = basic_string_facet<char>;
+	using string = basic_string<char>;
 	/** Alias for string facet with `wchar_t` character type. */
-	using wstring_facet = basic_string_facet<wchar_t>;
+	using wstring = basic_string<wchar_t>;
 
 	template<typename C, std::ranges::contiguous_range T> requires std::same_as<std::ranges::range_value_t<T>, C>
-	struct impl_facet<basic_string_facet<C>, T>
+	struct impl_facet<basic_string<C>, T>
 	{
 	private:
 		[[nodiscard]] constexpr static detail::string_vtable<C> make_vtable()

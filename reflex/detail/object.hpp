@@ -4,10 +4,7 @@
 
 #pragma once
 
-#include "type_info.hpp"
 #include "database.hpp"
-#include "factory.hpp"
-#include "facet.hpp"
 
 namespace reflex
 {
@@ -117,51 +114,6 @@ namespace reflex
 		}
 	};
 
-	/** Dynamic exception type thrown when a function cannot be invoked on a facet. */
-	class REFLEX_VISIBLE bad_facet_function final : public dynamic_exception<std::runtime_error>
-	{
-		template<auto F, basic_const_string FuncName>
-		friend inline bad_facet_function detail::make_facet_error();
-
-		[[nodiscard]] reflex::type_info do_type_of() const final { return reflex::type_info::get<bad_facet_function>(); }
-
-	public:
-		bad_facet_function(const bad_facet_function &) = default;
-		bad_facet_function &operator=(const bad_facet_function &) = default;
-		bad_facet_function(bad_facet_function &&) = default;
-		bad_facet_function &operator=(bad_facet_function &&) = default;
-
-		/** Initializes the facet error exception from message and function name strings. */
-		bad_facet_function(const char *msg, std::string_view name) : dynamic_exception<std::runtime_error>(msg), m_name(name) {}
-		/** @copydoc bad_facet_function */
-		bad_facet_function(const std::string &msg, std::string_view name) : dynamic_exception<std::runtime_error>(msg), m_name(name) {}
-
-		REFLEX_PUBLIC ~bad_facet_function() final;
-
-		/** Returns name of the offending facet function. */
-		[[nodiscard]] constexpr std::string_view name() const noexcept { return m_name; }
-
-	private:
-		std::string_view m_name;
-	};
-
-	template<auto F, basic_const_string FuncName>
-	[[nodiscard]] bad_facet_function detail::make_facet_error()
-	{
-		constexpr auto msg_prefix = basic_const_string{"Failed to invoke facet function `"};
-		if constexpr (FuncName.empty())
-		{
-			const auto msg = auto_constant<msg_prefix + FuncName + basic_const_string{"`"}>::value.data();
-			return bad_facet_function{msg, FuncName};
-		}
-		else
-		{
-			constexpr auto signature = type_name<detail::vtable_func_type_t<F>>::value;
-			const auto msg = auto_constant<msg_prefix + const_string<signature.size()>{signature} + basic_const_string{"`"}>::value.data();
-			return bad_facet_function{msg, FuncName};
-		}
-	}
-
 	/** Dynamic exception type thrown when the managed object of `any` cannot be copied. */
 	class REFLEX_VISIBLE bad_any_copy final : public dynamic_exception<std::runtime_error>
 	{
@@ -241,7 +193,6 @@ namespace reflex
 	void any::throw_bad_any_cast(type_info from_type, type_info to_type) { throw bad_any_cast(from_type, to_type); }
 	void any::throw_bad_any_copy(type_info type) { throw bad_any_copy(type); }
 
-	bad_facet_function::~bad_facet_function() = default;
 	bad_any_copy::~bad_any_copy() = default;
 	bad_any_cast::~bad_any_cast() = default;
 #endif

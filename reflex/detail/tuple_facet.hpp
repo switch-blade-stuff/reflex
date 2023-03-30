@@ -5,9 +5,8 @@
 #pragma once
 
 #include "facet.hpp"
-#include "any.hpp"
 
-namespace reflex
+namespace reflex::facets
 {
 	namespace detail
 	{
@@ -22,7 +21,7 @@ namespace reflex
 	}
 
 	/** Facet type implementing a generic interface to a tuple-like type. */
-	class tuple_facet : public facet<detail::tuple_vtable>
+	class tuple : public facet<detail::tuple_vtable>
 	{
 		using base_t = facet<detail::tuple_vtable>;
 
@@ -57,7 +56,7 @@ namespace reflex
 	};
 
 	template<typename T>
-	struct impl_facet<tuple_facet, T>
+	struct impl_facet<tuple, T>
 	{
 	private:
 		template<std::size_t I>

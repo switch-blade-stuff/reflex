@@ -116,7 +116,7 @@ namespace reflex
 		template<typename T>
 		[[nodiscard]] inline bool implements_facet() const noexcept;
 		/** Checks if the referenced type implements all facets in facet group \a G. */
-		template<template_instance<facet_group> G>
+		template<template_instance<facets::facet_group> G>
 		[[nodiscard]] inline bool implements_facet() const noexcept;
 
 		/** Checks if the referenced type inherits from a base type \a T. */

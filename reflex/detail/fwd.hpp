@@ -17,7 +17,15 @@
 
 namespace reflex
 {
-	class bad_facet_function;
+	namespace facets
+	{
+		class bad_facet_function;
+		template<typename Vtable>
+		class facet;
+		template<typename... Fs>
+		class facet_group;
+	}
+
 	class bad_any_copy;
 	class bad_any_cast;
 
@@ -27,11 +35,6 @@ namespace reflex
 	class type_factory;
 	template<typename T>
 	struct type_init;
-
-	template<typename Vtable>
-	class facet;
-	template<typename... Fs>
-	class facet_group;
 
 	class type_info;
 	class object;

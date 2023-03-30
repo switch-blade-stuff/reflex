@@ -106,18 +106,18 @@ namespace reflex
 		/** Implements all facets in facet group \a G for the underlying type info.
 		 * `impl_facet<F, T>` must be well-defined and have static member constant `value` of type `F::vtable_type`
 		 * for every facet type `F` in facet group \a G. */
-		template<template_instance<facet_group> G>
+		template<template_instance<facets::facet_group> G>
 		inline type_factory &facet();
 		/** Implements all facets in facet group \a G for the underlying type info using group vtable \a vtab.
 		 * @param vtab Tuple of vtables of the individual facet types in facet group \a G. */
-		template<template_instance<facet_group> G>
+		template<template_instance<facets::facet_group> G>
 		inline type_factory &facet(const typename G::vtable_type &vtab);
 
 	private:
 		template<typename... Ts, typename... Args>
 		void add_ctor(Args &&...args)
 		{
-			constexpr auto args_data = detail::arg_list<Ts...>::value;
+			constexpr auto args_data = std::span{detail::arg_list<Ts...>::value};
 			if (auto existing = m_data->find_ctor(args_data); existing == nullptr)
 				m_data->ctor_list.emplace_back(detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...));
 			else

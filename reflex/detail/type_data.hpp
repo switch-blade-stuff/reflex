@@ -80,10 +80,13 @@ namespace reflex
 			/* Return false when types don't exactly match, or mutable ref is required, but got a constant. */
 			[[nodiscard]] static bool is_exact_invocable(const arg_data &a, const any &b) noexcept { return (!b.is_const() || (a.flags & (IS_CONST | IS_VALUE))) && b.type().name() == a.type; }
 
+			constexpr arg_data() noexcept = default;
+			constexpr arg_data(std::string_view type, type_flags flags) noexcept : type(type), flags(flags) {}
+
 			[[nodiscard]] constexpr bool operator==(const arg_data &other) const noexcept { return type == other.type && flags == other.flags; }
 
 			std::string_view type;
-			type_flags flags;
+			type_flags flags = {};
 		};
 
 		template<typename T>

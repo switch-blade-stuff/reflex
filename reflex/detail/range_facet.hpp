@@ -5,11 +5,10 @@
 #pragma once
 
 #include "facet.hpp"
-#include "any.hpp"
 
-namespace reflex
+namespace reflex::facets
 {
-	class range_facet;
+	class range;
 
 	namespace detail
 	{
@@ -29,7 +28,7 @@ namespace reflex
 
 		class any_iterator
 		{
-			friend class reflex::range_facet;
+			friend class reflex::facets::range;
 
 		public:
 			using difference_type = std::ptrdiff_t;
@@ -161,7 +160,7 @@ namespace reflex
 	}
 
 	/** Facet type implementing a generic range. */
-	class range_facet : public facet<detail::range_vtable>
+	class range : public facet<detail::range_vtable>
 	{
 		using base_t = facet<detail::range_vtable>;
 
@@ -220,7 +219,7 @@ namespace reflex
 	};
 
 	template<std::ranges::input_range T>
-	struct impl_facet<range_facet, T>
+	struct impl_facet<range, T>
 	{
 	private:
 		using iterator = std::decay_t<decltype(std::ranges::begin(std::declval<T>()))>;

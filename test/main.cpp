@@ -3,7 +3,6 @@
  */
 
 #include <reflex/type_info.hpp>
-#include <reflex/facet.hpp>
 
 #ifndef NDEBUG
 
@@ -40,9 +39,9 @@ struct test_vtable
 	int (*get_value)(const reflex::any &);
 };
 
-class test_facet : public reflex::facet<test_vtable>
+class test_facet : public reflex::facets::facet<test_vtable>
 {
-	using base_t = reflex::facet<test_vtable>;
+	using base_t = reflex::facets::facet<test_vtable>;
 
 public:
 	using base_t::facet;
@@ -54,7 +53,7 @@ public:
 static_assert(std::same_as<test_facet::vtable_type, test_vtable>);
 
 template<>
-struct reflex::impl_facet<test_facet, int>
+struct reflex::facets::impl_facet<test_facet, int>
 {
 	constexpr static auto value = test_vtable{
 			.set_value = +[](any &obj, int i) { *obj.get<int>() = i; },
@@ -262,11 +261,11 @@ int main()
 
 		try
 		{
-			throw reflex::bad_facet_function("", "");
+			throw reflex::facets::bad_facet_function("", "");
 		}
 		catch (const reflex::object &e)
 		{
-			TEST_ASSERT(reflex::type_of(e) == reflex::type_info::get<reflex::bad_facet_function>());
+			TEST_ASSERT(reflex::type_of(e) == reflex::type_info::get<reflex::facets::bad_facet_function>());
 		}
 	}
 
