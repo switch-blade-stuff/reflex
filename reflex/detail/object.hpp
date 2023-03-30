@@ -71,7 +71,7 @@ namespace reflex
 
 	namespace detail { struct dynamic_exception_tag {}; }
 
-	/** CRTP base type used to create a dynamic exception type derived from `object` and \a Base. */
+	/** Abstract base type used to create a dynamic exception derived from `object` and \a Base. */
 	template<typename Base>
 	struct REFLEX_VISIBLE dynamic_exception : public detail::dynamic_exception_tag, public object, public Base
 	{
