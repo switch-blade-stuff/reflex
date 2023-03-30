@@ -24,77 +24,6 @@ namespace reflex
 		struct any_deleter_func<void (*)(const void *)> : std::true_type {};
 	}
 
-	/** Exception type thrown when the managed object of `any` cannot be copied. */
-	class REFLEX_VISIBLE bad_any_copy : public std::runtime_error
-	{
-		[[nodiscard]] static std::string make_msg(const type_info &type)
-		{
-			std::string result;
-			result.append("Type `");
-			result.append(type.name());
-			result.append("` is not copy-constructible");
-			return result;
-		}
-
-	public:
-		bad_any_copy(const bad_any_copy &) = default;
-		bad_any_copy &operator=(const bad_any_copy &) = default;
-		bad_any_copy(bad_any_copy &&) = default;
-		bad_any_copy &operator=(bad_any_copy &&) = default;
-
-		/** Initializes the argument list exception with message \a msg and offending type \a type. */
-		bad_any_copy(const char *msg, type_info type) : std::runtime_error(msg), m_type(type) {}
-		/** @copydoc bad_any_copy */
-		bad_any_copy(const std::string &msg, type_info type) : std::runtime_error(msg), m_type(type) {}
-
-		/** Initializes the argument list exception with offending type \a type. */
-		explicit bad_any_copy(type_info type) : bad_any_copy(make_msg(type), type) {}
-
-		REFLEX_PUBLIC ~bad_any_copy() override;
-
-		/** Returns type info of the offending (non-copyable) type. */
-		[[nodiscard]] constexpr type_info type() const noexcept { return m_type; }
-
-	private:
-		type_info m_type;
-	};
-
-	/** Exception type thrown when the managed object of `any` cannot be cast to the desired type. */
-	class REFLEX_VISIBLE bad_any_cast : public std::runtime_error
-	{
-		[[nodiscard]] static std::string make_msg(type_info from_type, type_info to_type)
-		{
-			std::string result;
-			result.reserve(from_type.name().size() + to_type.name().size() + 78);
-			result.append("Managed object of type `");
-			result.append(from_type.name());
-			result.append("` cannot be represented as or converted to type `");
-			result.append(to_type.name());
-			result.append(1, '`');
-			return result;
-		}
-
-	public:
-		bad_any_cast(const bad_any_cast &) = default;
-		bad_any_cast &operator=(const bad_any_cast &) = default;
-		bad_any_cast(bad_any_cast &&) = default;
-		bad_any_cast &operator=(bad_any_cast &&) = default;
-
-		/** Initializes the any cast exception from source type info and destination type info. */
-		bad_any_cast(type_info from_type, type_info to_type) : std::runtime_error(make_msg(from_type, to_type)), m_from_type(from_type), m_to_type(to_type) {}
-
-		REFLEX_PUBLIC ~bad_any_cast() override;
-
-		/** Returns type info of the converted-from type. */
-		[[nodiscard]] constexpr type_info from_type() const noexcept { return m_from_type; }
-		/** Returns type info of the converted-to type. */
-		[[nodiscard]] constexpr type_info to_type() const noexcept { return m_to_type; }
-
-	private:
-		type_info m_from_type;
-		type_info m_to_type;
-	};
-
 	/** Type-erased generic object. */
 	class any
 	{
@@ -141,6 +70,9 @@ namespace reflex
 		template<typename T>
 		static constexpr auto is_by_value = alignof(T) <= alignof(storage_t) && sizeof(T) <= (sizeof(storage_t) - sizeof(detail::type_flags)) &&
 		                                    std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>;
+
+		[[noreturn]] static REFLEX_PUBLIC void throw_bad_any_cast(type_info from_type, type_info to_type);
+		[[noreturn]] static REFLEX_PUBLIC void throw_bad_any_copy(type_info type);
 
 	public:
 		/** Initializes an empty `any`. */
@@ -351,7 +283,7 @@ namespace reflex
 		[[nodiscard]] any cast(type_info type)
 		{
 			if (auto result = try_cast(type); result.empty())
-				[[unlikely]] throw bad_any_cast(this->type(), type);
+				[[unlikely]] throw_bad_any_cast(this->type(), type);
 			else
 				return result;
 		}
@@ -359,7 +291,7 @@ namespace reflex
 		[[nodiscard]] any cast(type_info type) const
 		{
 			if (auto result = try_cast(type); result.empty())
-				[[unlikely]] throw bad_any_cast(this->type(), type);
+				[[unlikely]] throw_bad_any_cast(this->type(), type);
 			else
 				return result;
 		}
@@ -538,7 +470,7 @@ namespace reflex
 			if constexpr (std::is_constructible_v<T, other_t &>)
 				init_owned<T>(type, *static_cast<other_t *>(data));
 			else
-				throw bad_any_copy(type);
+				throw_bad_any_copy(type);
 		}
 		template<typename T>
 		void copy_from(type_info type, const void *cdata, void *data)

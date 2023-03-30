@@ -53,55 +53,6 @@ namespace reflex
 		[[nodiscard]] inline static bad_facet_function make_facet_error();
 	}
 
-	/** Exception type thrown when a function cannot be invoked on a facet. */
-	class REFLEX_VISIBLE bad_facet_function : public std::runtime_error
-	{
-		template<auto F, basic_const_string FuncName>
-		friend inline bad_facet_function detail::make_facet_error();
-
-		using std::runtime_error::runtime_error;
-
-	public:
-		bad_facet_function(const bad_facet_function &) = default;
-		bad_facet_function &operator=(const bad_facet_function &) = default;
-		bad_facet_function(bad_facet_function &&) = default;
-		bad_facet_function &operator=(bad_facet_function &&) = default;
-
-		/** Initializes the facet error exception from message and function name strings. */
-		bad_facet_function(const char *msg, std::string_view name) : std::runtime_error(msg), m_name(name) {}
-		/** @copydoc bad_facet_function */
-		bad_facet_function(const std::string &msg, std::string_view name) : std::runtime_error(msg), m_name(name) {}
-
-#ifndef REFLEX_HEADER_ONLY
-		REFLEX_PUBLIC ~bad_facet_function() override;
-#else
-		~bad_facet_function() override = default;
-#endif
-
-		/** Returns name of the offending facet function. */
-		[[nodiscard]] constexpr std::string_view name() const noexcept { return m_name; }
-
-	private:
-		std::string_view m_name;
-	};
-
-	template<auto F, basic_const_string FuncName>
-	[[nodiscard]] bad_facet_function detail::make_facet_error()
-	{
-		constexpr auto msg_prefix = basic_const_string{"Failed to invoke facet function `"};
-		if constexpr (FuncName.empty())
-		{
-			const auto msg = auto_constant<msg_prefix + FuncName + basic_const_string{"`"}>::value.data();
-			return bad_facet_function{msg, FuncName};
-		}
-		else
-		{
-			constexpr auto signature = type_name<detail::vtable_func_type_t<F>>::value;
-			const auto msg = auto_constant<msg_prefix + const_string<signature.size()>{signature} + basic_const_string{"`"}>::value.data();
-			return bad_facet_function{msg, FuncName};
-		}
-	}
-
 	/** Utility trait used to check if type \a T is a facet type. */
 	template<typename T>
 	using is_facet = std::is_base_of<detail::facet_instance, T>;

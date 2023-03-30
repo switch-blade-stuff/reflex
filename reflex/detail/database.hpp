@@ -96,11 +96,6 @@ namespace reflex
 				/* Constructors, destructors & conversions are only created for object types. */
 				if constexpr (std::is_object_v<T>)
 				{
-
-					/* If `T` is derived from `object`, add `object` to the list of parent types. */
-					if constexpr (std::derived_from<T, object> && !std::same_as<T, object>)
-						result.base_list.emplace(type_name_v<object>, make_type_base<T, object>());
-
 					/* Add default & copy constructors. */
 					if constexpr (std::is_default_constructible_v<T>)
 						result.ctor_list.emplace_back(make_type_ctor<T>());
@@ -111,15 +106,16 @@ namespace reflex
 					if constexpr (std::equality_comparable<T> || std::three_way_comparable<T>)
 						result.cmp_list.emplace(type_name_v<T>, make_type_cmp<T>());
 
-					/* Add default conversions. */
+					/* Add enum underlying type overloads. */
 					if constexpr (std::is_enum_v<T>)
+					{
+						result.ctor_list.emplace_back(make_type_ctor<T, std::underlying_type_t<T>>([](std::underlying_type_t<T> value)
+						{
+							return make_any<T>(static_cast<T>(value));
+						}));
 						result.conv_list.emplace(type_name_v<std::underlying_type_t<T>>, make_type_conv<T, std::underlying_type_t<T>>());
-					if constexpr (std::convertible_to<T, std::intmax_t>)
-						result.conv_list.emplace(type_name_v<std::intmax_t>, make_type_conv<T, std::intmax_t>());
-					if constexpr (std::convertible_to<T, std::uintmax_t>)
-						result.conv_list.emplace(type_name_v<std::uintmax_t>, make_type_conv<T, std::uintmax_t>());
-					if constexpr (std::convertible_to<T, double>)
-						result.conv_list.emplace(type_name_v<double>, make_type_conv<T, double>());
+						result.cmp_list.emplace(type_name_v<std::underlying_type_t<T>>, make_type_cmp<std::underlying_type_t<T>>());
+					}
 
 					/* Add `any` initialization funcions. */
 					result.any_funcs = make_any_funcs<T>();

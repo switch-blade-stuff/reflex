@@ -23,7 +23,7 @@ or MSVC compatible syntax) and CMake with minimal version 3.20.
     <td>REFLEX_NO_ARITHMETIC</td>
     <td>-DREFLEX_NO_ARITHMETIC</td>
     <td>OFF</td>
-    <td>Disables generation of default conversions & constructors for arithmetic types (other than `double` & `[u]intmax_t`)</td>
+    <td>Disables generation of default conversions & constructors for arithmetic types</td>
   </tr>
   <tr>
     <td>REFLEX_HEADER_ONLY</td>

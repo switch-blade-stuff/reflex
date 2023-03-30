@@ -8,6 +8,7 @@
 #include "detail/type_info.hpp"
 #include "detail/database.hpp"
 #include "detail/factory.hpp"
+#include "detail/object.hpp"
 #include "detail/any.hpp"
 
 #ifdef REFLEX_HEADER_ONLY

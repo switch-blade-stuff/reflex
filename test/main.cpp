@@ -3,7 +3,6 @@
  */
 
 #include <reflex/type_info.hpp>
-#include <reflex/object.hpp>
 #include <reflex/facet.hpp>
 
 #ifndef NDEBUG
@@ -241,4 +240,35 @@ int main()
 		TEST_ASSERT(*e0.get<test_enum>() == TEST_VALUE_0);
 		TEST_ASSERT(*e1.get<test_enum>() == TEST_VALUE_1);
 	}
+
+	{
+		try
+		{
+			throw reflex::bad_any_copy(reflex::type_info::get<int>());
+		}
+		catch (const reflex::object &e)
+		{
+			TEST_ASSERT(reflex::type_of(e) == reflex::type_info::get<reflex::bad_any_copy>());
+		}
+
+		try
+		{
+			throw reflex::bad_any_cast(reflex::type_info::get<int>(), reflex::type_info::get<double>());
+		}
+		catch (const reflex::object &e)
+		{
+			TEST_ASSERT(reflex::type_of(e) == reflex::type_info::get<reflex::bad_any_cast>());
+		}
+
+		try
+		{
+			throw reflex::bad_facet_function("", "");
+		}
+		catch (const reflex::object &e)
+		{
+			TEST_ASSERT(reflex::type_of(e) == reflex::type_info::get<reflex::bad_facet_function>());
+		}
+	}
+
+	return 0;
 }

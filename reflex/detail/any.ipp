@@ -7,9 +7,6 @@
 
 namespace reflex
 {
-	bad_any_copy::~bad_any_copy() = default;
-	bad_any_cast::~bad_any_cast() = default;
-
 	any any::try_cast(type_info type)
 	{
 		/* If `this` is empty, or `type` is invalid, return empty any. */

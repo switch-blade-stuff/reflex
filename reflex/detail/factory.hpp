@@ -50,7 +50,7 @@ namespace reflex
 		}
 
 		/** Makes the underlying type info convertible to \a U using conversion functor \a conv.
-		 * @note Conversions to `std::intrmax_t`, `std::uintrmax_t`, `double` and underlying type of enums are added by default when available. */
+		 * @note Conversion to the underlying type of enums is added by default when available. */
 		template<typename U, typename F>
 		type_factory &make_convertible(F &&conv) requires (std::invocable<F, const T &> && std::constructible_from<U, std::invoke_result_t<F, const T &>>)
 		{
@@ -58,7 +58,7 @@ namespace reflex
 			return *this;
 		}
 		/** Makes the underlying type info convertible to \a U using `static_cast<U>(value)`.
-		 * @note Conversions to `std::intrmax_t`, `std::uintrmax_t`, `double` and underlying type of enums are added by default when available. */
+		 * @note Conversion to the underlying type of enums is added by default when available. */
 		template<typename U>
 		type_factory &make_convertible() requires (std::convertible_to<T, U> && std::same_as<std::decay_t<U>, U>)
 		{
@@ -66,7 +66,8 @@ namespace reflex
 			return *this;
 		}
 
-		/** Makes the underlying type info constructible via constructor `T(Args...)`. */
+		/** Makes the underlying type info constructible via constructor `T(Args...)`.
+		 * @note Construction from the underlying type of enums is added by default when available. */
 		template<typename... Args>
 		type_factory &make_constructible() requires std::constructible_from<T, Args...>
 		{
@@ -74,7 +75,8 @@ namespace reflex
 			return *this;
 		}
 		/** Makes the underlying type info constructible via factory function \a ctor_func.
-		 * \a ctor_func must be invocable with arguments \a Args and return an instance of `any`. */
+		 * \a ctor_func must be invocable with arguments \a Args and return an instance of `any`.
+		 * @note Construction from the underlying type of enums is added by default when available. */
 		template<typename... Args, typename F>
 		type_factory &make_constructible(F &&ctor_func) requires std::is_invocable_r_v<any, F, Args...>
 		{
@@ -83,7 +85,8 @@ namespace reflex
 		}
 
 		/** Makes the underlying type info comparable with objects of type \a U.
-		 * @note Types \a T and \a U must be three-way and/or equality comparable. */
+		 * @note Types \a T and \a U must be three-way and/or equality comparable.
+		 * @note Comparison with the underlying type of enums is added by default when available. */
 		template<typename U>
 		type_factory &make_comparable() requires ((std::equality_comparable_with<T, U> || std::three_way_comparable_with<T, U>) && std::same_as<std::decay_t<U>, U>)
 		{
