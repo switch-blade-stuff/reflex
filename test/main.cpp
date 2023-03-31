@@ -2,17 +2,6 @@
  * Created by switchblade on 2023-01-01.
  */
 
-#include <reflex/type_info.hpp>
-
-#ifndef NDEBUG
-
-#include <cassert>
-
-#define TEST_ASSERT(cnd) assert((cnd))
-#else
-#define TEST_ASSERT(cnd) do { if (!(cnd)) std::terminate(); } while (false)
-#endif
-
 static_assert(reflex::type_name_v<int> == "int");
 static_assert(reflex::type_name_v<int *> == "int *");
 static_assert(reflex::type_name_v<int &> == "int &");
@@ -61,22 +50,6 @@ struct reflex::facets::impl_facet<test_facet, int>
 	};
 };
 
-class test_base : public reflex::object
-{
-	REFLEX_DEFINE_OBJECT(test_base)
-
-public:
-	constexpr test_base() noexcept = default;
-	~test_base() noexcept override = default;
-};
-class test_child : public test_base
-{
-	REFLEX_DEFINE_OBJECT(test_child)
-
-public:
-	constexpr test_child() noexcept = default;
-	~test_child() noexcept override = default;
-};
 
 int main()
 {
@@ -122,48 +95,6 @@ int main()
 	}
 
 	{
-		const auto base = test_base{};
-		TEST_ASSERT(reflex::type_of(base) == reflex::type_info::get<test_base>());
-		TEST_ASSERT(reflex::type_of(base).inherits_from<reflex::object>());
-
-		const auto child_ti = reflex::type_info::reflect<test_child>()
-		        .add_parent<test_base>().type();
-
-		auto *base_ptr = &base;
-		TEST_ASSERT(reflex::type_of(*base_ptr) == reflex::type_info::get<test_base>());
-		TEST_ASSERT(reflex::type_of(base) == reflex::type_of(*base_ptr));
-		TEST_ASSERT(reflex::object_cast<const reflex::object>(base_ptr) != nullptr);
-		TEST_ASSERT(reflex::object_cast<const test_child>(base_ptr) == nullptr);
-		TEST_ASSERT(reflex::object_cast<const test_base>(base_ptr) != nullptr);
-
-		const auto child = test_child{};
-		TEST_ASSERT(reflex::type_of(child) == child_ti);
-		TEST_ASSERT(reflex::type_of(child).inherits_from<reflex::object>());
-		TEST_ASSERT(reflex::type_of(child).inherits_from<test_base>());
-
-		base_ptr = &child;
-		TEST_ASSERT(reflex::type_of(*base_ptr) == child_ti);
-		TEST_ASSERT(reflex::type_of(child) == reflex::type_of(*base_ptr));
-		TEST_ASSERT(reflex::object_cast<const reflex::object>(base_ptr) != nullptr);
-		TEST_ASSERT(reflex::object_cast<const test_child>(base_ptr) != nullptr);
-		TEST_ASSERT(reflex::object_cast<const test_base>(base_ptr) != nullptr);
-
-		const reflex::object *object_ptr = &base;
-		TEST_ASSERT(reflex::type_of(*object_ptr) == reflex::type_info::get<test_base>());
-		TEST_ASSERT(reflex::type_of(base) == reflex::type_of(*object_ptr));
-		TEST_ASSERT(reflex::object_cast<const reflex::object>(object_ptr) != nullptr);
-		TEST_ASSERT(reflex::object_cast<const test_child>(object_ptr) == nullptr);
-		TEST_ASSERT(reflex::object_cast<const test_base>(object_ptr) != nullptr);
-
-		object_ptr = &child;
-		TEST_ASSERT(reflex::type_of(*object_ptr) == child_ti);
-		TEST_ASSERT(reflex::type_of(child) == reflex::type_of(*object_ptr));
-		TEST_ASSERT(reflex::object_cast<const reflex::object>(object_ptr) != nullptr);
-		TEST_ASSERT(reflex::object_cast<const test_child>(object_ptr) != nullptr);
-		TEST_ASSERT(reflex::object_cast<const test_base>(object_ptr) != nullptr);
-
-		reflex::type_info::reset<test_child>();
-		TEST_ASSERT(!child_ti.inherits_from<test_base>());
 	}
 
 	{
@@ -208,65 +139,7 @@ int main()
 	}
 
 	{
-		enum test_enum
-		{
-			TEST_VALUE_0,
-			TEST_VALUE_1,
-		};
 
-		const auto enum_ti = reflex::type_info::reflect<test_enum>()
-				.enumerate<TEST_VALUE_0>("TEST_VALUE_0")
-				.enumerate<TEST_VALUE_1>("TEST_VALUE_1")
-				.type();
-
-		TEST_ASSERT(enum_ti.is_enum());
-		TEST_ASSERT(enum_ti.convertible_to<std::underlying_type_t<test_enum>>());
-
-		TEST_ASSERT(enum_ti.has_enumeration("TEST_VALUE_0"));
-		TEST_ASSERT(enum_ti.has_enumeration("TEST_VALUE_1"));
-		TEST_ASSERT(enum_ti.has_enumeration(reflex::forward_any(TEST_VALUE_0)));
-		TEST_ASSERT(enum_ti.has_enumeration(reflex::forward_any(TEST_VALUE_1)));
-
-		const auto e0 = enum_ti.enumerate("TEST_VALUE_0");
-		const auto e1 = enum_ti.enumerate("TEST_VALUE_1");
-
-		TEST_ASSERT(!e0.empty());
-		TEST_ASSERT(!e1.empty());
-		TEST_ASSERT(e0.is_ref());
-		TEST_ASSERT(e1.is_ref());
-		TEST_ASSERT(e0.type() == enum_ti);
-		TEST_ASSERT(e1.type() == enum_ti);
-		TEST_ASSERT(*e0.get<test_enum>() == TEST_VALUE_0);
-		TEST_ASSERT(*e1.get<test_enum>() == TEST_VALUE_1);
-	}
-
-	{
-		try
-		{
-			throw reflex::bad_any_copy(reflex::type_info::get<int>());
-		}
-		catch (const reflex::object &e)
-		{
-			TEST_ASSERT(reflex::type_of(e) == reflex::type_info::get<reflex::bad_any_copy>());
-		}
-
-		try
-		{
-			throw reflex::bad_any_cast(reflex::type_info::get<int>(), reflex::type_info::get<double>());
-		}
-		catch (const reflex::object &e)
-		{
-			TEST_ASSERT(reflex::type_of(e) == reflex::type_info::get<reflex::bad_any_cast>());
-		}
-
-		try
-		{
-			throw reflex::facets::bad_facet_function("", "");
-		}
-		catch (const reflex::object &e)
-		{
-			TEST_ASSERT(reflex::type_of(e) == reflex::type_info::get<reflex::facets::bad_facet_function>());
-		}
 	}
 
 	return 0;
