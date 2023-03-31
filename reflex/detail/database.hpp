@@ -58,8 +58,9 @@ namespace reflex
 
 			REFLEX_PUBLIC void reset();
 			REFLEX_PUBLIC type_data *reset(std::string_view name);
-			REFLEX_PUBLIC type_data *insert(const constant_type_data &data);
 			REFLEX_PUBLIC const type_data *find(std::string_view name) const;
+
+			REFLEX_PUBLIC REFLEX_COLD type_data *insert(const constant_type_data &data);
 
 			tpp::stable_map<std::string_view, type_data> m_types;
 		};

@@ -15,3 +15,9 @@
 #elif defined(__clang__) || defined(__GNUC__)
 #define REFLEX_PRETTY_FUNC __PRETTY_FUNCTION__
 #endif
+
+#if defined(__GNUC__) || defined(__clang__)
+#define REFLEX_COLD __attribute__((cold))
+#else
+#define REFLEX_COLD
+#endif

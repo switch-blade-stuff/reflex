@@ -310,13 +310,13 @@ namespace reflex
 			std::size_t extent = 0;
 		};
 
-		/* Type data must be over-aligned since `any` uses bottom bits of it's pointer for flags. */
+		/* Type data must be over-aligned since `any` uses bottom bits of its pointer for flags. */
 		struct alignas(detail::ANY_FAGS_MAX + 1) type_data : constant_type_data, dynamic_type_data
 		{
 			type_data(const constant_type_data &cdata) : constant_type_data(cdata) {}
 
 			template<typename T>
-			void impl_init(database_impl &db)
+			REFLEX_COLD void impl_init(database_impl &db)
 			{
 				/* Constructors, destructors & conversions are only created for object types. */
 				if constexpr (std::is_object_v<T>)
@@ -365,7 +365,7 @@ namespace reflex
 		template<typename T>
 		[[nodiscard]] inline static const constant_type_data &make_constant_type_data() noexcept
 		{
-			constinit static const constant_type_data value = []()
+			constinit static const constant_type_data value =  []()
 			{
 				constant_type_data result;
 				result.init_func = &type_data::impl_init<T>;
