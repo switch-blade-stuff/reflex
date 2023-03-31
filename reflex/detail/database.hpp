@@ -53,7 +53,8 @@ namespace reflex
 			[[nodiscard]] REFLEX_PUBLIC static database_impl *instance() noexcept;
 			REFLEX_PUBLIC static database_impl *instance(database_impl *ptr) noexcept;
 
-			REFLEX_PUBLIC database_impl() noexcept;
+			REFLEX_PUBLIC database_impl();
+			REFLEX_PUBLIC database_impl(database_impl &&);
 			REFLEX_PUBLIC ~database_impl();
 
 			REFLEX_PUBLIC void reset();

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cassert>
+#include <mutex>
 
 #include "database.hpp"
 
@@ -72,7 +73,12 @@ namespace reflex::detail
 	database_impl *database_impl::instance() noexcept { return global_ptr(); }
 	database_impl *database_impl::instance(database_impl *ptr) noexcept { return global_ptr().exchange(ptr); }
 
-	database_impl::database_impl() noexcept = default;
+	database_impl::database_impl() = default;
+	database_impl::database_impl(database_impl &&other)
+	{
+		const auto g = spinlock_guard::make_unique(other);
+		std::construct_at(&m_types, std::move(other.m_types));
+	}
 	database_impl::~database_impl() = default;
 
 	void database_impl::reset()
