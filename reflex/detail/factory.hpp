@@ -96,21 +96,21 @@ namespace reflex
 		/** Implements facet \a F for the underlying type info.
 		 * `impl_facet<F, T>` must be well-defined and have static member constant `value` of type `F::vtable_type`. */
 		template<typename F>
-		inline type_factory &facet();
+		inline type_factory &implement_facet();
 		/** Implements facet \a F for the underlying type info using facet vtable \a vtab.
 		 * @param vtab Reference to facet vtable for facet \a F. */
 		template<typename F>
-		inline type_factory &facet(const typename F::vtable_type &vtab);
+		inline type_factory &implement_facet(const typename F::vtable_type &vtab);
 
 		/** Implements all facets in facet group \a G for the underlying type info.
 		 * `impl_facet<F, T>` must be well-defined and have static member constant `value` of type `F::vtable_type`
 		 * for every facet type `F` in facet group \a G. */
 		template<template_instance<facets::facet_group> G>
-		inline type_factory &facet();
+		inline type_factory &implement_facet();
 		/** Implements all facets in facet group \a G for the underlying type info using group vtable \a vtab.
 		 * @param vtab Tuple of vtables of the individual facet types in facet group \a G. */
 		template<template_instance<facets::facet_group> G>
-		inline type_factory &facet(const typename G::vtable_type &vtab);
+		inline type_factory &implement_facet(const typename G::vtable_type &vtab);
 
 	private:
 		template<typename... Ts, typename... Args>

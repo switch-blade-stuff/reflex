@@ -233,10 +233,10 @@ namespace reflex
 
 	template<typename T>
 	template<typename F>
-	type_factory<T> &type_factory<T>::facet() { return facet<F>(facets::impl_facet_v<F, T>); }
+	type_factory<T> &type_factory<T>::implement_facet() { return implement_facet<F>(facets::impl_facet_v<F, T>); }
 	template<typename T>
 	template<typename F>
-	type_factory<T> &type_factory<T>::facet(const typename F::vtable_type &vtab)
+	type_factory<T> &type_factory<T>::implement_facet(const typename F::vtable_type &vtab)
 	{
 		add_facet(std::make_tuple(&vtab));
 		return *this;
@@ -244,10 +244,10 @@ namespace reflex
 
 	template<typename T>
 	template<template_instance<facets::facet_group> G>
-	type_factory<T> &type_factory<T>::facet() { return facet<G>(facets::impl_facet_v<G, T>); }
+	type_factory<T> &type_factory<T>::implement_facet() { return implement_facet<G>(facets::impl_facet_v<G, T>); }
 	template<typename T>
 	template<template_instance<facets::facet_group> G>
-	type_factory<T> &type_factory<T>::facet(const typename G::vtable_type &vtab)
+	type_factory<T> &type_factory<T>::implement_facet(const typename G::vtable_type &vtab)
 	{
 		add_facet(vtab);
 		return *this;

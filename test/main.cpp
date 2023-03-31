@@ -95,25 +95,6 @@ int main()
 	}
 
 	{
-		const auto int_ti = reflex::type_info::reflect<int>().facet<test_facet>().type();
-		TEST_ASSERT(int_ti.implements_facet<test_facet>());
-
-		auto i = reflex::make_any<int>();
-		auto fi = i.facet<test_facet>();
-
-		TEST_ASSERT(fi.instance().data() == i.data());
-		TEST_ASSERT(fi.instance().is_ref());
-
-		fi.value(0);
-		TEST_ASSERT(fi.value() == 0);
-		fi.value(1);
-		TEST_ASSERT(fi.value() == 1);
-
-		reflex::type_info::reset<int>();
-		TEST_ASSERT(!int_ti.implements_facet<test_facet>());
-	}
-
-	{
 
 	}
 

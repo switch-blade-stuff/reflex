@@ -346,4 +346,4 @@ namespace reflex::facets
 
 /** Type initializer overload for types implementing `std::ranges::input_range`. */
 template<std::ranges::input_range R>
-struct reflex::type_init<R> { void operator()(reflex::type_factory<R> f) { f.template facet<reflex::facets::range>(); } };
+struct reflex::type_init<R> { void operator()(reflex::type_factory<R> f) { f.template implement_facet<reflex::facets::range>(); } };

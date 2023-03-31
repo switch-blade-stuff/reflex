@@ -87,8 +87,8 @@ struct reflex::type_init<std::basic_string<C, T, A>>
 {
 	void operator()(reflex::type_factory<std::basic_string<C, T, A>> f)
 	{
-		f.template facet<reflex::facets::range>();
-		f.template facet<reflex::facets::basic_string<C>>();
+		f.template implement_facet<reflex::facets::range>();
+		f.template implement_facet<reflex::facets::basic_string<C>>();
 
 		f.template make_constructible<const C *, std::size_t>();
 		f.template make_constructible<const C *>();
@@ -103,8 +103,8 @@ struct reflex::type_init<std::basic_string_view<C, T>>
 {
 	void operator()(reflex::type_factory<std::basic_string_view<C, T>> f)
 	{
-		f.template facet<reflex::facets::range>();
-		f.template facet<reflex::facets::basic_string<C>>();
+		f.template implement_facet<reflex::facets::range>();
+		f.template implement_facet<reflex::facets::basic_string<C>>();
 
 		f.template make_constructible<const C *, std::size_t>();
 		f.template make_constructible<const C *>();

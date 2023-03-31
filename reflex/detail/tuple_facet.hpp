@@ -107,7 +107,7 @@ namespace reflex::facets
 
 /** Type initializer overload for tuple-like types. */
 template<reflex::tuple_like T>
-struct reflex::type_init<T> { void operator()(reflex::type_factory<T> f) { f.template facet<reflex::facets::tuple>(); }};
+struct reflex::type_init<T> { void operator()(reflex::type_factory<T> f) { f.template implement_facet<reflex::facets::tuple>(); }};
 
 /** Type initializer overload for both range-like & tuple-like types. */
 template<typename R> requires reflex::tuple_like<R> && std::ranges::input_range<R>
@@ -115,7 +115,7 @@ struct reflex::type_init<R>
 {
 	void operator()(reflex::type_factory<R> f)
 	{
-		f.template facet<reflex::facets::range>();
-		f.template facet<reflex::facets::tuple>();
+		f.template implement_facet<reflex::facets::range>();
+		f.template implement_facet<reflex::facets::tuple>();
 	}
 };
