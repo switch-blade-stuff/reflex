@@ -18,4 +18,6 @@ function(make_test NAME FILE)
 endfunction()
 
 make_test(enum ${CMAKE_CURRENT_LIST_DIR}/test_enum.cpp)
+make_test(tuple ${CMAKE_CURRENT_LIST_DIR}/test_tuple.cpp)
+make_test(string ${CMAKE_CURRENT_LIST_DIR}/test_string.cpp)
 make_test(object ${CMAKE_CURRENT_LIST_DIR}/test_object.cpp)

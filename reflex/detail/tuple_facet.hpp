@@ -26,6 +26,9 @@ namespace reflex::facets
 		using base_t = facet<detail::tuple_vtable>;
 
 	public:
+		using base_t::facet;
+		using base_t::operator=;
+
 		/** Returns size of the underlying tuple object as if via `std::tuple_size`. */
 		[[nodiscard]] std::size_t size() const noexcept { return base_t::vtable()->size; }
 		/** Returns type of the `n`th element of the tuple. If \a n is greater than tuple size, returns invalid type info. */
@@ -55,32 +58,33 @@ namespace reflex::facets
 		[[nodiscard]] any second() const { return get(1); }
 	};
 
-	template<typename T>
+	template<reflex::tuple_like T>
 	struct impl_facet<tuple, T>
 	{
 	private:
 		template<std::size_t I>
 		[[nodiscard]] constexpr static type_info element_type(std::size_t n)
 		{
-			if (n == I)
-				return type_info::get<std::tuple_element_t<I, T>>();
-			else if constexpr (I < std::tuple_size_v<T>)
-				return element_type<I + 1>(n);
-			else
-				return type_info{};
+			if constexpr (I < std::tuple_size_v<T>)
+			{
+				if (n == I)
+					return type_info::get<std::tuple_element_t<I, T>>();
+				else
+					return element_type<I + 1>(n);
+			}
+			return type_info{};
 		}
 		template<std::size_t I = 0>
 		[[nodiscard]] static any element_get(auto &tuple, std::size_t n)
 		{
-			if (n == I)
+			if constexpr (I < std::tuple_size_v<T>)
 			{
-				using std::get;
-				return forward_any(get<I>(tuple));
+				if (n == I)
+					return forward_any(get<I>(tuple));
+				else
+					return element_get<I + 1>(tuple, n);
 			}
-			else if constexpr (I < std::tuple_size_v<T>)
-				return element_get<I + 1>(tuple, n);
-			else
-				return any{};
+			return any{};
 		}
 
 		[[nodiscard]] constexpr static detail::tuple_vtable make_vtable()
@@ -90,16 +94,8 @@ namespace reflex::facets
 			result.size = std::tuple_size_v<T>;
 			result.tuple_element = element_type<0>;
 
-			result.get = +[](any &tuple, std::size_t n)
-			{
-				auto &tuple_ref = *tuple.as<T>();
-				return element_get(tuple_ref, n);
-			};
-			result.get_const = +[](const any &tuple, std::size_t n)
-			{
-				auto &tuple_ref = *tuple.as<T>();
-				return element_get(tuple_ref, n);
-			};
+			result.get = +[](any &tuple, std::size_t n) { return element_get(tuple.as<T>(), n); };
+			result.get_const = +[](const any &tuple, std::size_t n) { return element_get(tuple.as<T>(), n); };
 
 			return result;
 		}
@@ -108,3 +104,18 @@ namespace reflex::facets
 		constexpr static detail::tuple_vtable value = make_vtable();
 	};
 }
+
+/** Type initializer overload for tuple-like types. */
+template<reflex::tuple_like T>
+struct reflex::type_init<T> { void operator()(reflex::type_factory<T> f) { f.template facet<reflex::facets::tuple>(); }};
+
+/** Type initializer overload for both range-like & tuple-like types. */
+template<typename R> requires reflex::tuple_like<R> && std::ranges::input_range<R>
+struct reflex::type_init<R>
+{
+	void operator()(reflex::type_factory<R> f)
+	{
+		f.template facet<reflex::facets::range>();
+		f.template facet<reflex::facets::tuple>();
+	}
+};

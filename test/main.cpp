@@ -95,31 +95,6 @@ int main()
 	}
 
 	{
-	}
-
-	{
-		const auto str_ti = reflex::type_info::reflect<std::string>()
-				.make_constructible<const char *, std::size_t>()
-				.make_constructible<const char *>()
-				.type();
-
-		TEST_ASSERT((str_ti.constructible_from<const char *, std::size_t>()));
-		TEST_ASSERT((str_ti.constructible_from<const char *>()));
-
-		const auto str0 = str_ti.construct("hello, world");
-		TEST_ASSERT(!str0.empty() && *str0.get<std::string>() == "hello, world");
-
-		const auto str1 = str_ti.construct("hello, world", 12);
-		TEST_ASSERT(!str1.empty() && *str1.get<std::string>() == "hello, world");
-		TEST_ASSERT(str0 == str1);
-
-		reflex::type_info::reset<std::string>();
-
-		TEST_ASSERT((!str_ti.constructible_from<const char *, std::size_t>()));
-		TEST_ASSERT((!str_ti.constructible_from<const char *>()));
-	}
-
-	{
 		const auto int_ti = reflex::type_info::reflect<int>().facet<test_facet>().type();
 		TEST_ASSERT(int_ti.implements_facet<test_facet>());
 

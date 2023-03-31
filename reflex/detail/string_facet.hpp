@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include "facet.hpp"
-#include "any.hpp"
+#include "range_facet.hpp"
 
 namespace reflex::facets
 {
@@ -29,6 +28,9 @@ namespace reflex::facets
 		using base_t = facet<detail::string_vtable<C>>;
 
 	public:
+		using base_t::base_t;
+		using base_t::operator=;
+
 		/** Checks if the underlying string is empty. */
 		[[nodiscard]] bool empty() const { return base_t::vtable()->empty(base_t::instance()); }
 		/** Returns size of the underlying string. */
@@ -61,13 +63,13 @@ namespace reflex::facets
 		{
 			detail::string_vtable<C> result = {};
 
-			result.empty = +[](const any &str) { return std::ranges::empty(*str.as<T *>()); };
-			result.size = +[](const any &str) { return static_cast<std::size_t>(std::ranges::size(*str.as<T *>())); };
+			result.empty = +[](const any &str) { return std::ranges::empty(str.as<T>()); };
+			result.size = +[](const any &str) { return static_cast<std::size_t>(std::ranges::size(str.as<T>())); };
 
-			result.data = +[](const any &str) { return std::ranges::cdata(*str.as<T *>()); };
+			result.data = +[](const any &str) { return std::ranges::cdata(str.as<T>()); };
 
 			if constexpr (requires(const T &str) {{ str.c_str() } -> std::same_as<const C *>; })
-				result.c_str = +[](const any &str) { return str.as<T *>()->c_str(); };
+				result.c_str = +[](const any &str) { return str.as<T>().c_str(); };
 			else
 				result.c_str = nullptr;
 
@@ -78,3 +80,33 @@ namespace reflex::facets
 		constexpr static detail::string_vtable<C> value = make_vtable();
 	};
 }
+
+/** Type initializer overload for STL strings. */
+template<typename C, typename T, typename A>
+struct reflex::type_init<std::basic_string<C, T, A>>
+{
+	void operator()(reflex::type_factory<std::basic_string<C, T, A>> f)
+	{
+		f.template facet<reflex::facets::range>();
+		f.template facet<reflex::facets::basic_string<C>>();
+
+		f.template make_constructible<const C *, std::size_t>();
+		f.template make_constructible<const C *>();
+
+		f.template make_constructible<std::string_view>();
+		f.template make_convertible<std::string_view>();
+	}
+};
+/** Type initializer overload for STL string views. */
+template<typename C, typename T>
+struct reflex::type_init<std::basic_string_view<C, T>>
+{
+	void operator()(reflex::type_factory<std::basic_string_view<C, T>> f)
+	{
+		f.template facet<reflex::facets::range>();
+		f.template facet<reflex::facets::basic_string<C>>();
+
+		f.template make_constructible<const C *, std::size_t>();
+		f.template make_constructible<const C *>();
+	}
+};

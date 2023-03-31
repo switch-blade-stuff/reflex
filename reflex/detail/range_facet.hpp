@@ -15,14 +15,17 @@ namespace reflex::facets
 		struct iterator_vtable
 		{
 			any (*iter_deref)(const any &) = nullptr;
+
 			void (*iter_pre_inc)(any &) = nullptr;
 			void (*iter_pre_dec)(any &) = nullptr;
-			any (*iter_post_inc)(const any &) = nullptr;
-			any (*iter_post_dec)(const any &) = nullptr;
+			any (*iter_post_inc)(any &) = nullptr;
+			any (*iter_post_dec)(any &) = nullptr;
+
 			void (*iter_eq_add)(any &, std::ptrdiff_t) = nullptr;
 			void (*iter_eq_sub)(any &, std::ptrdiff_t) = nullptr;
 			any (*iter_add)(const any &, std::ptrdiff_t) = nullptr;
 			any (*iter_sub)(const any &, std::ptrdiff_t) = nullptr;
+
 			std::ptrdiff_t (*iter_diff)(const any &, const any &) = nullptr;
 		};
 
@@ -141,8 +144,8 @@ namespace reflex::facets
 
 		struct range_vtable
 		{
-			const iterator_vtable *iter_funcs;
-			const iterator_vtable *const_iter_funcs;
+			iterator_vtable iter_funcs;
+			iterator_vtable const_iter_funcs;
 
 			type_info (*value_type)() = nullptr;
 
@@ -182,12 +185,12 @@ namespace reflex::facets
 		[[nodiscard]] iterator begin()
 		{
 			if (!instance().is_const())
-				return {vtable()->iter_funcs, vtable()->begin(instance())};
+				return {&vtable()->iter_funcs, vtable()->begin(instance())};
 			else
 				return cbegin();
 		}
 		/** Returns a type-erased constant begin iterator of the underlying range. */
-		[[nodiscard]] const_iterator cbegin() const { return {vtable()->const_iter_funcs, vtable()->cbegin(instance())}; }
+		[[nodiscard]] const_iterator cbegin() const { return {&vtable()->const_iter_funcs, vtable()->cbegin(instance())}; }
 		/** @copydoc cbegin */
 		[[nodiscard]] const_iterator begin() const { return cbegin(); }
 
@@ -196,12 +199,12 @@ namespace reflex::facets
 		[[nodiscard]] iterator end()
 		{
 			if (!instance().is_const())
-				return {vtable()->iter_funcs, vtable()->end(instance())};
+				return {&vtable()->iter_funcs, vtable()->end(instance())};
 			else
 				return cend();
 		}
 		/** Returns a type-erased constant end iterator of the underlying range. */
-		[[nodiscard]] const_iterator cend() const { return {vtable()->const_iter_funcs, vtable()->cend(instance())}; }
+		[[nodiscard]] const_iterator cend() const { return {&vtable()->const_iter_funcs, vtable()->cend(instance())}; }
 		/** @copydoc cend */
 		[[nodiscard]] const_iterator end() const { return cend(); }
 
@@ -222,9 +225,9 @@ namespace reflex::facets
 	struct impl_facet<range, T>
 	{
 	private:
-		using iterator = std::decay_t<decltype(std::ranges::begin(std::declval<T>()))>;
-		using const_iterator = std::decay_t<decltype(std::ranges::begin(std::declval<const T>()))>;
 		using difference_type = std::ranges::range_difference_t<T>;
+		using iterator = std::decay_t<decltype(std::ranges::begin(std::declval<T &>()))>;
+		using const_iterator = std::decay_t<decltype(std::ranges::begin(std::declval<const T &>()))>;
 
 		template<typename Iter>
 		[[nodiscard]] constexpr static detail::iterator_vtable make_iterator_vtable()
@@ -232,44 +235,44 @@ namespace reflex::facets
 			detail::iterator_vtable result = {};
 			result.iter_deref = +[](const any &iter)
 			{
-				auto &iter_ref = *iter.as<Iter *>();
+				auto &iter_ref = *iter.try_as<Iter>();
 				return forward_any(*iter_ref);
 			};
 			if constexpr (std::ranges::forward_range<T>)
 			{
-				result.iter_pre_inc = +[](any &iter) { ++(*iter.as<Iter *>()); };
-				result.iter_post_inc = +[](const any &iter) { return forward_any((*iter.as<Iter *>())++); };
+				result.iter_pre_inc = +[](any &iter) { ++(*iter.try_as<Iter>()); };
+				result.iter_post_inc = +[](any &iter) { return forward_any((*iter.try_as<Iter>())++); };
 			}
 			if constexpr (std::ranges::bidirectional_range<T>)
 			{
-				result.iter_pre_dec = +[](any &iter) { --(*iter.as<Iter *>()); };
-				result.iter_post_dec = +[](const any &iter) { return forward_any((*iter.as<Iter *>())--); };
+				result.iter_pre_dec = +[](any &iter) { --(*iter.try_as<Iter>()); };
+				result.iter_post_dec = +[](any &iter) { return forward_any((*iter.try_as<Iter>())--); };
 			}
 			if constexpr (std::ranges::random_access_range<T>)
 			{
 				result.iter_eq_add = +[](any &iter, std::ptrdiff_t n)
 				{
 					const auto diff = static_cast<difference_type>(n);
-					(*iter.as<Iter *>()) += diff;
+					(*iter.try_as<Iter>()) += diff;
 				};
 				result.iter_eq_sub = +[](any &iter, std::ptrdiff_t n)
 				{
 					const auto diff = static_cast<difference_type>(n);
-					(*iter.as<Iter *>()) -= diff;
+					(*iter.try_as<Iter>()) -= diff;
 				};
 				result.iter_add = +[](const any &iter, std::ptrdiff_t n)
 				{
 					const auto diff = static_cast<difference_type>(n);
-					return forward_any(*iter.as<Iter *>() + diff);
+					return forward_any(*iter.try_as<Iter>() + diff);
 				};
 				result.iter_sub = +[](const any &iter, std::ptrdiff_t n)
 				{
 					const auto diff = static_cast<difference_type>(n);
-					return forward_any(*iter.as<Iter *>() - diff);
+					return forward_any(*iter.try_as<Iter>() - diff);
 				};
 				result.iter_diff = +[](const any &a, const any &b)
 				{
-					return static_cast<std::ptrdiff_t>(*a.as<Iter *>() - *b.as<Iter *>());
+					return static_cast<std::ptrdiff_t>(*a.try_as<Iter>() - *b.try_as<Iter>());
 				};
 			}
 			return result;
@@ -285,35 +288,35 @@ namespace reflex::facets
 
 			result.begin = +[](any &range)
 			{
-				auto &range_ref = range.as<T &>();
+				auto &range_ref = range.as<T>();
 				return make_any<iterator>(std::ranges::begin(range_ref));
 			};
 			result.cbegin = +[](const any &range)
 			{
-				auto &range_ref = range.as<T &>();
+				auto &range_ref = range.as<T>();
 				return make_any<const_iterator>(std::ranges::begin(range_ref));
 			};
 			result.end = +[](any &range)
 			{
-				auto &range_ref = range.as<T &>();
+				auto &range_ref = range.as<T>();
 				return make_any<iterator>(std::ranges::end(range_ref));
 			};
 			result.cend = +[](const any &range)
 			{
-				auto &range_ref = range.as<T &>();
+				auto &range_ref = range.as<T>();
 				return make_any<const_iterator>(std::ranges::end(range_ref));
 			};
 
 			result.empty = +[](const any &range)
 			{
-				auto &range_ref = range.as<T &>();
+				auto &range_ref = range.as<T>();
 				return static_cast<bool>(std::ranges::empty(range_ref));
 			};
 
 			if constexpr (std::ranges::sized_range<T>)
 				result.size = +[](const any &range)
 				{
-					auto &range_ref = range.as<T &>();
+					auto &range_ref = range.as<T>();
 					return static_cast<std::size_t>(std::ranges::size(range_ref));
 				};
 
@@ -321,13 +324,13 @@ namespace reflex::facets
 			{
 				result.at = +[](any &range, std::size_t n)
 				{
-					auto &range_ref = range.as<T &>();
+					auto &range_ref = range.as<T>();
 					const auto diff = static_cast<difference_type>(n);
 					return forward_any(std::ranges::begin(range_ref)[diff]);
 				};
 				result.at_const = +[](const any &range, std::size_t n)
 				{
-					auto &range_ref = range.as<T &>();
+					auto &range_ref = range.as<T>();
 					const auto diff = static_cast<difference_type>(n);
 					return forward_any(std::ranges::begin(range_ref)[diff]);
 				};
@@ -340,3 +343,7 @@ namespace reflex::facets
 		constexpr static detail::range_vtable value = make_vtable();
 	};
 }
+
+/** Type initializer overload for types implementing `std::ranges::input_range`. */
+template<std::ranges::input_range R>
+struct reflex::type_init<R> { void operator()(reflex::type_factory<R> f) { f.template facet<reflex::facets::range>(); } };

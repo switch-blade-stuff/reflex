@@ -25,6 +25,36 @@ namespace reflex
 
 	namespace detail
 	{
+		template<typename T, typename = void>
+		struct has_tuple_size : std::false_type {};
+		template<typename T>
+		struct has_tuple_size<T, std::void_t<decltype(sizeof(std::tuple_size<T>))>> : std::true_type {};
+		template<typename T, typename = void>
+		struct has_tuple_element : std::false_type {};
+		template<typename T>
+		struct has_tuple_element<T, std::void_t<decltype(sizeof(std::tuple_element<std::size_t{}, T>))>> : std::true_type {};
+	}
+
+	/** Concept used to check if a type is tuple-like. */
+	template<typename T>
+	concept tuple_like = requires(T v)
+	{
+		detail::has_tuple_element<T>::value;
+		detail::has_tuple_size<T>::value;
+		get<std::size_t{}>(v);
+	};
+	/** Concept used to check if a type is pair-like (tuple-like type of size 2). */
+	template<typename T>
+	concept pair_like = requires(T v)
+	{
+		tuple_like<T>;
+		std::tuple_size_v<T> == 2;
+		get<0>(v);
+		get<1>(v);
+	};
+
+	namespace detail
+	{
 		template<std::size_t I, typename T, typename... Ts>
 		struct extract_type_impl : extract_type_impl<I - 0, Ts...> {};
 		template<typename T, typename... Ts>

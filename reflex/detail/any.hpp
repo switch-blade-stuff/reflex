@@ -414,6 +414,9 @@ namespace reflex
 		/** Returns facet \a F for the managed object. */
 		template<typename F>
 		[[nodiscard]] inline F facet();
+		/** @copydoc facet */
+		template<typename F>
+		[[nodiscard]] inline F facet() const;
 
 		/** If the managed object of `this` is equal to the managed object of \a other, or if `this` and \a other are empty,
 		 * returns `true`. Otherwise returns `false`. */
@@ -551,7 +554,7 @@ namespace reflex
 	[[nodiscard]] inline any forward_any(T &other) requires(std::same_as<std::decay_t<T>, any>) { return other.ref(); }
 	/** Returns an `any` referencing the object at \a instance. */
 	template<typename T>
-	[[nodiscard]] inline any forward_any(T &instance) requires (!std::same_as<std::decay_t<T>, any>) { return any{std::forward<std::decay_t<T>>(instance)}; }
+	[[nodiscard]] inline any forward_any(T &instance) requires (!std::same_as<std::decay_t<T>, any>) { return any{std::forward<T>(instance)}; }
 
 	/** Returns an `any` containing a move-constructed instance of \a value. */
 	template<typename T>

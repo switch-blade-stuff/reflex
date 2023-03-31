@@ -273,34 +273,30 @@ namespace reflex
 	namespace detail
 	{
 		template<typename V>
-		inline void get_vtable(const V *&vtab, const type_data *type)
-		{
-			vtab = static_cast<const V *>(type->find_facet(type_name_v<V>));
-		}
+		inline void get_vtable(const V *&vtab, const type_data *type) { vtab = static_cast<const V *>(type->find_facet(type_name_v<V>)); }
 		template<typename... Vs>
-		inline void get_vtable(std::tuple<const Vs *...> &vtab, const type_data *type)
-		{
-			(get_vtable(std::get<const Vs *>(vtab), type), ...);
-		}
+		inline void get_vtable(std::tuple<const Vs *...> &vtab, const type_data *type) { (get_vtable(std::get<const Vs *>(vtab), type), ...); }
 
 		template<typename F>
-		[[nodiscard]] inline F make_facet(any &obj, const type_data *type)
+		[[nodiscard]] inline F make_facet(auto &any_obj, const type_data *type)
 		{
 			if constexpr (template_instance<F, facets::facet_group>)
 			{
 				typename F::vtable_type vtab = {};
 				get_vtable(vtab, type);
-				return F{obj.ref(), vtab};
+				return F{any_obj.ref(), vtab};
 			}
 			else
 			{
 				const typename F::vtable_type *vtab = {};
 				get_vtable(vtab, type);
-				return F{obj.ref(), vtab};
+				return F{any_obj.ref(), vtab};
 			}
 		}
 	}
 
 	template<typename F>
 	F any::facet() { return detail::make_facet<F>(*this, type_data()); }
+	template<typename F>
+	F any::facet() const { return detail::make_facet<F>(*this, type_data()); }
 }
