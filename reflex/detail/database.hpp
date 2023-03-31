@@ -62,6 +62,7 @@ namespace reflex
 
 			REFLEX_PUBLIC REFLEX_COLD type_data *insert(const constant_type_data &data);
 
+			/* stable_map is used to allow type_info to be a simple pointer to type_data. */
 			tpp::stable_map<std::string_view, type_data> m_types;
 		};
 

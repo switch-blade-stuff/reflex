@@ -15,16 +15,16 @@ namespace reflex
 {
 	namespace detail
 	{
-		std::size_t str_hash::operator()(const type_info &value) const { return tpp::seahash_hash<type_info>{}(value); }
+		std::size_t type_hash::operator()(const type_info &value) const { return tpp::seahash_hash<type_info>{}(value); }
 
-		std::size_t str_cmp::operator()(const type_info &a, const type_info &b) const { return a == b; }
-		std::size_t str_cmp::operator()(const std::string &a, const type_info &b) const { return std::string_view{a} == b; }
-		std::size_t str_cmp::operator()(const type_info &a, const std::string &b) const { return a == std::string_view{b}; }
-		std::size_t str_cmp::operator()(const type_info &a, const std::string_view &b) const { return a == b; }
-		std::size_t str_cmp::operator()(const std::string_view &a, const type_info &b) const { return a == b; }
+		std::size_t type_eq::operator()(const type_info &a, const type_info &b) const { return a == b; }
+		std::size_t type_eq::operator()(const std::string &a, const type_info &b) const { return std::string_view{a} == b; }
+		std::size_t type_eq::operator()(const type_info &a, const std::string &b) const { return a == std::string_view{b}; }
+		std::size_t type_eq::operator()(const type_info &a, const std::string_view &b) const { return a == b; }
+		std::size_t type_eq::operator()(const std::string_view &a, const type_info &b) const { return a == b; }
 
-		using facet_table = tpp::dense_map<std::string_view, const void *, str_hash, str_cmp>;
-		using enum_table = tpp::stable_map<std::string, any, str_hash, str_cmp>;
+		using facet_table = tpp::dense_map<std::string_view, const void *>;
+		using enum_table = tpp::dense_map<std::string, any, type_hash, type_eq>;
 
 		struct type_base
 		{
@@ -32,7 +32,7 @@ namespace reflex
 			base_cast cast_func;
 		};
 
-		using base_table = tpp::dense_map<std::string_view, type_base, str_hash, str_cmp>;
+		using base_table = tpp::dense_map<std::string_view, type_base>;
 
 		template<typename T, typename B>
 		[[nodiscard]] inline static type_base make_type_base() noexcept
@@ -60,7 +60,7 @@ namespace reflex
 			std::function<any(const void *)> conv_func;
 		};
 
-		using conv_table = tpp::dense_map<std::string_view, type_conv, str_hash, str_cmp>;
+		using conv_table = tpp::dense_map<std::string_view, type_conv>;
 
 		template<typename From, typename To, typename F>
 		[[nodiscard]] inline static type_conv make_type_conv(F &&conv)
@@ -151,7 +151,7 @@ namespace reflex
 			bool (*cmp_lt)(const void *, const void *) = nullptr;
 		};
 
-		using cmp_table = tpp::dense_map<std::string_view, type_cmp, str_hash, str_cmp>;
+		using cmp_table = tpp::dense_map<std::string_view, type_cmp>;
 
 #ifdef _MSC_VER
 		/* Allow signed/unsigned comparison. */

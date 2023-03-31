@@ -42,7 +42,7 @@ namespace reflex
 
 	namespace detail
 	{
-		struct str_hash
+		struct type_hash
 		{
 			using is_transparent = std::true_type;
 
@@ -50,7 +50,7 @@ namespace reflex
 			[[nodiscard]] std::size_t operator()(const std::string_view &value) const { return tpp::seahash_hash<std::string_view>{}(value); }
 			[[nodiscard]] inline std::size_t operator()(const type_info &value) const;
 		};
-		struct str_cmp
+		struct type_eq
 		{
 			using is_transparent = std::true_type;
 

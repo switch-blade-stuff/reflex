@@ -11,13 +11,13 @@
 
 namespace reflex
 {
-	tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> type_info::parents() const
+	tpp::dense_set<type_info, detail::type_hash, detail::type_eq> type_info::parents() const
 	{
-		tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> result;
+		tpp::dense_set<type_info, detail::type_hash, detail::type_eq> result;
 		fill_parents(result);
 		return result;
 	}
-	void type_info::fill_parents(tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> &result) const
+	void type_info::fill_parents(tpp::dense_set<type_info, detail::type_hash, detail::type_eq> &result) const
 	{
 		/* Recursively add parent types to the set. */
 		result.reserve(result.capacity() + m_data->bases.size());
@@ -38,15 +38,15 @@ namespace reflex
 		return std::ranges::any_of(m_data->bases, pred);
 	}
 
-	tpp::dense_map<std::string_view, any, detail::str_hash, detail::str_cmp> type_info::enumerations() const
+	tpp::dense_map<std::string_view, any> type_info::enumerations() const
 	{
-		tpp::dense_map<std::string_view, any, detail::str_hash, detail::str_cmp> result;
+		tpp::dense_map<std::string_view, any> result;
 		result.reserve(m_data->enums.size());
 		for (const auto &[name, value]: m_data->enums)
 			result.emplace(name, value.ref());
 		return result;
 	}
-	bool type_info::has_enumeration(const any &value) const { return std::ranges::any_of(m_data->enums, [&](auto &e) { return e.second == value; }); }
+	bool type_info::has_enumeration(const any &value) const { return std::ranges::any_of(m_data->enums, [&](auto &&e) { return e.second == value; }); }
 	bool type_info::has_enumeration(std::string_view name) const { return m_data->enums.contains(name); }
 	any type_info::enumerate(std::string_view name) const
 	{
