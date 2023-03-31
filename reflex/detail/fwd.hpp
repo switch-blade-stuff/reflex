@@ -46,14 +46,8 @@ namespace reflex
 		{
 			using is_transparent = std::true_type;
 
-			[[nodiscard]] std::size_t operator()(const std::string &value) const
-			{
-				return tpp::seahash_hash<std::string>{}(value);
-			}
-			[[nodiscard]] std::size_t operator()(const std::string_view &value) const
-			{
-				return tpp::seahash_hash<std::string_view>{}(value);
-			}
+			[[nodiscard]] std::size_t operator()(const std::string &value) const { return tpp::seahash_hash<std::string>{}(value); }
+			[[nodiscard]] std::size_t operator()(const std::string_view &value) const { return tpp::seahash_hash<std::string_view>{}(value); }
 			[[nodiscard]] inline std::size_t operator()(const type_info &value) const;
 		};
 		struct str_cmp
@@ -117,7 +111,7 @@ namespace reflex
 		using type_handle = type_data *(*)(database_impl &);
 
 		template<typename T>
-		[[nodiscard]] inline static any_funcs_t make_any_funcs() noexcept;
+		[[nodiscard]] constexpr static any_funcs_t make_any_funcs() noexcept;
 		template<typename T>
 		[[nodiscard]] inline static type_data *make_type_data(database_impl &);
 	}

@@ -120,9 +120,15 @@ namespace reflex
 		[[nodiscard]] static std::string make_msg(const type_info &type)
 		{
 			std::string result;
-			result.append("Type `");
-			result.append(type.name());
-			result.append("` is not copy-constructible");
+			if (!type.valid())
+				result.append("Invalid type");
+			else
+			{
+				result.append("Type `");
+				result.append(type.name());
+				result.append(1, '`');
+			}
+			result.append(" is not copy-constructible");
 			return result;
 		}
 
@@ -157,12 +163,27 @@ namespace reflex
 		[[nodiscard]] static std::string make_msg(type_info from_type, type_info to_type)
 		{
 			std::string result;
-			result.reserve(from_type.name().size() + to_type.name().size() + 78);
-			result.append("Managed object of type `");
-			result.append(from_type.name());
-			result.append("` cannot be represented as or converted to type `");
-			result.append(to_type.name());
-			result.append(1, '`');
+
+			result.append("Managed object of ");
+			if (!from_type.valid())
+				result.append("an invalid type ");
+			else
+			{
+				result.append("type `");
+				result.append(from_type.name());
+				result.append(1, '`');
+			}
+
+			result.append(" cannot be represented as or converted to ");
+			if (!to_type.valid())
+				result.append("an invalid type");
+			else
+			{
+				result.append("type `");
+				result.append(to_type.name());
+				result.append(1, '`');
+			}
+
 			return result;
 		}
 

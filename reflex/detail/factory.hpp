@@ -12,9 +12,8 @@ namespace reflex
 	template<typename T>
 	class type_factory
 	{
+		friend struct detail::type_data;
 		friend class type_info;
-		template<typename>
-		friend detail::type_data *detail::make_type_data(detail::database_impl &);
 
 		type_factory(detail::type_handle handle, detail::database_impl &db) : m_data(handle(db)), m_db(&db) {}
 		constexpr type_factory(detail::type_data *data, detail::database_impl *db) noexcept : m_data(data), m_db(db) {}
@@ -34,7 +33,7 @@ namespace reflex
 		template<typename... Args>
 		type_factory &enumerate(std::string_view name, Args &&...args) requires std::constructible_from<T, Args...>
 		{
-			m_data->enum_list.emplace_or_replace(name, type(), std::in_place_type<T>, std::forward<Args>(args)...);
+			m_data->enums.emplace_or_replace(name, type(), std::in_place_type<T>, std::forward<Args>(args)...);
 			return *this;
 		}
 		/** Adds enumeration constant named \a name initialized with \a Value to the underlying type info. */
@@ -45,7 +44,7 @@ namespace reflex
 		template<typename U>
 		type_factory &add_parent() requires std::derived_from<T, U>
 		{
-			m_data->base_list.emplace_or_replace(type_name_v<U>, detail::make_type_base<T, U>());
+			m_data->bases.emplace_or_replace(type_name_v<U>, detail::make_type_base<T, U>());
 			return *this;
 		}
 
@@ -54,7 +53,7 @@ namespace reflex
 		template<typename U, typename F>
 		type_factory &make_convertible(F &&conv) requires (std::invocable<F, const T &> && std::constructible_from<U, std::invoke_result_t<F, const T &>>)
 		{
-			m_data->conv_list.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>(std::forward<F>(conv)));
+			m_data->convs.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>(std::forward<F>(conv)));
 			return *this;
 		}
 		/** Makes the underlying type info convertible to \a U using `static_cast<U>(value)`.
@@ -62,7 +61,7 @@ namespace reflex
 		template<typename U>
 		type_factory &make_convertible() requires (std::convertible_to<T, U> && std::same_as<std::decay_t<U>, U>)
 		{
-			m_data->conv_list.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>());
+			m_data->convs.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>());
 			return *this;
 		}
 
@@ -90,7 +89,7 @@ namespace reflex
 		template<typename U>
 		type_factory &make_comparable() requires ((std::equality_comparable_with<T, U> || std::three_way_comparable_with<T, U>) && std::same_as<std::decay_t<U>, U>)
 		{
-			m_data->cmp_list.emplace_or_replace(type_name_v<U>, detail::make_type_cmp<T, U>());
+			m_data->cmps.emplace_or_replace(type_name_v<U>, detail::make_type_cmp<T, U>());
 			return *this;
 		}
 
@@ -119,7 +118,7 @@ namespace reflex
 		{
 			constexpr auto args_data = std::span{detail::arg_list<Ts...>::value};
 			if (auto existing = m_data->find_ctor(args_data); existing == nullptr)
-				m_data->ctor_list.emplace_back(detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...));
+				m_data->ctors.emplace_back(detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...));
 			else
 				*existing = detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...);
 		}

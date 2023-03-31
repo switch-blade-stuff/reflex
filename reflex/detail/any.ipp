@@ -48,7 +48,7 @@ namespace reflex
 			return const_cast<void *>(base->cast_func(cdata()));
 
 		/* Otherwise, recursively cast through a base type. */
-		for (auto [_, base]: data->base_list)
+		for (auto [_, base]: data->bases)
 		{
 			const auto *base_ptr = base.cast_func(cdata());
 			const auto base_type = type_info{base.type, *m_db};
@@ -66,7 +66,7 @@ namespace reflex
 			return conv->conv_func(cdata());
 
 		/* Otherwise, recursively convert through a base type. */
-		for (auto [_, base]: data->base_list)
+		for (auto [_, base]: data->bases)
 		{
 			const auto *base_ptr = base.cast_func(cdata());
 			const auto base_type = type_info{base.type, *m_db};

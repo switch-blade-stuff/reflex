@@ -56,37 +56,17 @@ namespace reflex::detail
 
 	struct spinlock_guard
 	{
-		static spinlock_guard make_unique(shared_spinlock &l) { return spinlock_guard{.m_lock = l.lock(), .m_locked_unique = true}; }
-		static spinlock_guard make_shared(shared_spinlock &l) { return spinlock_guard{.m_lock = l.lock_shared(), .m_locked_shared = true}; }
+		static spinlock_guard make_unique(shared_spinlock &l) { return spinlock_guard{.m_unique = &l.lock()}; }
+		static spinlock_guard make_shared(shared_spinlock &l) { return spinlock_guard{.m_shared = &l.lock_shared()}; }
 
-		~spinlock_guard() { unlock(); }
-
-		void relock(bool unique = true)
+		~spinlock_guard()
 		{
-			if (unique && !m_locked_unique)
-			{
-				unlock();
-				m_lock.lock();
-				m_locked_unique = true;
-			}
-			else if (!unique && !m_locked_shared)
-			{
-				unlock();
-				m_lock.lock_shared();
-				m_locked_shared = true;
-			}
-		}
-		void unlock()
-		{
-			if (std::exchange(m_locked_shared, false))
-				m_lock.unlock_shared();
-			else if (std::exchange(m_locked_unique, false))
-				m_lock.unlock();
+			if (m_unique) m_unique->unlock();
+			if (m_shared) m_shared->unlock_shared();
 		}
 
-		shared_spinlock &m_lock;
-		bool m_locked_unique = false;
-		bool m_locked_shared = false;
+		shared_spinlock *m_unique = nullptr;
+		shared_spinlock *m_shared = nullptr;
 	};
 
 	database_impl *database_impl::instance() noexcept { return global_ptr(); }
@@ -98,36 +78,28 @@ namespace reflex::detail
 	void database_impl::reset()
 	{
 		const auto g = spinlock_guard::make_unique(*this);
-		for (auto &[_, entry]: m_types) entry.first = entry.second(*this);
+		for (auto &[_, entry]: m_types) entry.reset(*this);
 	}
-	const type_data *database_impl::reset(std::string_view name)
+	type_data *database_impl::reset(std::string_view name)
 	{
 		const auto g = spinlock_guard::make_unique(*this);
-		const auto iter = m_types.find(name);
-		if (iter == m_types.end()) return nullptr;
-
-		iter->second.first = iter->second.second(*this);
-		return &iter->second.first;
+		if (auto iter = m_types.find(name); iter != m_types.end())
+			[[likely]] return &iter->second.reset(*this);
+		else
+			return nullptr;
 	}
+	type_data *database_impl::insert(const constant_type_data &data)
+	{
+		const auto g = spinlock_guard::make_unique(*this);
+		return &m_types.emplace(data.name, data).first->second.init(*this);
+	}
+
 	const type_data *database_impl::find(std::string_view name) const
 	{
 		const auto g = spinlock_guard::make_shared(const_cast<database_impl &>(*this));
 		if (const auto iter = m_types.find(name); iter != m_types.end())
-			return &iter->second.first;
+			return &iter->second;
 		else
 			return nullptr;
-	}
-
-	type_data *database_impl::reflect(std::string_view name, type_data (*factory)(database_impl &))
-	{
-		auto g = spinlock_guard::make_shared(*this);
-		auto iter = m_types.find(name);
-		if (iter == m_types.end()) [[unlikely]]
-		{
-			/* Unable to find existing entry, lock for writing & insert. */
-			g.relock();
-			iter = m_types.emplace(name, std::make_pair(factory(*this), factory)).first;
-		}
-		return &iter->second.first;
 	}
 }

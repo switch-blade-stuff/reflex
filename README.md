@@ -29,7 +29,7 @@ or MSVC compatible syntax) and CMake with minimal version 3.20.
     <td>REFLEX_HEADER_ONLY</td>
     <td>-DREFLEX_HEADER_ONLY</td>
     <td>ON</td>
-    <td>Switches the library to header-only mode and toggles build of the `reflex-header-only` CMake target</td>
+    <td>Switches the library to header-only mode and toggles build of the `reflex-interface` CMake target</td>
   </tr>
   <tr>
     <td>N/A</td>

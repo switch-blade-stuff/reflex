@@ -255,23 +255,14 @@ namespace reflex
 
 	template<typename T>
 	template<typename... Vt>
-	void type_factory<T>::add_facet(const std::tuple<const Vt *...> &vtab)
-	{
-		(m_data->facet_list.emplace_or_replace(type_name_v<Vt>, std::get<const Vt *>(vtab)), ...);
-	}
+	void type_factory<T>::add_facet(const std::tuple<const Vt *...> &vt) { (m_data->facets.emplace_or_replace(type_name_v<Vt>, std::get<const Vt *>(vt)), ...); }
 
 	namespace detail
 	{
 		template<typename V>
-		inline bool has_vtable(type_pack_t<V>, const type_data *type)
-		{
-			return type->find_facet(type_name_v<V>);
-		}
+		inline bool has_vtable(type_pack_t<V>, const type_data *type) { return type->find_facet(type_name_v<V>); }
 		template<typename... Vs>
-		inline bool has_vtable(type_pack_t<std::tuple<const Vs *...>>, const type_data *type)
-		{
-			return (type->find_facet(type_name_v<Vs>) && ...);
-		}
+		inline bool has_vtable(type_pack_t<std::tuple<const Vs *...>>, const type_data *type) { return (type->find_facet(type_name_v<Vs>) && ...); }
 	}
 
 	template<typename T>

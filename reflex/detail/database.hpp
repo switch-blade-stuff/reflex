@@ -26,14 +26,14 @@ namespace reflex
 			std::atomic<std::thread::id> m_writer = {};
 			std::atomic<std::size_t> m_reader_ctr = {};
 #else
-			public:
-				void lock() {}
-				void unlock() {}
-				bool try_lock() { return true; }
+		public:
+			void lock() {}
+			void unlock() {}
+			bool try_lock() { return true; }
 
-				void lock_shared() {}
-				void unlock_shared() {}
-				bool try_lock_shared() { return true; }
+			void lock_shared() {}
+			void unlock_shared() {}
+			bool try_lock_shared() { return true; }
 #endif
 		};
 
@@ -57,76 +57,17 @@ namespace reflex
 			REFLEX_PUBLIC ~database_impl();
 
 			REFLEX_PUBLIC void reset();
-			REFLEX_PUBLIC const type_data *reset(std::string_view name);
+			REFLEX_PUBLIC type_data *reset(std::string_view name);
+			REFLEX_PUBLIC type_data *insert(const constant_type_data &data);
 			REFLEX_PUBLIC const type_data *find(std::string_view name) const;
 
-			REFLEX_PUBLIC type_data *reflect(std::string_view name, type_data (*factory)(database_impl &));
-
-			tpp::stable_map<std::string_view, std::pair<type_data, type_data (*)(database_impl &)>> m_types;
+			tpp::stable_map<std::string_view, type_data> m_types;
 		};
 
 		template<typename T>
-		[[nodiscard]] inline static type_data *make_type_data(database_impl &db)
+		type_data *make_type_data(database_impl &db)
 		{
-			static type_data *data = db.reflect(type_name<T>::value, +[](database_impl &db) -> type_data
-			{
-				auto result = type_data{type_name_v<T>};
-				if constexpr (std::same_as<T, void>)
-					result.flags |= type_flags::IS_VOID;
-				else
-				{
-					result.alignment = alignof(T);
-					if constexpr (!std::is_empty_v<T>) result.size = sizeof(T);
-
-					if constexpr (std::is_enum_v<T>) result.flags |= type_flags::IS_ENUM;
-					if constexpr (std::is_class_v<T>) result.flags |= type_flags::IS_CLASS;
-					if constexpr (std::is_pointer_v<T>) result.flags |= type_flags::IS_POINTER;
-					if constexpr (std::is_abstract_v<T>) result.flags |= type_flags::IS_ABSTRACT;
-					if constexpr (std::is_null_pointer_v<T>) result.flags |= type_flags::IS_NULL;
-
-					if constexpr (std::is_arithmetic_v<T>) result.flags |= type_flags::IS_ARITHMETIC;
-					if constexpr (std::signed_integral<T>) result.flags |= type_flags::IS_SIGNED_INT;
-					if constexpr (std::unsigned_integral<T>) result.flags |= type_flags::IS_UNSIGNED_INT;
-
-					result.remove_pointer = make_type_data<std::decay_t<std::remove_pointer_t<T>>>;
-					result.remove_extent = make_type_data<std::decay_t<std::remove_extent_t<T>>>;
-					result.extent = std::extent_v<T>;
-				}
-
-				/* Constructors, destructors & conversions are only created for object types. */
-				if constexpr (std::is_object_v<T>)
-				{
-					/* Add default & copy constructors. */
-					if constexpr (std::is_default_constructible_v<T>)
-						result.ctor_list.emplace_back(make_type_ctor<T>());
-					if constexpr (std::is_copy_constructible_v<T>)
-						result.ctor_list.emplace_back(make_type_ctor<T, std::add_const_t<T> &>());
-
-					/* Add comparisons. */
-					if constexpr (std::equality_comparable<T> || std::three_way_comparable<T>)
-						result.cmp_list.emplace(type_name_v<T>, make_type_cmp<T>());
-
-					/* Add enum underlying type overloads. */
-					if constexpr (std::is_enum_v<T>)
-					{
-						result.ctor_list.emplace_back(make_type_ctor<T, std::underlying_type_t<T>>([](std::underlying_type_t<T> value)
-						{
-							return make_any<T>(static_cast<T>(value));
-						}));
-						result.conv_list.emplace(type_name_v<std::underlying_type_t<T>>, make_type_conv<T, std::underlying_type_t<T>>());
-						result.cmp_list.emplace(type_name_v<std::underlying_type_t<T>>, make_type_cmp<std::underlying_type_t<T>>());
-					}
-
-					/* Add `any` initialization funcions. */
-					result.any_funcs = make_any_funcs<T>();
-				}
-
-				/* Invoke user type initializer. */
-				if constexpr (requires(type_factory<T> f) { type_init<T>{}(f); })
-					type_init<T>{}(type_factory<T>{&result, &db});
-
-				return result;
-			});
+			static type_data *data = db.insert(make_constant_type_data<T>());
 			return data;
 		}
 	}

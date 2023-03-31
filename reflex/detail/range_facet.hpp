@@ -232,44 +232,44 @@ namespace reflex::facets
 			detail::iterator_vtable result = {};
 			result.iter_deref = +[](const any &iter)
 			{
-				auto &iter_ref = *iter.as<Iter>();
+				auto &iter_ref = *iter.as<Iter *>();
 				return forward_any(*iter_ref);
 			};
 			if constexpr (std::ranges::forward_range<T>)
 			{
-				result.iter_pre_inc = +[](any &iter) { ++(*iter.as<Iter>()); };
-				result.iter_post_inc = +[](const any &iter) { return forward_any((*iter.as<Iter>())++); };
+				result.iter_pre_inc = +[](any &iter) { ++(*iter.as<Iter *>()); };
+				result.iter_post_inc = +[](const any &iter) { return forward_any((*iter.as<Iter *>())++); };
 			}
 			if constexpr (std::ranges::bidirectional_range<T>)
 			{
-				result.iter_pre_dec = +[](any &iter) { --(*iter.as<Iter>()); };
-				result.iter_post_dec = +[](const any &iter) { return forward_any((*iter.as<Iter>())--); };
+				result.iter_pre_dec = +[](any &iter) { --(*iter.as<Iter *>()); };
+				result.iter_post_dec = +[](const any &iter) { return forward_any((*iter.as<Iter *>())--); };
 			}
 			if constexpr (std::ranges::random_access_range<T>)
 			{
 				result.iter_eq_add = +[](any &iter, std::ptrdiff_t n)
 				{
 					const auto diff = static_cast<difference_type>(n);
-					(*iter.as<Iter>()) += diff;
+					(*iter.as<Iter *>()) += diff;
 				};
 				result.iter_eq_sub = +[](any &iter, std::ptrdiff_t n)
 				{
 					const auto diff = static_cast<difference_type>(n);
-					(*iter.as<Iter>()) -= diff;
+					(*iter.as<Iter *>()) -= diff;
 				};
 				result.iter_add = +[](const any &iter, std::ptrdiff_t n)
 				{
 					const auto diff = static_cast<difference_type>(n);
-					return forward_any(*iter.as<Iter>() + diff);
+					return forward_any(*iter.as<Iter *>() + diff);
 				};
 				result.iter_sub = +[](const any &iter, std::ptrdiff_t n)
 				{
 					const auto diff = static_cast<difference_type>(n);
-					return forward_any(*iter.as<Iter>() - diff);
+					return forward_any(*iter.as<Iter *>() - diff);
 				};
 				result.iter_diff = +[](const any &a, const any &b)
 				{
-					return static_cast<std::ptrdiff_t>(*a.as<Iter>() - *b.as<Iter>());
+					return static_cast<std::ptrdiff_t>(*a.as<Iter *>() - *b.as<Iter *>());
 				};
 			}
 			return result;
@@ -281,39 +281,39 @@ namespace reflex::facets
 
 			result.iter_funcs = make_iterator_vtable<iterator>();
 			result.const_iter_funcs = make_iterator_vtable<const_iterator>();
-			result.value_type = +[]() { return type_info::get<T>(); };
+			result.value_type = +[]() { return type_info::get<std::ranges::range_value_t<T>>(); };
 
 			result.begin = +[](any &range)
 			{
-				auto &range_ref = *range.as<T>();
+				auto &range_ref = range.as<T &>();
 				return make_any<iterator>(std::ranges::begin(range_ref));
 			};
 			result.cbegin = +[](const any &range)
 			{
-				auto &range_ref = *range.as<T>();
+				auto &range_ref = range.as<T &>();
 				return make_any<const_iterator>(std::ranges::begin(range_ref));
 			};
 			result.end = +[](any &range)
 			{
-				auto &range_ref = *range.as<T>();
+				auto &range_ref = range.as<T &>();
 				return make_any<iterator>(std::ranges::end(range_ref));
 			};
 			result.cend = +[](const any &range)
 			{
-				auto &range_ref = *range.as<T>();
+				auto &range_ref = range.as<T &>();
 				return make_any<const_iterator>(std::ranges::end(range_ref));
 			};
 
 			result.empty = +[](const any &range)
 			{
-				auto &range_ref = *range.as<T>();
+				auto &range_ref = range.as<T &>();
 				return static_cast<bool>(std::ranges::empty(range_ref));
 			};
 
 			if constexpr (std::ranges::sized_range<T>)
 				result.size = +[](const any &range)
 				{
-					auto &range_ref = *range.as<T>();
+					auto &range_ref = range.as<T &>();
 					return static_cast<std::size_t>(std::ranges::size(range_ref));
 				};
 
@@ -321,13 +321,13 @@ namespace reflex::facets
 			{
 				result.at = +[](any &range, std::size_t n)
 				{
-					auto &range_ref = *range.as<T>();
+					auto &range_ref = range.as<T &>();
 					const auto diff = static_cast<difference_type>(n);
 					return forward_any(std::ranges::begin(range_ref)[diff]);
 				};
 				result.at_const = +[](const any &range, std::size_t n)
 				{
-					auto &range_ref = *range.as<T>();
+					auto &range_ref = range.as<T &>();
 					const auto diff = static_cast<difference_type>(n);
 					return forward_any(std::ranges::begin(range_ref)[diff]);
 				};

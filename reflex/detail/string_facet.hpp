@@ -61,13 +61,13 @@ namespace reflex::facets
 		{
 			detail::string_vtable<C> result = {};
 
-			result.empty = +[](const any &str) { return std::ranges::empty(*str.as<T>()); };
-			result.size = +[](const any &str) { return static_cast<std::size_t>(std::ranges::size(*str.as<T>())); };
+			result.empty = +[](const any &str) { return std::ranges::empty(*str.as<T *>()); };
+			result.size = +[](const any &str) { return static_cast<std::size_t>(std::ranges::size(*str.as<T *>())); };
 
-			result.data = +[](const any &str) { return std::ranges::cdata(*str.as<T>()); };
+			result.data = +[](const any &str) { return std::ranges::cdata(*str.as<T *>()); };
 
 			if constexpr (requires(const T &str) {{ str.c_str() } -> std::same_as<const C *>; })
-				result.c_str = +[](const any &str) { return str.as<T>()->c_str(); };
+				result.c_str = +[](const any &str) { return str.as<T *>()->c_str(); };
 			else
 				result.c_str = nullptr;
 

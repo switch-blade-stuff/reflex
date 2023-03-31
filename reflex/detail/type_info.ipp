@@ -20,37 +20,38 @@ namespace reflex
 	void type_info::fill_parents(tpp::dense_set<type_info, detail::str_hash, detail::str_cmp> &result) const
 	{
 		/* Recursively add parent types to the set. */
-		result.reserve(result.capacity() + m_data->base_list.size());
-		for (auto [_, base]: m_data->base_list)
+		result.reserve(result.capacity() + m_data->bases.size());
+		for (auto [_, base]: m_data->bases)
 		{
 			const auto parent = type_info{base.type, *m_db};
 			parent.fill_parents(result);
 			result.emplace(parent);
 		}
 	}
+	bool type_info::inherits_from(std::string_view name) const noexcept
+	{
+		if (!valid()) [[unlikely]] return false;
+		if (m_data->find_base(name) != nullptr)
+			return true;
+
+		const auto pred = [&](auto e) { return type_info{e.second.type, *m_db}.inherits_from(name); };
+		return std::ranges::any_of(m_data->bases, pred);
+	}
 
 	tpp::dense_map<std::string_view, any, detail::str_hash, detail::str_cmp> type_info::enumerations() const
 	{
 		tpp::dense_map<std::string_view, any, detail::str_hash, detail::str_cmp> result;
-		result.reserve(m_data->enum_list.size());
-		for (const auto &[name, value]: m_data->enum_list)
+		result.reserve(m_data->enums.size());
+		for (const auto &[name, value]: m_data->enums)
 			result.emplace(name, value.ref());
 		return result;
 	}
-
-	bool type_info::has_enumeration(const any &value) const
-	{
-		return std::ranges::any_of(m_data->enum_list, [&](auto &entry) { return entry.second == value; });
-	}
-	bool type_info::has_enumeration(std::string_view name) const
-	{
-		return m_data->enum_list.contains(name);
-	}
-
+	bool type_info::has_enumeration(const any &value) const { return std::ranges::any_of(m_data->enums, [&](auto &e) { return e.second == value; }); }
+	bool type_info::has_enumeration(std::string_view name) const { return m_data->enums.contains(name); }
 	any type_info::enumerate(std::string_view name) const
 	{
-		const auto pos = m_data->enum_list.find(name);
-		return pos != m_data->enum_list.end() ? pos->second.ref() : any{};
+		const auto pos = m_data->enums.find(name);
+		return pos != m_data->enums.end() ? pos->second.ref() : any{};
 	}
 
 	bool type_info::has_facet_vtable(std::string_view name) const noexcept
@@ -60,17 +61,9 @@ namespace reflex
 			return true;
 
 		const auto pred = [&](auto e) { return type_info{e.second.type, *m_db}.has_facet_vtable(name); };
-		return std::ranges::any_of(m_data->base_list, pred);
+		return std::ranges::any_of(m_data->bases, pred);
 	}
-	bool type_info::inherits_from(std::string_view name) const noexcept
-	{
-		if (!valid()) [[unlikely]] return false;
-		if (m_data->find_base(name) != nullptr)
-			return true;
 
-		const auto pred = [&](auto e) { return type_info{e.second.type, *m_db}.inherits_from(name); };
-		return std::ranges::any_of(m_data->base_list, pred);
-	}
 	bool type_info::convertible_to(std::string_view name) const noexcept
 	{
 		if (!valid()) [[unlikely]] return false;
@@ -78,7 +71,7 @@ namespace reflex
 			return true;
 
 		const auto pred = [&](auto e) { return type_info{e.second.type, *m_db}.convertible_to(name); };
-		return std::ranges::any_of(m_data->base_list, pred);
+		return std::ranges::any_of(m_data->bases, pred);
 	}
 
 	bool type_info::constructible_from(std::span<any> args) const
@@ -91,7 +84,6 @@ namespace reflex
 		if (!valid()) [[unlikely]] return false;
 		return m_data->find_ctor(args) != nullptr;
 	}
-
 	any type_info::construct(std::span<any> args) const
 	{
 		if (valid()) [[likely]]

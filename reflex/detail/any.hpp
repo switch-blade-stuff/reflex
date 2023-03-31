@@ -29,7 +29,7 @@ namespace reflex
 	{
 		friend class type_info;
 		template<typename>
-		friend detail::any_funcs_t detail::make_any_funcs() noexcept;
+		friend constexpr detail::any_funcs_t detail::make_any_funcs() noexcept;
 
 		struct alignas(alignof(std::uintptr_t)) storage_t
 		{
@@ -319,20 +319,22 @@ namespace reflex
 		/** @copydoc try_cast */
 		[[nodiscard]] REFLEX_PUBLIC any try_cast(type_info type) const;
 
-		/** Returns pointer to the managed object or `nullptr` if the managed object is of a different type or const-ness than `T`. */
+		/** Returns pointer to the managed object or `nullptr` if the managed object is of a different type or const-ness than \a T.
+		 * @tparam T Destination pointer type. */
 		template<typename T>
-		[[nodiscard]] T *get() noexcept
+		[[nodiscard]] T *try_get() noexcept
 		{
 			if constexpr (std::is_const_v<T>)
-				return std::as_const(*this).get<T>();
+				return std::as_const(*this).try_get<T>();
 			else if (type().name() == type_name_v<std::decay_t<T>>)
 				return static_cast<T *>(data());
 			else
 				return nullptr;
 		}
-		/** Returns const pointer to the managed object or `nullptr` if the managed object is of a different type. */
+		/** Returns const pointer to the managed object or `nullptr` if the managed object is of a different type than \a T.
+		 * @tparam T Destination pointer type. */
 		template<typename T>
-		[[nodiscard]] std::add_const_t<T> *get() const noexcept
+		[[nodiscard]] std::add_const_t<T> *try_get() const noexcept
 		{
 			if (type().name() == type_name_v<std::decay_t<T>>)
 				return static_cast<std::add_const_t<T> *>(data());
@@ -340,25 +342,73 @@ namespace reflex
 				return nullptr;
 		}
 
-		/** Returns pointer to the managed object, cast to `T *` or `nullptr` if the managed object is of a different const-ness or not representable with `T *`. */
+		/** Returns reference to the managed object.
+		 * @tparam T Destination reference type.
+		 * @throw bad_any_cast If the managed object is of a different type or const-ness than \a T, or if the `any` is empty. */
 		template<typename T>
-		[[nodiscard]] T *as()
+		[[nodiscard]] T &get()
+		{
+			if (auto *ptr = try_get<T>(); ptr == nullptr)
+				[[unlikely]] throw_bad_any_cast(type(), type_info::get<T>());
+			else
+				return *ptr;
+		}
+		/** Returns const reference to the managed object.
+		 * @tparam T Destination reference type.
+		 * @throw bad_any_cast If the managed object is of a different type than \a T, or if the `any` is empty. */
+		template<typename T>
+		[[nodiscard]] std::add_const_t<T> &get() const
+		{
+			if (auto *ptr = try_get<T>(); ptr == nullptr)
+				[[unlikely]] throw_bad_any_cast(type(), type_info::get<T>());
+			else
+				return *ptr;
+		}
+
+		/** Returns pointer to the managed object, cast to \a T or `nullptr` if the managed object is of a different const-ness or not representable with \a T.
+		 * @tparam T Destination pointer type. */
+		template<typename T>
+		[[nodiscard]] T *try_as()
 		{
 			if constexpr (std::is_const_v<T>)
-				return std::as_const(*this).as<T>();
+				return std::as_const(*this).try_as<T>();
 			else if (type().name() != type_name_v<std::decay_t<T>>)
 				return static_cast<T *>(base_cast(type_name_v<std::decay_t<T>>));
 			else
 				return static_cast<T *>(data());
 		}
-		/** Returns const pointer to the managed object, cast to `T *` or `nullptr` if the managed object is of a different const-ness or not representable with `T *`. */
+		/** Returns const pointer to the managed object, cast to \a T or `nullptr` if the managed object is of a different const-ness or not representable with \a T.
+		 * @tparam T Destination pointer type. */
 		template<typename T>
-		[[nodiscard]] std::add_const_t<T> *as() const
+		[[nodiscard]] std::add_const_t<T> *try_as() const
 		{
 			if (type().name() != type_name_v<std::decay_t<T>>)
 				return static_cast<std::add_const_t<T> *>(base_cast(type_name_v<std::decay_t<T>>));
 			else
 				return static_cast<std::add_const_t<T> *>(data());
+		}
+
+		/** Returns reference to the managed object, cast to \a T.
+		 * @tparam T Destination reference type.
+		 * @throw bad_any_cast If the managed object is of a different const-ness or not representable with \a T, or if the `any` is empty. */
+		template<typename T>
+		[[nodiscard]] T &as()
+		{
+			if (auto *ptr = try_as<T>(); ptr == nullptr)
+				[[unlikely]] throw_bad_any_cast(type(), type_info::get<T>());
+			else
+				return *ptr;
+		}
+		/** Returns const reference to the managed object, cast to \a T.
+		 * @tparam T Destination reference type.
+		 * @throw bad_any_cast If the managed object is not representable with \a T, or if the `any` is empty. */
+		template<typename T>
+		[[nodiscard]] std::add_const_t<T> &as() const
+		{
+			if (auto *ptr = try_as<T>(); ptr == nullptr)
+				[[unlikely]] throw_bad_any_cast(type(), type_info::get<T>());
+			else
+				return *ptr;
 		}
 
 		/** Returns facet \a F for the managed object. */
@@ -433,7 +483,7 @@ namespace reflex
 		{
 			this->type(type);
 			auto flags = detail::IS_OWNED | (std::is_const_v<T> ? detail::IS_CONST : detail::type_flags{});
-			if constexpr (!is_by_value<T>)
+			if constexpr (!is_by_value < T >)
 			{
 				deleter(+[](void *ptr) { delete static_cast<std::remove_cv_t<T> *>(ptr); });
 				external(new std::remove_cv_t<T>(std::forward<Args>(args)...));
@@ -455,7 +505,7 @@ namespace reflex
 		void impl_copy_from(type_info type, U *data)
 		{
 			using other_t = take_const_t<T, U>;
-			if constexpr (std::is_constructible_v<T, other_t &>)
+			if constexpr (std::is_copy_constructible_v<T>)
 				init_owned<T>(type, *static_cast<other_t *>(data));
 			else
 				throw_bad_any_copy(type);
@@ -472,12 +522,16 @@ namespace reflex
 		void assign_from(type_info type, const void *cdata, void *data)
 		{
 			/* Attempt a copy-assignment for cases where `target` is by-value and assignable from source. */
-			if (auto *tgt = get<T>(); is_ref() || tgt == nullptr)
-				copy_from<T>(type, cdata, data);
-			else if (cdata != nullptr)
-				*tgt = *static_cast<std::add_const_t<T> *>(cdata);
-			else
-				*tgt = *detail::void_cast<T>(data);
+			if constexpr (std::is_copy_assignable_v<T>)
+				if (auto *tgt = try_get<T>(); !is_ref() && tgt != nullptr)
+				{
+					if (cdata != nullptr)
+						*tgt = *static_cast<std::add_const_t<T> *>(cdata);
+					else
+						*tgt = *detail::void_cast<T>(data);
+					return;
+				}
+			copy_from<T>(type, cdata, data);
 		}
 
 		[[nodiscard]] REFLEX_PUBLIC void *base_cast(std::string_view) const;
