@@ -10,33 +10,6 @@ namespace reflex
 {
 	namespace detail
 	{
-		/* Use a shared spinlock to synchronize database operations, since thread contention is expected to be low. */
-		class shared_spinlock
-		{
-#ifndef REFLEX_NO_THREADS
-		public:
-			REFLEX_PUBLIC shared_spinlock &lock();
-			REFLEX_PUBLIC shared_spinlock &lock_shared();
-
-			REFLEX_PUBLIC void unlock();
-			REFLEX_PUBLIC void unlock_shared();
-
-		private:
-			std::atomic_flag m_busy_flag = {};
-			std::atomic<std::thread::id> m_writer = {};
-			std::atomic<std::size_t> m_reader_ctr = {};
-#else
-		public:
-			void lock() {}
-			void unlock() {}
-			bool try_lock() { return true; }
-
-			void lock_shared() {}
-			void unlock_shared() {}
-			bool try_lock_shared() { return true; }
-#endif
-		};
-
 		struct database_impl : shared_spinlock
 		{
 			static database_impl *local_ptr() noexcept
@@ -58,7 +31,9 @@ namespace reflex
 			REFLEX_PUBLIC ~database_impl();
 
 			REFLEX_PUBLIC void reset();
-			REFLEX_PUBLIC type_data *reset(std::string_view name);
+			REFLEX_PUBLIC void reset(type_data &data);
+			REFLEX_PUBLIC void reset(std::string_view name);
+
 			REFLEX_PUBLIC const type_data *find(std::string_view name) const;
 
 			REFLEX_PUBLIC REFLEX_COLD type_data *insert(const constant_type_data &data);

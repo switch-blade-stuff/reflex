@@ -17,7 +17,9 @@
 #include "detail/string_facet.hpp"
 
 #ifdef REFLEX_HEADER_ONLY
+#include "detail/spinlock.ipp"
 #include "detail/type_info.ipp"
 #include "detail/database.ipp"
+#include "detail/factory.ipp"
 #include "detail/any.ipp"
 #endif

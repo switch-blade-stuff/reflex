@@ -255,7 +255,11 @@ namespace reflex
 
 	template<typename T>
 	template<typename... Vt>
-	void type_factory<T>::add_facet(const std::tuple<const Vt *...> &vt) { (m_data->facets.emplace_or_replace(type_name_v<Vt>, std::get<const Vt *>(vt)), ...); }
+	void type_factory<T>::add_facet(const std::tuple<const Vt *...> &vt)
+	{
+		const auto l = detail::scoped_lock{*m_data};
+		(m_data->facets.emplace_or_replace(type_name_v<Vt>, std::get<const Vt *>(vt)), ...);
+	}
 
 	namespace detail
 	{

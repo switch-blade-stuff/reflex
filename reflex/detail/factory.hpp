@@ -33,6 +33,7 @@ namespace reflex
 		template<typename... Args>
 		type_factory &enumerate(std::string_view name, Args &&...args) requires std::constructible_from<T, Args...>
 		{
+			const auto l = detail::scoped_lock{*m_data};
 			m_data->enums.emplace_or_replace(name, type(), std::in_place_type<T>, std::forward<Args>(args)...);
 			return *this;
 		}
@@ -44,6 +45,7 @@ namespace reflex
 		template<typename U>
 		type_factory &add_parent() requires std::derived_from<T, U>
 		{
+			const auto l = detail::scoped_lock{*m_data};
 			m_data->bases.emplace_or_replace(type_name_v<U>, detail::make_type_base<T, U>());
 			return *this;
 		}
@@ -53,6 +55,7 @@ namespace reflex
 		template<typename U, typename F>
 		type_factory &make_convertible(F &&conv) requires (std::invocable<F, const T &> && std::constructible_from<U, std::invoke_result_t<F, const T &>>)
 		{
+			const auto l = detail::scoped_lock{*m_data};
 			m_data->convs.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>(std::forward<F>(conv)));
 			return *this;
 		}
@@ -61,6 +64,7 @@ namespace reflex
 		template<typename U>
 		type_factory &make_convertible() requires (std::convertible_to<T, U> && std::same_as<std::decay_t<U>, U>)
 		{
+			const auto l = detail::scoped_lock{*m_data};
 			m_data->convs.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>());
 			return *this;
 		}
@@ -89,6 +93,7 @@ namespace reflex
 		template<typename U>
 		type_factory &make_comparable() requires ((std::equality_comparable_with<T, U> || std::three_way_comparable_with<T, U>) && std::same_as<std::decay_t<U>, U>)
 		{
+			const auto l = detail::scoped_lock{*m_data};
 			m_data->cmps.emplace_or_replace(type_name_v<U>, detail::make_type_cmp<T, U>());
 			return *this;
 		}
@@ -116,6 +121,8 @@ namespace reflex
 		template<typename... Ts, typename... Args>
 		void add_ctor(Args &&...args)
 		{
+			const auto l = detail::scoped_lock{*m_data};
+
 			constexpr auto args_data = std::span{detail::arg_list<Ts...>::value};
 			if (auto existing = m_data->find_ctor(args_data); existing == nullptr)
 				m_data->ctors.emplace_back(detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...));
@@ -169,7 +176,6 @@ namespace reflex
 		}
 	};
 
-#ifndef REFLEX_HEADER_ONLY
 	extern template struct type_init<bool>;
 
 	extern template struct type_init<char>;
@@ -199,6 +205,5 @@ namespace reflex
 	extern template struct type_init<float>;
 	extern template struct type_init<double>;
 	extern template struct type_init<long double>;
-#endif
 #endif
 }

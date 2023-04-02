@@ -8,8 +8,8 @@
 #include <array>
 #include <list>
 
+#include "spinlock.hpp"
 #include "any.hpp"
-#include "type_info.hpp"
 
 namespace reflex
 {
@@ -195,8 +195,8 @@ namespace reflex
 			return result;
 		}
 
-		/* Mutable type data initialized at runtime. */
-		struct dynamic_type_data
+		/* Mutable type data initialized at runtime. Requires spinlock, as it can be modified at runtime. */
+		struct dynamic_type_data : shared_spinlock
 		{
 			[[nodiscard]] const void *find_facet(std::string_view type) const
 			{
