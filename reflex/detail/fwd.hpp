@@ -66,6 +66,9 @@ namespace reflex
 			[[nodiscard]] inline std::size_t operator()(const std::string_view &a, const type_info &b) const;
 		};
 
+		using enum_map = tpp::dense_map<std::string_view, any>;
+		using type_set = tpp::dense_set<type_info, detail::type_hash, detail::type_eq>;
+
 		enum type_flags
 		{
 			/* Used by any, prop_data & arg_data */

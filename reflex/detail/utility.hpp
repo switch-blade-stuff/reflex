@@ -153,6 +153,21 @@ namespace reflex
 
 	namespace detail
 	{
+		template<typename>
+		struct impl_template_pack;
+		template<template<typename...> typename T, typename... Ts>
+		struct impl_template_pack<T<Ts...>> { using type = type_pack_t<Ts...>; };
+	}
+
+	/** Metaprogramming utility used extract type pack of template instance \a T as an instance of `type_pack_t`. */
+	template<typename T>
+	using template_pack_t = typename detail::impl_template_pack<T>::type;
+	/** Instance of `template_pack_t<T>`. */
+	template<typename T>
+	inline constexpr auto template_pack = template_pack<T>{};
+
+	namespace detail
+	{
 		template<typename, typename...>
 		struct is_in_impl;
 

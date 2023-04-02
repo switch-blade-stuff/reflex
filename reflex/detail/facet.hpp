@@ -238,7 +238,7 @@ namespace reflex
 	template<typename F>
 	type_factory<T> &type_factory<T>::implement_facet(const typename F::vtable_type &vtab)
 	{
-		add_facet(std::make_tuple(&vtab));
+		add_facet(type_pack<T>, std::make_tuple(&vtab));
 		return *this;
 	}
 
@@ -249,16 +249,16 @@ namespace reflex
 	template<template_instance<facets::facet_group> G>
 	type_factory<T> &type_factory<T>::implement_facet(const typename G::vtable_type &vtab)
 	{
-		add_facet(vtab);
+		add_facet(template_pack<G>, vtab);
 		return *this;
 	}
 
 	template<typename T>
-	template<typename... Vt>
-	void type_factory<T>::add_facet(const std::tuple<const Vt *...> &vt)
+	template<typename... Ts>
+	void type_factory<T>::add_facet(type_pack_t<Ts...>, const std::tuple<const typename Ts::vtable_type *...> &vt)
 	{
 		const auto l = detail::scoped_lock{*m_data};
-		(m_data->facets.emplace_or_replace(type_name_v<Vt>, std::get<const Vt *>(vt)), ...);
+		(m_data->facets.emplace_or_replace(type_name_v<Ts>, std::get<const typename Ts::vtable_type *>(vt)), ...);
 	}
 
 	namespace detail

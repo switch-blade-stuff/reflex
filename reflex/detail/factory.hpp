@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "type_data.hpp"
+#include "data.hpp"
 
 namespace reflex
 {
@@ -130,8 +130,8 @@ namespace reflex
 				*existing = detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...);
 		}
 
-		template<typename... Vt>
-		inline void add_facet(const std::tuple<const Vt *...> &vtab);
+		template<typename... Ts>
+		inline void add_facet(type_pack_t<Ts...>, const std::tuple<const typename Ts::vtable_type *...> &vt);
 
 		detail::type_data *m_data;
 		detail::database_impl *m_db;

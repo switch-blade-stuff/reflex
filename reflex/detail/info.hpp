@@ -100,9 +100,9 @@ namespace reflex
 		[[nodiscard]] constexpr std::size_t extent() const noexcept;
 
 		/** Returns a set of the referenced type's parents (including the parents' parents). */
-		[[nodiscard]] REFLEX_PUBLIC auto parents() const -> tpp::dense_set<type_info, detail::type_hash, detail::type_eq>;
+		[[nodiscard]] REFLEX_PUBLIC detail::type_set parents() const;
 		/** Returns a map of the referenced type's enumerations. */
-		[[nodiscard]] REFLEX_PUBLIC auto enumerations() const -> tpp::dense_map<std::string_view, any>;
+		[[nodiscard]] REFLEX_PUBLIC detail::enum_map enumerations() const;
 
 		/** Checks if the referenced type has an enumeration with value \a value. */
 		[[nodiscard]] REFLEX_PUBLIC bool has_enumeration(const any &value) const;
@@ -214,9 +214,9 @@ namespace reflex
 		/* Convenience operator for access to underlying type_data. */
 		[[nodiscard]] constexpr const detail::type_data *operator->() const noexcept { return m_data; }
 
-		[[nodiscard]] REFLEX_PUBLIC bool has_facet_vtable(std::string_view name) const noexcept;
+		inline void fill_parents(detail::type_set &result) const;
+		[[nodiscard]] REFLEX_PUBLIC bool has_facet(std::string_view name) const noexcept;
 		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(std::span<const detail::arg_data> args) const;
-		inline void fill_parents(tpp::dense_set<type_info, detail::type_hash, detail::type_eq> &result) const;
 
 		const detail::type_data *m_data = nullptr;
 		detail::database_impl *m_db = nullptr;

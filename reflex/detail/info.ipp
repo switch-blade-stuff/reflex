@@ -6,21 +6,65 @@
 
 #include <algorithm>
 
-#include "type_info.hpp"
+#include "info.hpp"
 #include "database.hpp"
 
 namespace reflex
 {
-	tpp::dense_set<type_info, detail::type_hash, detail::type_eq> type_info::parents() const
+
+	detail::enum_map type_info::enumerations() const
+	{
+		if (!valid()) [[unlikely]] return {};
+		const auto l = detail::shared_scoped_lock{*m_data};
+
+		auto result = detail::enum_map{m_data->enums.size()};
+		for (const auto &[name, value]: m_data->enums)
+			result.emplace(name, value.ref());
+		return result;
+	}
+	bool type_info::has_enumeration(const any &value) const
+	{
+		if (!valid()) [[unlikely]] return false;
+		const auto l = detail::shared_scoped_lock{*m_data};
+		return std::ranges::any_of(m_data->enums, [&](auto &&e) { return e.second == value; });
+	}
+	bool type_info::has_enumeration(std::string_view name) const
+	{
+		if (!valid()) [[unlikely]] return false;
+		const auto l = detail::shared_scoped_lock{*m_data};
+		return m_data->enums.contains(name);
+	}
+	any type_info::enumerate(std::string_view name) const
+	{
+		if (!valid()) [[unlikely]] return {};
+		const auto l = detail::shared_scoped_lock{*m_data};
+
+		const auto pos = m_data->enums.find(name);
+		return pos != m_data->enums.end() ? pos->second.ref() : any{};
+	}
+
+	bool type_info::has_facet(std::string_view name) const noexcept
+	{
+		if (!valid()) [[unlikely]] return false;
+		const auto l = detail::shared_scoped_lock{*m_data};
+
+		if (m_data->find_facet(name) != nullptr)
+			return true;
+
+		const auto pred = [&](auto e) { return type_info{e.second.type, *m_db}.has_facet(name); };
+		return std::ranges::any_of(m_data->bases, pred);
+	}
+
+	detail::type_set type_info::parents() const
 	{
 		if (!valid()) [[unlikely]] return {};
 
 		const auto l = detail::shared_scoped_lock{*m_data};
-		tpp::dense_set<type_info, detail::type_hash, detail::type_eq> result;
+		detail::type_set result;
 		fill_parents(result);
 		return result;
 	}
-	void type_info::fill_parents(tpp::dense_set<type_info, detail::type_hash, detail::type_eq> &result) const
+	void type_info::fill_parents(detail::type_set &result) const
 	{
 		/* Recursively add parent types to the set. */
 		result.reserve(result.capacity() + m_data->bases.size());
@@ -34,8 +78,8 @@ namespace reflex
 	bool type_info::inherits_from(std::string_view name) const noexcept
 	{
 		if (!valid()) [[unlikely]] return false;
-
 		const auto l = detail::shared_scoped_lock{*m_data};
+
 		if (m_data->find_base(name) != nullptr)
 			return true;
 
@@ -43,57 +87,11 @@ namespace reflex
 		return std::ranges::any_of(m_data->bases, pred);
 	}
 
-	tpp::dense_map<std::string_view, any> type_info::enumerations() const
-	{
-		if (!valid()) [[unlikely]] return {};
-
-		const auto l = detail::shared_scoped_lock{*m_data};
-		tpp::dense_map<std::string_view, any> result;
-		result.reserve(m_data->enums.size());
-		for (const auto &[name, value]: m_data->enums)
-			result.emplace(name, value.ref());
-		return result;
-	}
-	bool type_info::has_enumeration(const any &value) const
-	{
-		if (!valid()) [[unlikely]] return false;
-
-		const auto l = detail::shared_scoped_lock{*m_data};
-		return std::ranges::any_of(m_data->enums, [&](auto &&e) { return e.second == value; });
-	}
-	bool type_info::has_enumeration(std::string_view name) const
-	{
-		if (!valid()) [[unlikely]] return false;
-
-		const auto l = detail::shared_scoped_lock{*m_data};
-		return m_data->enums.contains(name);
-	}
-	any type_info::enumerate(std::string_view name) const
-	{
-		if (!valid()) [[unlikely]] return {};
-
-		const auto l = detail::shared_scoped_lock{*m_data};
-		const auto pos = m_data->enums.find(name);
-		return pos != m_data->enums.end() ? pos->second.ref() : any{};
-	}
-
-	bool type_info::has_facet_vtable(std::string_view name) const noexcept
-	{
-		if (!valid()) [[unlikely]] return false;
-
-		const auto l = detail::shared_scoped_lock{*m_data};
-		if (m_data->find_facet(name) != nullptr)
-			return true;
-
-		const auto pred = [&](auto e) { return type_info{e.second.type, *m_db}.has_facet_vtable(name); };
-		return std::ranges::any_of(m_data->bases, pred);
-	}
-
 	bool type_info::convertible_to(std::string_view name) const noexcept
 	{
 		if (!valid()) [[unlikely]] return false;
-
 		const auto l = detail::shared_scoped_lock{*m_data};
+
 		if (m_data->find_conv(name) != nullptr)
 			return true;
 

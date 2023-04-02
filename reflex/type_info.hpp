@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "detail/type_data.hpp"
-#include "detail/type_info.hpp"
+#include "detail/data.hpp"
+#include "detail/info.hpp"
 #include "detail/database.hpp"
 #include "detail/factory.hpp"
 #include "detail/object.hpp"

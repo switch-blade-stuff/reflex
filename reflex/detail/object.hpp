@@ -48,10 +48,12 @@ namespace reflex
 	template<typename To, typename From>
 	[[nodiscard]] inline To *object_cast(From *ptr)
 	{
-		static_assert(std::same_as<take_const_t<To, From>, To>, "object_cast cannot cast away type qualifiers");
-		if constexpr (std::same_as<To, From>)
-			return ptr;
-		else if constexpr (std::derived_from<From, To>)
+		static_assert(std::same_as<take_const_t<To, From>, To>,
+		              "Cannot cast away type qualifiers");
+		static_assert(std::derived_from<From, To> || (std::derived_from<From, object> && std::derived_from<To, object>),
+		              "Cannot cast between unrelated non-object types");
+
+		if constexpr (std::derived_from<From, To>)
 			return static_cast<To *>(ptr);
 		else if constexpr (std::derived_from<From, object> && std::derived_from<To, object>)
 		{

@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "type_info.hpp"
+#include "info.hpp"
 
 namespace reflex
 {
