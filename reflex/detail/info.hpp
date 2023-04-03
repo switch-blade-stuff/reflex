@@ -164,7 +164,7 @@ namespace reflex
 		[[nodiscard]] constexpr bool is_abstract() const noexcept;
 
 		/** Checks if the referenced type is a pointer type.
-		 * @note For pointer-like class types, check the `pointer_like` facet. */
+		 * @note For pointer-like class types, check the `facets::pointer` facet. */
 		[[nodiscard]] constexpr bool is_pointer() const noexcept;
 		/** Checks if the referenced type is an integral type.
 		 * @note For conversions to integral types, use `convertible_to`. */
