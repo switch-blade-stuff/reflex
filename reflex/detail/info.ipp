@@ -61,7 +61,7 @@ namespace reflex
 		const auto l = detail::shared_scoped_lock{*m_data};
 		return m_data->find_enum(value);
 	}
-	bool type_info::has_enumeration(std::string_view name) const
+	bool type_info::has_enumeration(std::string_view name) const noexcept
 	{
 		if (!valid()) [[unlikely]] return false;
 

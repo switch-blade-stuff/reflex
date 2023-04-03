@@ -216,7 +216,7 @@ namespace reflex
 		/** @copydoc has_enumeration */
 		[[nodiscard]] REFLEX_PUBLIC bool has_enumeration(const any &value) const;
 		/** Checks if the referenced type has an enumeration with name \a name. */
-		[[nodiscard]] REFLEX_PUBLIC bool has_enumeration(std::string_view name) const;
+		[[nodiscard]] REFLEX_PUBLIC bool has_enumeration(std::string_view name) const noexcept;
 
 		/** Returns value of the attribute of type with name \a name, or an empty `any` if no such attribute exists. */
 		[[nodiscard]] REFLEX_PUBLIC any attribute(std::string_view name) const;
@@ -295,49 +295,49 @@ namespace reflex
 		template<typename T>
 		[[nodiscard]] bool comparable_with() const { return comparable_with(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is directly (without conversion) comparable (using any comparison operator) with type \a type. */
-		[[nodiscard]] bool comparable_with(type_info type) const { return comparable_with(type.name()); }
+		[[nodiscard]] bool comparable_with(type_info type) const noexcept { return comparable_with(type.name()); }
 		/** Checks if the referenced type is directly (without conversion) comparable (using any comparison operator) with type with name \a name. */
-		[[nodiscard]] REFLEX_PUBLIC bool comparable_with(std::string_view name) const;
+		[[nodiscard]] REFLEX_PUBLIC bool comparable_with(std::string_view name) const noexcept;
 
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator==` and `operator!=`. */
 		template<typename T>
 		[[nodiscard]] bool eq_comparable_with() const { return eq_comparable_with(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator==` and `operator!=`. */
-		[[nodiscard]] bool eq_comparable_with(type_info type) const { return eq_comparable_with(type.name()); }
+		[[nodiscard]] bool eq_comparable_with(type_info type) const noexcept { return eq_comparable_with(type.name()); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator==` and `operator!=`. */
-		[[nodiscard]] REFLEX_PUBLIC bool eq_comparable_with(std::string_view name) const;
+		[[nodiscard]] REFLEX_PUBLIC bool eq_comparable_with(std::string_view name) const noexcept;
 
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator>=`. */
 		template<typename T>
 		[[nodiscard]] bool ge_comparable_with() const { return ge_comparable_with(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator>=`. */
-		[[nodiscard]] bool ge_comparable_with(type_info type) const { return ge_comparable_with(type.name()); }
+		[[nodiscard]] bool ge_comparable_with(type_info type) const noexcept { return ge_comparable_with(type.name()); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator>=`. */
-		[[nodiscard]] REFLEX_PUBLIC bool ge_comparable_with(std::string_view name) const;
+		[[nodiscard]] REFLEX_PUBLIC bool ge_comparable_with(std::string_view name) const noexcept;
 
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator<=`. */
 		template<typename T>
 		[[nodiscard]] bool le_comparable_with() const { return le_comparable_with(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator<=`. */
-		[[nodiscard]] bool le_comparable_with(type_info type) const { return le_comparable_with(type.name()); }
+		[[nodiscard]] bool le_comparable_with(type_info type) const noexcept { return le_comparable_with(type.name()); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator<=`. */
-		[[nodiscard]] REFLEX_PUBLIC bool le_comparable_with(std::string_view name) const;
+		[[nodiscard]] REFLEX_PUBLIC bool le_comparable_with(std::string_view name) const noexcept;
 
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator>`. */
 		template<typename T>
 		[[nodiscard]] bool gt_comparable_with() const { return gt_comparable_with(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator>`. */
-		[[nodiscard]] bool gt_comparable_with(type_info type) const { return gt_comparable_with(type.name()); }
+		[[nodiscard]] bool gt_comparable_with(type_info type) const noexcept { return gt_comparable_with(type.name()); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator>`. */
-		[[nodiscard]] REFLEX_PUBLIC bool gt_comparable_with(std::string_view name) const;
+		[[nodiscard]] REFLEX_PUBLIC bool gt_comparable_with(std::string_view name) const noexcept;
 
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator<`. */
 		template<typename T>
 		[[nodiscard]] bool lt_comparable_with() const { return lt_comparable_with(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator<`. */
-		[[nodiscard]] bool lt_comparable_with(type_info type) const { return lt_comparable_with(type.name()); }
+		[[nodiscard]] bool lt_comparable_with(type_info type) const noexcept { return lt_comparable_with(type.name()); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator<`. */
-		[[nodiscard]] REFLEX_PUBLIC bool lt_comparable_with(std::string_view name) const;
+		[[nodiscard]] REFLEX_PUBLIC bool lt_comparable_with(std::string_view name) const noexcept;
 
 		[[nodiscard]] constexpr bool operator==(const type_info &other) const noexcept = default;
 		[[nodiscard]] constexpr bool operator!=(const type_info &other) const noexcept = default;
