@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <iterator>
 #include <utility>
+#include <memory>
 
 #include "define.hpp"
 
@@ -51,6 +52,15 @@ namespace reflex
 		std::tuple_size_v<T> == 2;
 		get<0>(v);
 		get<1>(v);
+	};
+
+	/** Concept used to check if a type is pointer or pointer-like. */
+	template<typename T>
+	concept pointer_like = std::is_pointer_v<T> || requires(T v)
+	{
+		typename std::pointer_traits<T>::element_type;
+		{ *v } -> std::common_reference_with<typename std::pointer_traits<T>::element_type>;
+		std::to_address(v);
 	};
 
 	namespace detail

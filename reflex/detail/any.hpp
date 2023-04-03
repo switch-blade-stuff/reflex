@@ -566,7 +566,7 @@ namespace reflex
 	[[nodiscard]] inline any forward_any(T &other) requires(std::same_as<std::decay_t<T>, any>) { return other.ref(); }
 	/** Returns an `any` referencing the object at \a instance. */
 	template<typename T>
-	[[nodiscard]] inline any forward_any(T &instance) requires (!std::same_as<std::decay_t<T>, any>) { return any{std::forward<T>(instance)}; }
+	[[nodiscard]] inline any forward_any(T &instance) requires (!std::same_as<std::decay_t<T>, any>) { return any{instance}; }
 
 	/** Returns an `any` containing a move-constructed instance of \a value. */
 	template<typename T>
@@ -584,7 +584,7 @@ namespace reflex
 	any type_info::attribute(type_info type) const { return attribute(type.name()); }
 
 	template<typename T>
-	bool type_info::has_enumeration(T &&value) const { return has_enumeration(forward_any(std::forward<T>(value))); }
+	bool type_info::has_enumeration(T &&value) const requires (!std::same_as<std::decay_t<T>, any>) { return has_enumeration(forward_any(std::forward<T>(value))); }
 
 	template<std::size_t N>
 	any type_info::construct(std::span<any, N> args) const { return construct(std::span<any>{args}); }

@@ -212,7 +212,7 @@ namespace reflex
 
 		/** Checks if the referenced type has an enumeration with value \a value. */
 		template<typename T>
-		[[nodiscard]] inline bool has_enumeration(T &&value) const;
+		[[nodiscard]] inline bool has_enumeration(T &&value) const requires (!std::same_as<std::decay_t<T>, any>);
 		/** @copydoc has_enumeration */
 		[[nodiscard]] REFLEX_PUBLIC bool has_enumeration(const any &value) const;
 		/** Checks if the referenced type has an enumeration with name \a name. */

@@ -16,6 +16,7 @@
 #include "detail/range_facet.hpp"
 #include "detail/tuple_facet.hpp"
 #include "detail/string_facet.hpp"
+#include "detail/pointer_facet.hpp"
 
 #ifdef REFLEX_HEADER_ONLY
 #include "detail/spinlock.ipp"

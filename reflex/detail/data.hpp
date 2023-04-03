@@ -127,10 +127,13 @@ namespace reflex
 
 		struct type_ctor
 		{
+			template<typename T, typename U = std::remove_reference_t<T>>
+			using forward_arg_t = std::conditional_t<std::is_reference_v<T>, U, std::add_const_t<U>>;
+
 			template<typename T, typename... Ts, typename F, std::size_t... Is>
 			[[nodiscard]] inline static any construct(std::index_sequence<Is...>, F &&f, std::span<any> args)
 			{
-				return std::invoke(f, (std::forward<Ts>(*args[Is].cast<Ts>().template try_get<Ts>()))...);
+				return std::invoke(f, (*args[Is].cast<Ts>().template try_get<forward_arg_t<Ts>>())...);
 			}
 			template<typename T, typename... Ts, typename F>
 			[[nodiscard]] inline static any construct(F &&f, std::span<any> args)
@@ -144,7 +147,7 @@ namespace reflex
 			{
 				this->func = [f = std::forward<F>(func)](std::span<any> any_args) -> any
 				{
-					return construct<T, std::remove_reference_t<Ts>...>(f, any_args);
+					return construct<T, Ts...>(f, any_args);
 				};
 			}
 
@@ -463,9 +466,7 @@ namespace reflex
 				if (!this_type->find_base(other_name, db) && !this_type->find_conv(other_name, db))
 					return false;
 			}
-			const auto a_mask = static_cast<int>(flags);
-			const auto b_mask = (other.is_ref() << 1) | other.is_const();
-			return a_mask >= b_mask;
+			return flags >= other.is_const() ? IS_CONST : type_flags{};
 		}
 		bool arg_data::compatible(const arg_data &other, database_impl &db) const
 		{
@@ -475,7 +476,7 @@ namespace reflex
 				if (!this_type->find_base(other_name, db) || !this_type->find_conv(other_name, db))
 					return false;
 			}
-			return flags >= other.flags;
+			return flags >= (other.flags & IS_CONST);
 		}
 
 		template<typename T>
