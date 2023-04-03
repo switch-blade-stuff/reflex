@@ -52,7 +52,7 @@ namespace reflex
 	}
 
 	template<typename... Args>
-	arg_list::arg_list(type_pack_t<Args...> p) : arg_list(p, detail::database_impl::instance()) {}
+	argument_view::argument_view(type_pack_t<Args...> p) : argument_view(p, detail::database_impl::instance()) {}
 
 	template<typename T>
 	type_factory<T> type_info::reflect()

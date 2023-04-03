@@ -115,7 +115,7 @@ namespace reflex
 		template<typename T>
 		[[nodiscard]] constexpr static arg_data make_arg_data() noexcept { return arg_data{std::in_place_type<T>}; }
 		template<typename... Ts>
-		[[nodiscard]] inline static std::span<const arg_data> make_arg_list() noexcept
+		[[nodiscard]] inline static std::span<const arg_data> make_argument_view() noexcept
 		{
 			if constexpr (sizeof...(Ts) != 0)
 			{
@@ -143,7 +143,7 @@ namespace reflex
 
 			type_ctor() noexcept = default;
 			template<typename T, typename... Ts, typename F>
-			type_ctor(std::in_place_type_t<T>, type_pack_t<Ts...>, F &&func) : args(make_arg_list<Ts...>())
+			type_ctor(std::in_place_type_t<T>, type_pack_t<Ts...>, F &&func) : args(make_argument_view<Ts...>())
 			{
 				this->func = [f = std::forward<F>(func)](std::span<any> any_args) -> any
 				{
@@ -223,7 +223,7 @@ namespace reflex
 		}
 
 		/* Mutable type data initialized at runtime. Requires spinlock, as it can be modified at runtime. */
-		struct dynamic_type_data : shared_spinlock
+		struct dynamic_type_data
 		{
 			void clear()
 			{
@@ -512,22 +512,22 @@ namespace reflex
 		}
 	}
 
-	constexpr bool arg_info::operator==(const reflex::arg_info &other) const noexcept
+	constexpr bool argument_info::operator==(const argument_info &other) const noexcept
 	{
 		return m_data == other.m_data || (m_data && other.m_data && *m_data == *other.m_data);
 	}
 
 	template<typename... Args>
-	arg_list::arg_list(type_pack_t<Args...>, detail::database_impl *db) noexcept : m_data(detail::make_arg_list<Args...>()), m_db(db) {}
+	argument_view::argument_view(type_pack_t<Args...>, detail::database_impl *db) noexcept : m_data(detail::make_argument_view<Args...>()), m_db(db) {}
 
-	class arg_list::pointer
+	class argument_view::pointer
 	{
 		friend class iterator;
 
-		constexpr pointer(arg_info &&info) : m_value(std::forward<arg_info>(info)) {}
+		constexpr pointer(argument_info &&info) : m_value(std::forward<argument_info>(info)) {}
 
 	public:
-		using element_type = arg_info;
+		using element_type = argument_info;
 
 	public:
 		pointer() = delete;
@@ -537,23 +537,23 @@ namespace reflex
 		pointer &operator=(const pointer &) noexcept = default;
 		pointer &operator=(pointer &&) noexcept = default;
 
-		[[nodiscard]] constexpr const arg_info &operator*() const noexcept { return m_value; }
-		[[nodiscard]] constexpr const arg_info *operator->() const noexcept { return &m_value; }
+		[[nodiscard]] constexpr const argument_info &operator*() const noexcept { return m_value; }
+		[[nodiscard]] constexpr const argument_info *operator->() const noexcept { return &m_value; }
 
 		[[nodiscard]] constexpr bool operator==(const pointer &) const noexcept = default;
 
 	private:
-		arg_info m_value;
+		argument_info m_value;
 	};
-	class arg_list::iterator
+	class argument_view::iterator
 	{
-		friend class arg_list;
+		friend class argument_view;
 
 		using iter_t = typename std::span<const detail::arg_data>::iterator;
 
 	public:
-		using value_type = arg_info;
-		using reference = arg_info;
+		using value_type = argument_info;
+		using reference = argument_info;
 		using pointer = pointer;
 
 		using difference_type = std::ptrdiff_t;
@@ -575,16 +575,16 @@ namespace reflex
 			operator++();
 			return tmp;
 		}
-		constexpr iterator &operator++() noexcept
-		{
-			++m_iter;
-			return *this;
-		}
 		constexpr iterator operator--(int) noexcept
 		{
 			auto tmp = *this;
 			operator--();
 			return tmp;
+		}
+		constexpr iterator &operator++() noexcept
+		{
+			++m_iter;
+			return *this;
 		}
 		constexpr iterator &operator--() noexcept
 		{
@@ -610,8 +610,8 @@ namespace reflex
 		[[nodiscard]] constexpr pointer operator->() const noexcept { return get(); }
 		[[nodiscard]] constexpr reference operator*() const noexcept { return *get(); }
 
-		[[nodiscard]] constexpr pointer get() const noexcept { return {arg_info{std::to_address(m_iter), m_db}}; }
-		[[nodiscard]] constexpr reference operator[](difference_type i) const noexcept { return *pointer{arg_info{&m_iter[i], m_db}}; }
+		[[nodiscard]] constexpr pointer get() const noexcept { return {argument_info{std::to_address(m_iter), m_db}}; }
+		[[nodiscard]] constexpr reference operator[](difference_type i) const noexcept { return *pointer{argument_info{&m_iter[i], m_db}}; }
 
 		[[nodiscard]] constexpr bool operator==(const iterator &other) const noexcept { return m_iter == other.m_iter; }
 		[[nodiscard]] constexpr auto operator<=>(const iterator &other) const noexcept { return m_iter <=> other.m_iter; }
@@ -621,14 +621,103 @@ namespace reflex
 		detail::database_impl *m_db = nullptr;
 	};
 
-	constexpr typename arg_list::iterator arg_list::begin() const noexcept { return {m_data.begin(), m_db}; }
-	constexpr typename arg_list::iterator arg_list::cbegin() const noexcept { return begin(); }
-	constexpr typename arg_list::iterator arg_list::end() const noexcept { return {m_data.end(), nullptr}; }
-	constexpr typename arg_list::iterator arg_list::cend() const noexcept { return end(); }
+	constexpr typename argument_view::iterator argument_view::begin() const noexcept { return {m_data.begin(), m_db}; }
+	constexpr typename argument_view::iterator argument_view::cbegin() const noexcept { return begin(); }
+	constexpr typename argument_view::iterator argument_view::end() const noexcept { return {m_data.end(), nullptr}; }
+	constexpr typename argument_view::iterator argument_view::cend() const noexcept { return end(); }
 
-	constexpr typename arg_list::value_type arg_list::front() const noexcept { return *begin(); }
-	constexpr typename arg_list::value_type arg_list::back() const noexcept { return *(end() - 1); }
-	constexpr typename arg_list::value_type arg_list::operator[](size_type i) const noexcept { return begin()[static_cast<difference_type>(i)]; }
+	constexpr typename argument_view::value_type argument_view::front() const noexcept { return *begin(); }
+	constexpr typename argument_view::value_type argument_view::back() const noexcept { return *(end() - 1); }
+	constexpr typename argument_view::value_type argument_view::operator[](size_type i) const noexcept { return begin()[static_cast<difference_type>(i)]; }
+
+	argument_view constructor_info::args() const noexcept { return {m_data->args, m_db}; }
+	any constructor_info::invoke(std::span<any> args) const { return m_data->operator()(args); }
+	any constructor_info::operator()(std::span<any> args) const { return invoke(args); }
+	constexpr bool constructor_info::operator==(const constructor_info &other) const noexcept { return m_data == other.m_data; }
+
+	class constructor_view::pointer
+	{
+		friend class iterator;
+
+		constexpr pointer(constructor_info &&info) : m_value(std::forward<constructor_info>(info)) {}
+
+	public:
+		using element_type = constructor_info;
+
+	public:
+		pointer() = delete;
+
+		constexpr pointer(const pointer &) noexcept = default;
+		constexpr pointer(pointer &&) noexcept = default;
+		pointer &operator=(const pointer &) noexcept = default;
+		pointer &operator=(pointer &&) noexcept = default;
+
+		[[nodiscard]] constexpr const constructor_info &operator*() const noexcept { return m_value; }
+		[[nodiscard]] constexpr const constructor_info *operator->() const noexcept { return &m_value; }
+
+		[[nodiscard]] constexpr bool operator==(const pointer &) const noexcept = default;
+
+	private:
+		constructor_info m_value;
+	};
+	class constructor_view::iterator
+	{
+		friend class constructor_view;
+
+		using iter_t = typename std::list<detail::type_ctor>::const_iterator;
+
+	public:
+		using value_type = constructor_info;
+		using reference = constructor_info;
+		using pointer = pointer;
+
+		using difference_type = std::ptrdiff_t;
+		using iterator_category = std::bidirectional_iterator_tag;
+
+	private:
+		iterator(iter_t iter, detail::database_impl *db) : m_iter(iter), m_db(db) {}
+
+	public:
+		constexpr iterator() noexcept = default;
+		constexpr iterator(const iterator &) noexcept = default;
+		constexpr iterator(iterator &&) noexcept = default;
+		iterator &operator=(const iterator &) noexcept = default;
+		iterator &operator=(iterator &&) noexcept = default;
+
+		iterator operator++(int) noexcept
+		{
+			auto tmp = *this;
+			operator++();
+			return tmp;
+		}
+		iterator operator--(int) noexcept
+		{
+			auto tmp = *this;
+			operator--();
+			return tmp;
+		}
+		constexpr iterator &operator++() noexcept
+		{
+			++m_iter;
+			return *this;
+		}
+		constexpr iterator &operator--() noexcept
+		{
+			--m_iter;
+			return *this;
+		}
+
+		[[nodiscard]] constexpr pointer operator->() const noexcept { return get(); }
+		[[nodiscard]] constexpr reference operator*() const noexcept { return *get(); }
+
+		[[nodiscard]] constexpr pointer get() const noexcept { return {constructor_info{std::to_address(m_iter), m_db}}; }
+
+		[[nodiscard]] constexpr bool operator==(const iterator &other) const noexcept { return m_iter == other.m_iter; }
+
+	private:
+		iter_t m_iter = {};
+		detail::database_impl *m_db = nullptr;
+	};
 
 	constexpr std::string_view type_info::name() const noexcept { return valid() ? m_data->name : std::string_view{}; }
 
@@ -653,6 +742,8 @@ namespace reflex
 
 	type_info type_info::remove_extent() const noexcept { return valid() && m_data->remove_extent ? type_info{m_data->remove_extent, *m_db} : type_info{}; }
 	type_info type_info::remove_pointer() const noexcept { return valid() && m_data->remove_pointer ? type_info{m_data->remove_pointer, *m_db} : type_info{}; }
+
+	constexpr constructor_view type_info::constructors() const noexcept { return valid() ? constructor_view{&m_data->ctors, m_db} : constructor_view{}; }
 
 	template<typename T>
 	void any::copy_init(type_info type, T *ptr)

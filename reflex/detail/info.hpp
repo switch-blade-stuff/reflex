@@ -11,14 +11,17 @@
 namespace reflex
 {
 	/** Structure representing a view of argument infos. */
-	class arg_list
+	class argument_view
 	{
+		friend class constructor_info;
+
 		template<typename... Args>
-		inline arg_list(type_pack_t<Args...>, detail::database_impl *) noexcept;
+		inline argument_view(type_pack_t<Args...>, detail::database_impl *) noexcept;
+		constexpr argument_view(std::span<const detail::arg_data> data, detail::database_impl *db) noexcept : m_data(data), m_db(db) {}
 
 	public:
-		using value_type = arg_info;
-		using reference = arg_info;
+		using value_type = argument_info;
+		using reference = argument_info;
 
 		class pointer;
 		class iterator;
@@ -27,15 +30,15 @@ namespace reflex
 		using size_type = std::size_t;
 
 	public:
-		constexpr arg_list() noexcept = default;
-		constexpr arg_list(const arg_list &) noexcept = default;
-		constexpr arg_list(arg_list &&) noexcept = default;
-		arg_list &operator=(const arg_list &) noexcept = default;
-		arg_list &operator=(arg_list &&) noexcept = default;
+		constexpr argument_view() noexcept = default;
+		constexpr argument_view(const argument_view &) noexcept = default;
+		constexpr argument_view(argument_view &&) noexcept = default;
+		argument_view &operator=(const argument_view &) noexcept = default;
+		argument_view &operator=(argument_view &&) noexcept = default;
 
 		/** Creates argument list for argument types \a Args. */
 		template<typename... Args>
-		inline arg_list(type_pack_t<Args...>);
+		inline argument_view(type_pack_t<Args...>);
 
 		/** Checks if the argument list is empty. */
 		[[nodiscard]] constexpr bool empty() const noexcept { return m_data.empty(); }
@@ -63,19 +66,19 @@ namespace reflex
 		detail::database_impl *m_db = nullptr;
 	};
 	/** Structure containing information about an argument of an argument list. */
-	class arg_info
+	class argument_info
 	{
-		friend class arg_list::iterator;
+		friend class argument_view::iterator;
 
-		constexpr arg_info(const detail::arg_data *data, detail::database_impl *db) noexcept : m_data(data), m_db(db) {}
+		constexpr argument_info(const detail::arg_data *data, detail::database_impl *db) noexcept : m_data(data), m_db(db) {}
 
 	public:
-		arg_info() = delete;
+		argument_info() = delete;
 
-		constexpr arg_info(const arg_info &) noexcept = default;
-		constexpr arg_info(arg_info &&) noexcept = default;
-		constexpr arg_info &operator=(const arg_info &) noexcept = default;
-		constexpr arg_info &operator=(arg_info &&) noexcept = default;
+		constexpr argument_info(const argument_info &) noexcept = default;
+		constexpr argument_info(argument_info &&) noexcept = default;
+		constexpr argument_info &operator=(const argument_info &) noexcept = default;
+		constexpr argument_info &operator=(argument_info &&) noexcept = default;
 
 		/** Checks if the argument type is a reference. */
 		[[nodiscard]] inline bool is_ref() const noexcept;
@@ -87,11 +90,83 @@ namespace reflex
 		/** @warning Internal use only! */
 		[[nodiscard]] constexpr operator const detail::arg_data &() const noexcept { return *m_data; }
 
-		[[nodiscard]] constexpr bool operator==(const arg_info &other) const noexcept;
+		[[nodiscard]] constexpr bool operator==(const argument_info &other) const noexcept;
 
 	private:
 		const detail::arg_data *m_data;
 		detail::database_impl *m_db;
+	};
+
+	/** Structure representing a view of type constructors. */
+	class constructor_view
+	{
+		friend class type_info;
+
+		using iter_t = typename std::list<detail::type_ctor>::const_iterator;
+
+		constexpr constructor_view(const std::list<detail::type_ctor> *list, detail::database_impl *db) : m_view(list), m_db(db) {}
+
+	public:
+		using value_type = constructor_info;
+		using reference = constructor_info;
+		using size_type = std::size_t;
+
+		class pointer;
+		class iterator;
+
+	public:
+		constexpr constructor_view() noexcept = default;
+		constexpr constructor_view(const constructor_view &) noexcept = default;
+		constexpr constructor_view(constructor_view &&) noexcept = default;
+		constructor_view &operator=(const constructor_view &) noexcept = default;
+		constructor_view &operator=(constructor_view &&) noexcept = default;
+
+		/** Checks if the constructor list is empty. */
+		[[nodiscard]] constexpr bool empty() const noexcept { return m_view->empty(); }
+		/** Returns total amount of constructors in the constructor list. */
+		[[nodiscard]] constexpr size_type size() const noexcept { return m_view->size(); }
+
+		/** Returns iterator to the first argument of the list. */
+		[[nodiscard]] inline iterator begin() const noexcept;
+		/** @copydoc begin */
+		[[nodiscard]] inline iterator cbegin() const noexcept;
+		/** Returns iterator one past the last argument of the list. */
+		[[nodiscard]] inline iterator end() const noexcept;
+		/** @copydoc begin */
+		[[nodiscard]] inline iterator cend() const noexcept;
+
+	private:
+		const std::list<detail::type_ctor> *m_view = nullptr;
+		detail::database_impl *m_db = nullptr;
+	};
+	/** Structure representing constructor of a reflected type. */
+	class constructor_info
+	{
+		friend class constructor_view::iterator;
+
+		constexpr constructor_info(const detail::type_ctor *data, detail::database_impl *db) : m_data(data), m_db(db) {}
+
+	public:
+		constructor_info() = delete;
+
+		constexpr constructor_info(const constructor_info &) noexcept = default;
+		constexpr constructor_info(constructor_info &&) noexcept = default;
+		constexpr constructor_info &operator=(const constructor_info &) noexcept = default;
+		constexpr constructor_info &operator=(constructor_info &&) noexcept = default;
+
+		/** Returns argument list of the referenced constructor. */
+		[[nodiscard]] inline argument_view args() const noexcept;
+
+		/** Invokes the underlying constructor with arguments \a args. */
+		[[nodiscard]] inline any invoke(std::span<any> args) const;
+		/** @copydoc invoke */
+		[[nodiscard]] inline any operator()(std::span<any> args) const;
+
+		[[nodiscard]] constexpr bool operator==(const constructor_info &other) const noexcept;
+
+	private:
+		const detail::type_ctor *m_data = nullptr;
+		detail::database_impl *m_db = nullptr;
 	};
 
 	/** Handle to reflected type information. */
@@ -101,7 +176,7 @@ namespace reflex
 		friend class type_factory;
 		template<typename...>
 		friend class type_query;
-		friend class arg_info;
+		friend class argument_info;
 		friend class any;
 
 	public:
@@ -189,13 +264,6 @@ namespace reflex
 		/** Returns the extent of the referenced type. */
 		[[nodiscard]] constexpr std::size_t extent() const noexcept;
 
-		/** Returns a set of the referenced type's parents (including the parents' parents). */
-		[[nodiscard]] REFLEX_PUBLIC detail::type_set parents() const;
-		/** Returns a map of the referenced type's attributes. */
-		[[nodiscard]] REFLEX_PUBLIC detail::attr_map attributes() const;
-		/** Returns a map of the referenced type's enumerations. */
-		[[nodiscard]] REFLEX_PUBLIC detail::enum_map enumerations() const;
-
 		/** Checks if the referenced type has an attribute of type \a T. */
 		template<typename T>
 		[[nodiscard]] bool has_attribute() const noexcept { return has_attribute(type_name_v<std::decay_t<T>>); }
@@ -204,6 +272,8 @@ namespace reflex
 		/** Checks if the referenced type has an attribute of type with name \a name. */
 		[[nodiscard]] REFLEX_PUBLIC bool has_attribute(std::string_view name) const noexcept;
 
+		/** Returns a map of the referenced type's attributes. */
+		[[nodiscard]] REFLEX_PUBLIC detail::attr_map attributes() const;
 		/** Returns value of the attribute of type \a T, or an empty `any` if no such attribute exists. */
 		template<typename T>
 		[[nodiscard]] inline any attribute() const;
@@ -218,6 +288,8 @@ namespace reflex
 		/** Checks if the referenced type has an enumeration with name \a name. */
 		[[nodiscard]] REFLEX_PUBLIC bool has_enumeration(std::string_view name) const noexcept;
 
+		/** Returns a map of the referenced type's enumerations. */
+		[[nodiscard]] REFLEX_PUBLIC detail::enum_map enumerations() const;
 		/** Returns value of the attribute of type with name \a name, or an empty `any` if no such attribute exists. */
 		[[nodiscard]] REFLEX_PUBLIC any attribute(std::string_view name) const;
 		/** Returns value of the enumeration with name \a name, or an empty `any` if no such enumeration exists. */
@@ -257,14 +329,19 @@ namespace reflex
 		/** Checks if the referenced type inherits from a base type with name \a name. */
 		[[nodiscard]] REFLEX_PUBLIC bool inherits_from(std::string_view name) const;
 
+		/** Returns a set of the referenced type's parents (including the parents' parents). */
+		[[nodiscard]] REFLEX_PUBLIC detail::type_set parents() const;
+
 		/** Checks if the referenced type is constructible from arguments \a Args. */
 		template<typename... Args>
-		[[nodiscard]] inline bool constructible_from() const { return constructible_from(arg_list{type_pack<Args...>}); }
+		[[nodiscard]] inline bool constructible_from() const { return constructible_from(argument_view{type_pack<Args...>}); }
 		/** Checks if the referenced type is constructible from arguments \a args. */
 		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(std::span<any> args) const;
 		/** @copydoc constructible_from */
-		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(const arg_list &args) const;
+		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(const argument_view &args) const;
 
+		/** Returns a view of the referenced type's constructors. */
+		[[nodiscard]] constexpr constructor_view constructors() const noexcept;
 		/** Constructs an object of the referenced type from arguments \a args.
 		 * @return `any` containing the constructed object instance, or an empty `any` if `this` is not valid or the referenced type is not constructible from \a args. */
 		template<typename... Args>

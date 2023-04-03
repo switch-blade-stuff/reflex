@@ -33,7 +33,6 @@ namespace reflex
 		template<typename A, typename... Args>
 		type_factory &attribute(Args &&...args) requires (std::same_as<std::decay_t<A>, A> && std::constructible_from<A, Args...>)
 		{
-			const auto l = detail::scoped_lock{*m_data};
 			m_data->attrs.emplace_or_replace(type_name_v<A>, type(), std::in_place_type<T>, std::forward<Args>(args)...);
 			return *this;
 		}
@@ -41,7 +40,6 @@ namespace reflex
 		template<typename... Args>
 		type_factory &enumerate(std::string_view name, Args &&...args) requires std::constructible_from<T, Args...>
 		{
-			const auto l = detail::scoped_lock{*m_data};
 			m_data->enums.emplace_or_replace(name, type(), std::in_place_type<T>, std::forward<Args>(args)...);
 			return *this;
 		}
@@ -72,7 +70,6 @@ namespace reflex
 		template<typename U>
 		type_factory &add_parent() requires std::derived_from<T, U>
 		{
-			const auto l = detail::scoped_lock{*m_data};
 			m_data->bases.emplace_or_replace(type_name_v<U>, detail::make_type_base<T, U>());
 			return *this;
 		}
@@ -100,7 +97,6 @@ namespace reflex
 		template<typename U, typename F>
 		type_factory &make_convertible(F &&conv) requires (std::same_as<std::decay_t<U>, U> && std::is_invocable_r_v<U, F, const T &>)
 		{
-			const auto l = detail::scoped_lock{*m_data};
 			m_data->convs.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>(std::forward<F>(conv)));
 			return *this;
 		}
@@ -109,7 +105,6 @@ namespace reflex
 		template<typename U>
 		type_factory &make_convertible() requires (std::same_as<std::decay_t<U>, U> && std::convertible_to<T, U>)
 		{
-			const auto l = detail::scoped_lock{*m_data};
 			m_data->convs.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>());
 			return *this;
 		}
@@ -120,7 +115,6 @@ namespace reflex
 		template<typename U>
 		type_factory &make_comparable() requires (std::same_as<std::decay_t<U>, U> && (std::equality_comparable_with<T, U> || std::three_way_comparable_with<T, U>))
 		{
-			const auto l = detail::scoped_lock{*m_data};
 			m_data->cmps.emplace_or_replace(type_name_v<U>, detail::make_type_cmp<T, U>());
 			return *this;
 		}
@@ -129,9 +123,7 @@ namespace reflex
 		template<typename... Ts, typename... Args>
 		void add_ctor(Args &&...args)
 		{
-			const auto l = detail::scoped_lock{*m_data};
-
-			const auto expected = detail::make_arg_list<Args...>();
+			const auto expected = detail::make_argument_view<Args...>();
 			if (auto existing = m_data->find_exact_ctor(expected); existing == nullptr)
 				m_data->ctors.emplace_back(detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...));
 			else

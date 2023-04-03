@@ -41,9 +41,11 @@ namespace reflex
 	template<typename...>
 	class type_query;
 
+	class constructor_view;
+	class constructor_info;
+	class argument_info;
+	class argument_view;
 	class type_info;
-	class arg_info;
-	class arg_list;
 	class object;
 	class any;
 

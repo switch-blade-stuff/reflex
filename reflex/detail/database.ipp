@@ -26,11 +26,7 @@ namespace reflex::detail
 		const auto l = detail::scoped_lock{*this};
 		for (auto &[_, entry]: m_types) reset(entry);
 	}
-	void database_impl::reset(type_data &data)
-	{
-		const auto l = detail::scoped_lock{data};
-		data.reset(*this);
-	}
+	void database_impl::reset(type_data &data) { data.reset(*this); }
 	void database_impl::reset(std::string_view name)
 	{
 		const auto l = detail::scoped_lock{*this};

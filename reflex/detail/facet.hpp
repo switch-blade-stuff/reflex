@@ -258,7 +258,6 @@ namespace reflex
 	template<typename... Ts>
 	void type_factory<T>::add_facet(type_pack_t<Ts...>, const std::tuple<const typename Ts::vtable_type *...> &vt)
 	{
-		const auto l = detail::scoped_lock{*m_data};
 		(m_data->vtabs.emplace_or_replace(type_name_v<Ts>, std::get<const typename Ts::vtable_type *>(vt)), ...);
 	}
 

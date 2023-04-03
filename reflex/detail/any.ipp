@@ -41,7 +41,6 @@ namespace reflex
 	void *any::base_cast(std::string_view base_name) const
 	{
 		const auto data = type_data();
-		const auto l = detail::shared_scoped_lock{*data};
 
 		/* If `type` is an immediate base of `this`, attempt to cast through that. */
 		if (const auto *base = data->find_base(base_name, *m_db); base != nullptr)
@@ -60,7 +59,6 @@ namespace reflex
 	any any::value_conv(std::string_view base_name) const
 	{
 		const auto data = type_data();
-		const auto l = detail::shared_scoped_lock{*data};
 
 		/* If `this` is directly convertible to `name`, use the existing conversion. */
 		if (const auto *conv = data->find_conv(base_name, *m_db); conv != nullptr)
@@ -91,7 +89,6 @@ namespace reflex
 		const auto other_type = other.type();
 		const auto this_type = type();
 
-		const auto l = detail::shared_scoped_lock{*this_type.m_data, *other_type.m_data};
 		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
 		{
 			if (cmp->cmp_eq != nullptr)
@@ -106,7 +103,6 @@ namespace reflex
 		const auto other_type = other.type();
 		const auto this_type = type();
 
-		const auto l = detail::shared_scoped_lock{*this_type.m_data, *other_type.m_data};
 		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
 		{
 			if (cmp->cmp_ne != nullptr)
@@ -121,7 +117,6 @@ namespace reflex
 		const auto other_type = other.type();
 		const auto this_type = type();
 
-		const auto l = detail::shared_scoped_lock{*this_type.m_data, *other_type.m_data};
 		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
 		{
 			if (cmp->cmp_ge != nullptr)
@@ -138,7 +133,6 @@ namespace reflex
 		const auto other_type = other.type();
 		const auto this_type = type();
 
-		const auto l = detail::shared_scoped_lock{*this_type.m_data, *other_type.m_data};
 		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
 		{
 			if (cmp->cmp_le != nullptr)
@@ -155,7 +149,6 @@ namespace reflex
 		const auto other_type = other.type();
 		const auto this_type = type();
 
-		const auto l = detail::shared_scoped_lock{*this_type.m_data, *other_type.m_data};
 		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
 		{
 			if (cmp->cmp_gt != nullptr)
@@ -172,7 +165,6 @@ namespace reflex
 		const auto other_type = other.type();
 		const auto this_type = type();
 
-		const auto l = detail::shared_scoped_lock{*this_type.m_data, *other_type.m_data};
 		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
 		{
 			if (cmp->cmp_lt != nullptr)
