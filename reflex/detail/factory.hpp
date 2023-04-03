@@ -29,6 +29,14 @@ namespace reflex
 		/** Returns the underlying type initialized by this type factory. */
 		[[nodiscard]] constexpr type_info type() const noexcept { return {m_data, m_db}; }
 
+		/** Adds an attribute of type \a A constructed from arguments \a args to the underlying type info. */
+		template<typename A, typename... Args>
+		type_factory &attribute(Args &&...args) requires (std::same_as<std::decay_t<A>, A> && std::constructible_from<A, Args...>)
+		{
+			const auto l = detail::scoped_lock{*m_data};
+			m_data->attrs.emplace_or_replace(type_name_v<A>, type(), std::in_place_type<T>, std::forward<Args>(args)...);
+			return *this;
+		}
 		/** Adds enumeration constant named \a name constructed from arguments \a args to the underlying type info. */
 		template<typename... Args>
 		type_factory &enumerate(std::string_view name, Args &&...args) requires std::constructible_from<T, Args...>
@@ -41,31 +49,31 @@ namespace reflex
 		template<auto Value>
 		type_factory &enumerate(std::string_view name) { return enumerate(name, Value); }
 
+		/** Implements facet \a F for the underlying type info.
+		 * `impl_facet<F, T>` must be well-defined and have static member constant `value` of type `F::vtable_type`. */
+		template<typename F>
+		inline type_factory &implement_facet();
+		/** Implements facet \a F for the underlying type info using facet vtable \a vtab.
+		 * @param vtab Reference to facet vtable for facet \a F. */
+		template<typename F>
+		inline type_factory &implement_facet(const typename F::vtable_type &vtab);
+
+		/** Implements all facets in facet group \a G for the underlying type info.
+		 * `impl_facet<F, T>` must be well-defined and have static member constant `value` of type `F::vtable_type`
+		 * for every facet type `F` in facet group \a G. */
+		template<template_instance<facets::facet_group> G>
+		inline type_factory &implement_facet();
+		/** Implements all facets in facet group \a G for the underlying type info using group vtable \a vtab.
+		 * @param vtab Tuple of vtables of the individual facet types in facet group \a G. */
+		template<template_instance<facets::facet_group> G>
+		inline type_factory &implement_facet(const typename G::vtable_type &vtab);
+
 		/** Adds base type \a U to the list of bases of the underlying type info. */
 		template<typename U>
 		type_factory &add_parent() requires std::derived_from<T, U>
 		{
 			const auto l = detail::scoped_lock{*m_data};
 			m_data->bases.emplace_or_replace(type_name_v<U>, detail::make_type_base<T, U>());
-			return *this;
-		}
-
-		/** Makes the underlying type info convertible to \a U using conversion functor \a conv.
-		 * @note Conversion to the underlying type of enums is added by default when available. */
-		template<typename U, typename F>
-		type_factory &make_convertible(F &&conv) requires (std::invocable<F, const T &> && std::constructible_from<U, std::invoke_result_t<F, const T &>>)
-		{
-			const auto l = detail::scoped_lock{*m_data};
-			m_data->convs.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>(std::forward<F>(conv)));
-			return *this;
-		}
-		/** Makes the underlying type info convertible to \a U using `static_cast<U>(value)`.
-		 * @note Conversion to the underlying type of enums is added by default when available. */
-		template<typename U>
-		type_factory &make_convertible() requires (std::convertible_to<T, U> && std::same_as<std::decay_t<U>, U>)
-		{
-			const auto l = detail::scoped_lock{*m_data};
-			m_data->convs.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>());
 			return *this;
 		}
 
@@ -87,35 +95,35 @@ namespace reflex
 			return *this;
 		}
 
+		/** Makes the underlying type info convertible to \a U using conversion functor \a conv.
+		 * @note Conversion to the underlying type of enums is added by default when available. */
+		template<typename U, typename F>
+		type_factory &make_convertible(F &&conv) requires (std::same_as<std::decay_t<U>, U> && std::is_invocable_r_v<U, F, const T &>)
+		{
+			const auto l = detail::scoped_lock{*m_data};
+			m_data->convs.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>(std::forward<F>(conv)));
+			return *this;
+		}
+		/** Makes the underlying type info convertible to \a U using `static_cast<U>(value)`.
+		 * @note Conversion to the underlying type of enums is added by default when available. */
+		template<typename U>
+		type_factory &make_convertible() requires (std::same_as<std::decay_t<U>, U> && std::convertible_to<T, U>)
+		{
+			const auto l = detail::scoped_lock{*m_data};
+			m_data->convs.emplace_or_replace(type_name_v<U>, detail::make_type_conv<T, U>());
+			return *this;
+		}
+
 		/** Makes the underlying type info comparable with objects of type \a U.
 		 * @note Types \a T and \a U must be three-way and/or equality comparable.
 		 * @note Comparison with the underlying type of enums is added by default when available. */
 		template<typename U>
-		type_factory &make_comparable() requires ((std::equality_comparable_with<T, U> || std::three_way_comparable_with<T, U>) && std::same_as<std::decay_t<U>, U>)
+		type_factory &make_comparable() requires (std::same_as<std::decay_t<U>, U> && (std::equality_comparable_with<T, U> || std::three_way_comparable_with<T, U>))
 		{
 			const auto l = detail::scoped_lock{*m_data};
 			m_data->cmps.emplace_or_replace(type_name_v<U>, detail::make_type_cmp<T, U>());
 			return *this;
 		}
-
-		/** Implements facet \a F for the underlying type info.
-		 * `impl_facet<F, T>` must be well-defined and have static member constant `value` of type `F::vtable_type`. */
-		template<typename F>
-		inline type_factory &implement_facet();
-		/** Implements facet \a F for the underlying type info using facet vtable \a vtab.
-		 * @param vtab Reference to facet vtable for facet \a F. */
-		template<typename F>
-		inline type_factory &implement_facet(const typename F::vtable_type &vtab);
-
-		/** Implements all facets in facet group \a G for the underlying type info.
-		 * `impl_facet<F, T>` must be well-defined and have static member constant `value` of type `F::vtable_type`
-		 * for every facet type `F` in facet group \a G. */
-		template<template_instance<facets::facet_group> G>
-		inline type_factory &implement_facet();
-		/** Implements all facets in facet group \a G for the underlying type info using group vtable \a vtab.
-		 * @param vtab Tuple of vtables of the individual facet types in facet group \a G. */
-		template<template_instance<facets::facet_group> G>
-		inline type_factory &implement_facet(const typename G::vtable_type &vtab);
 
 	private:
 		template<typename... Ts, typename... Args>
