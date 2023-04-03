@@ -25,7 +25,7 @@ int main()
 	TEST_ASSERT(!str1.empty() && str1.get<std::string>() == str_val);
 	TEST_ASSERT(str0 == str1);
 
-	const auto str2 = str_ti.construct(str_val.data(), 12);
+	const auto str2 = str_ti.construct(str_val.data(), str_val.size());
 	TEST_ASSERT(!str2.empty() && str2.get<std::string>() == str_val);
 	TEST_ASSERT(str0 == str2);
 	TEST_ASSERT(str1 == str2);
