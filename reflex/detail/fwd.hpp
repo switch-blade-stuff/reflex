@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <concepts>
 #include <ranges>
 #include <span>
 

@@ -312,7 +312,7 @@ namespace reflex
 				}
 			}
 
-			bool walk_bases(database_impl &db, auto &&p) const { return std::ranges::any_of(bases, [&](auto &&e) { return p(e.second.type(db)); }); }
+			bool walk_bases(database_impl &db, auto &&p) const { return std::any_of(bases.begin(), bases.end(), [&](auto &&e) { return p(e.second.type(db)); }); }
 
 			[[nodiscard]] any *find_attr(std::string_view name)
 			{
