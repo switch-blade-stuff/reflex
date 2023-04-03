@@ -437,36 +437,11 @@ namespace reflex
 		[[nodiscard]] REFLEX_PUBLIC bool operator<(const any &other) const;
 
 	private:
-		/* Flags are stored within the type data pointer. */
-		const detail::type_data *type_data(const detail::type_data *ptr) noexcept
-		{
-			const auto old_value = m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX);
-			const auto old_flags = static_cast<std::uintptr_t>(m_data_ptr_flags & detail::ANY_FAGS_MAX);
-			m_data_ptr_flags = std::bit_cast<std::uintptr_t>(ptr) | old_flags;
-			return std::bit_cast<const detail::type_data *>(old_value);
-		}
-		[[nodiscard]] const detail::type_data *type_data() const noexcept
-		{
-			return std::bit_cast<const detail::type_data *>(m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX));
-		}
-
 		type_info type(type_info value) noexcept
 		{
 			const auto old_data = type_data(value.m_data);
 			const auto old_db = std::exchange(m_db, value.m_db);
 			return {old_data, old_db};
-		}
-
-		detail::type_flags flags(detail::type_flags value) noexcept
-		{
-			const auto old_value = static_cast<detail::type_flags>(m_data_ptr_flags) & detail::ANY_FAGS_MAX;
-			const auto old_intptr = (m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX));
-			m_data_ptr_flags = old_intptr | static_cast<std::uintptr_t>(value);
-			return old_value;
-		}
-		[[nodiscard]] detail::type_flags flags() const noexcept
-		{
-			return static_cast<detail::type_flags>(m_data_ptr_flags & detail::ANY_FAGS_MAX);
 		}
 
 		[[nodiscard]] void *local() noexcept { return m_storage.bytes; }
@@ -540,7 +515,44 @@ namespace reflex
 		[[nodiscard]] REFLEX_PUBLIC void *base_cast(std::string_view) const;
 		[[nodiscard]] REFLEX_PUBLIC any value_conv(std::string_view) const;
 
+#ifdef NDEBUG
+		/* Flags are stored within the type data pointer. */
+		const detail::type_data *type_data(const detail::type_data *ptr) noexcept
+		{
+			const auto old_value = m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX);
+			const auto old_flags = static_cast<std::uintptr_t>(m_data_ptr_flags & detail::ANY_FAGS_MAX);
+			m_data_ptr_flags = std::bit_cast<std::uintptr_t>(ptr) | old_flags;
+			return std::bit_cast<const detail::type_data *>(old_value);
+		}
+		[[nodiscard]] const detail::type_data *type_data() const noexcept
+		{
+			return std::bit_cast<const detail::type_data *>(m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX));
+		}
+
+		detail::type_flags flags(detail::type_flags value) noexcept
+		{
+			const auto old_value = static_cast<detail::type_flags>(m_data_ptr_flags) & detail::ANY_FAGS_MAX;
+			const auto old_intptr = (m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX));
+			m_data_ptr_flags = old_intptr | static_cast<std::uintptr_t>(value);
+			return old_value;
+		}
+		[[nodiscard]] detail::type_flags flags() const noexcept
+		{
+			return static_cast<detail::type_flags>(m_data_ptr_flags & detail::ANY_FAGS_MAX);
+		}
+
 		std::uintptr_t m_data_ptr_flags = 0;
+#else
+		const detail::type_data *type_data(const detail::type_data *ptr) noexcept { return std::exchange(m_type, ptr); }
+		[[nodiscard]] const detail::type_data *type_data() const noexcept { return m_type; }
+
+		detail::type_flags flags(detail::type_flags value) noexcept { return std::exchange(m_flags, value); }
+		[[nodiscard]] detail::type_flags flags() const noexcept { return m_flags; }
+
+		const detail::type_data *m_type = nullptr;
+		detail::type_flags m_flags = {};
+#endif
+
 		detail::database_impl *m_db = nullptr;
 		storage_t m_storage;
 	};
@@ -566,6 +578,13 @@ namespace reflex
 	/** Returns an `any` owning an instance of \a T constructed with arguments \a args. */
 	template<typename T, typename... Args>
 	[[nodiscard]] inline any make_any(Args &&...args) { return any{std::in_place_type<T>, std::forward<Args>(args)...}; }
+
+	template<typename T>
+	any type_info::attribute() const { return attribute(type_name_v<std::decay_t<T>>); }
+	any type_info::attribute(type_info type) const { return attribute(type.name()); }
+
+	template<typename T>
+	bool type_info::has_enumeration(T &&value) const { return has_enumeration(forward_any(std::forward<T>(value))); }
 
 	template<std::size_t N>
 	any type_info::construct(std::span<any, N> args) const { return construct(std::span<any>{args}); }

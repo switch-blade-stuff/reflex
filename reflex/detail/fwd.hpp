@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ranges>
 #include <span>
 
 #define TPP_STL_HASH_ALL
@@ -36,7 +37,12 @@ namespace reflex
 	template<typename T>
 	struct type_init;
 
+	template<typename...>
+	class type_query;
+
 	class type_info;
+	class arg_info;
+	class arg_list;
 	class object;
 	class any;
 
@@ -54,20 +60,21 @@ namespace reflex
 		{
 			using is_transparent = std::true_type;
 
-			[[nodiscard]] std::size_t operator()(const std::string &a, const std::string &b) const { return a == b; }
-			[[nodiscard]] std::size_t operator()(const std::string_view &a, const std::string_view &b) const { return a == b; }
-			[[nodiscard]] std::size_t operator()(const std::string &a, const std::string_view &b) const { return std::string_view{a} == b; }
-			[[nodiscard]] std::size_t operator()(const std::string_view &a, const std::string &b) const { return a == std::string_view{b}; }
+			[[nodiscard]] bool operator()(const std::string &a, const std::string &b) const { return a == b; }
+			[[nodiscard]] bool operator()(const std::string_view &a, const std::string_view &b) const { return a == b; }
+			[[nodiscard]] bool operator()(const std::string &a, const std::string_view &b) const { return std::string_view{a} == b; }
+			[[nodiscard]] bool operator()(const std::string_view &a, const std::string &b) const { return a == std::string_view{b}; }
 
-			[[nodiscard]] inline std::size_t operator()(const type_info &a, const type_info &b) const;
-			[[nodiscard]] inline std::size_t operator()(const std::string &a, const type_info &b) const;
-			[[nodiscard]] inline std::size_t operator()(const type_info &a, const std::string &b) const;
-			[[nodiscard]] inline std::size_t operator()(const type_info &a, const std::string_view &b) const;
-			[[nodiscard]] inline std::size_t operator()(const std::string_view &a, const type_info &b) const;
+			[[nodiscard]] inline bool operator()(const type_info &a, const type_info &b) const;
+			[[nodiscard]] inline bool operator()(const std::string &a, const type_info &b) const;
+			[[nodiscard]] inline bool operator()(const type_info &a, const std::string &b) const;
+			[[nodiscard]] inline bool operator()(const type_info &a, const std::string_view &b) const;
+			[[nodiscard]] inline bool operator()(const std::string_view &a, const type_info &b) const;
 		};
 
-		using enum_map = tpp::dense_map<std::string_view, any>;
 		using type_set = tpp::dense_set<type_info, detail::type_hash, detail::type_eq>;
+		using enum_map = tpp::dense_map<std::string_view, any>;
+		using attr_map = tpp::dense_map<type_info, any>;
 
 		enum type_flags
 		{
@@ -102,12 +109,10 @@ namespace reflex
 
 		struct database_impl;
 		struct any_funcs_t;
-		struct type_base;
 		struct arg_data;
+		struct type_base;
 		struct type_ctor;
-		struct type_dtor;
 		struct type_conv;
-		struct type_prop;
 		struct type_data;
 
 		using base_cast = const void *(*)(const void *) noexcept;

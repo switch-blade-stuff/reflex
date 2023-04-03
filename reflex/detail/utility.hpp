@@ -164,7 +164,7 @@ namespace reflex
 	using template_pack_t = typename detail::impl_template_pack<T>::type;
 	/** Instance of `template_pack_t<T>`. */
 	template<typename T>
-	inline constexpr auto template_pack = template_pack<T>{};
+	inline constexpr auto template_pack = template_pack_t<T>{};
 
 	namespace detail
 	{

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "object.hpp"
+#include "query.hpp"
 
 namespace reflex
 {
@@ -238,7 +239,7 @@ namespace reflex
 	template<typename F>
 	type_factory<T> &type_factory<T>::implement_facet(const typename F::vtable_type &vtab)
 	{
-		add_facet(type_pack<T>, std::make_tuple(&vtab));
+		add_facet(type_pack<F>, std::make_tuple(&vtab));
 		return *this;
 	}
 
@@ -258,49 +259,30 @@ namespace reflex
 	void type_factory<T>::add_facet(type_pack_t<Ts...>, const std::tuple<const typename Ts::vtable_type *...> &vt)
 	{
 		const auto l = detail::scoped_lock{*m_data};
-		(m_data->facets.emplace_or_replace(type_name_v<Ts>, std::get<const typename Ts::vtable_type *>(vt)), ...);
+		(m_data->vtabs.emplace_or_replace(type_name_v<Ts>, std::get<const typename Ts::vtable_type *>(vt)), ...);
 	}
 
-	namespace detail
-	{
-		template<typename V>
-		inline bool has_vtable(type_pack_t<V>, const type_data *type) { return type->find_facet(type_name_v<V>); }
-		template<typename... Vs>
-		inline bool has_vtable(type_pack_t<std::tuple<const Vs *...>>, const type_data *type) { return (type->find_facet(type_name_v<Vs>) && ...); }
-	}
-
-	template<typename T>
-	bool type_info::implements_facet() const noexcept { return detail::has_vtable(type_pack<typename T::vtable_type>, m_data); }
+	template<typename F>
+	F type_info::facet(const any &obj) const { return F{obj, get_vtab<F>()}; }
+	template<typename F>
+	F type_info::facet(any &&obj) const { return F{std::move(obj), get_vtab<F>()}; }
 	template<template_instance<facets::facet_group> G>
-	bool type_info::implements_facet() const noexcept { return detail::has_vtable(type_pack<typename G::vtable_type>, m_data); }
+	G type_info::facet(const any &obj) const { return G{obj, get_vtab(template_pack<G>)}; }
+	template<template_instance<facets::facet_group> G>
+	G type_info::facet(any &&obj) const { return G{std::move(obj), get_vtab(template_pack<G>)}; }
 
-	namespace detail
+	template<template_instance<facets::facet_group> G>
+	bool type_info::implements_facet() const
 	{
-		template<typename V>
-		inline void get_vtable(const V *&vtab, const type_data *type) { vtab = static_cast<const V *>(type->find_facet(type_name_v<V>)); }
-		template<typename... Vs>
-		inline void get_vtable(std::tuple<const Vs *...> &vtab, const type_data *type) { (get_vtable(std::get<const Vs *>(vtab), type), ...); }
-
-		template<typename F>
-		[[nodiscard]] inline F make_facet(auto &any_obj, const type_data *type)
+		const auto check_vtabs = [&]<typename... Ts>(type_pack_t<Ts...>)
 		{
-			if constexpr (template_instance<F, facets::facet_group>)
-			{
-				typename F::vtable_type vtab = {};
-				get_vtable(vtab, type);
-				return F{any_obj.ref(), vtab};
-			}
-			else
-			{
-				const typename F::vtable_type *vtab = {};
-				get_vtable(vtab, type);
-				return F{any_obj.ref(), vtab};
-			}
-		}
+			return (implements_facet<Ts>() && ...);
+		};
+		return check_vtabs(template_pack<typename G::vtable_type>);
 	}
 
 	template<typename F>
-	F any::facet() { return detail::make_facet<F>(*this, type_data()); }
+	F any::facet() { return type().facet<F>(ref()); }
 	template<typename F>
-	F any::facet() const { return detail::make_facet<F>(*this, type_data()); }
+	F any::facet() const { return type().facet<F>(ref()); }
 }

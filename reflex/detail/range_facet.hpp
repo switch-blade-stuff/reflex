@@ -35,6 +35,7 @@ namespace reflex::facets
 
 		public:
 			using difference_type = std::ptrdiff_t;
+			using iterator_category = std::input_iterator_tag;
 
 		private:
 			template<basic_const_string Name>
@@ -88,14 +89,14 @@ namespace reflex::facets
 			}
 
 			/** Post-increments the underlying iterator by 1. */
-			[[nodiscard]] any_iterator operator++(int)
+			any_iterator operator++(int)
 			{
 				assert_vtable<"iterator iterator::operator++(int)">(m_vtable->iter_post_inc);
 				return {m_vtable, m_vtable->iter_post_inc(m_value)};
 			}
 			/** Post-decrements the underlying iterator by 1.
 			 * @throw bad_facet_function If the underlying iterator type is not a bidirectional iterator. */
-			[[nodiscard]] any_iterator operator--(int)
+			any_iterator operator--(int)
 			{
 				assert_vtable<"iterator iterator::operator--(int)">(m_vtable->iter_post_dec);
 				return {m_vtable, m_vtable->iter_post_dec(m_value)};

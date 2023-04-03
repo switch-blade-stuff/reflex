@@ -17,13 +17,14 @@ namespace reflex
 	{
 		std::size_t type_hash::operator()(const type_info &value) const { return tpp::seahash_hash<type_info>{}(value); }
 
-		std::size_t type_eq::operator()(const type_info &a, const type_info &b) const { return a == b; }
-		std::size_t type_eq::operator()(const std::string &a, const type_info &b) const { return std::string_view{a} == b; }
-		std::size_t type_eq::operator()(const type_info &a, const std::string &b) const { return a == std::string_view{b}; }
-		std::size_t type_eq::operator()(const type_info &a, const std::string_view &b) const { return a == b; }
-		std::size_t type_eq::operator()(const std::string_view &a, const type_info &b) const { return a == b; }
+		bool type_eq::operator()(const type_info &a, const type_info &b) const { return a == b; }
+		bool type_eq::operator()(const std::string &a, const type_info &b) const { return std::string_view{a} == b; }
+		bool type_eq::operator()(const type_info &a, const std::string &b) const { return a == std::string_view{b}; }
+		bool type_eq::operator()(const type_info &a, const std::string_view &b) const { return a == b; }
+		bool type_eq::operator()(const std::string_view &a, const type_info &b) const { return a == b; }
 
-		using facet_table = tpp::dense_map<std::string_view, const void *>;
+		using vtab_table = tpp::dense_map<std::string_view, const void *>;
+		using attr_table = tpp::dense_map<std::string_view, any, type_hash, type_eq>;
 		using enum_table = tpp::dense_map<std::string, any, type_hash, type_eq>;
 
 		struct type_base
@@ -51,13 +52,15 @@ namespace reflex
 			template<typename From, typename To, typename F>
 			type_conv(std::in_place_type_t<From>, std::in_place_type_t<To>, F &&conv)
 			{
-				conv_func = [f = std::forward<F>(conv)](const void *data)
+				func = [f = std::forward<F>(conv)](const void *data)
 				{
 					return make_any<To>(std::invoke(f, *static_cast<const From *>(data)));
 				};
 			}
 
-			std::function<any(const void *)> conv_func;
+			[[nodiscard]] any operator()(const void *data) const { return func(data); }
+
+			std::function<any(const void *)> func;
 		};
 
 		using conv_table = tpp::dense_map<std::string_view, type_conv>;
@@ -75,33 +78,52 @@ namespace reflex
 
 		struct arg_data
 		{
-			/* Return false when types are not compatible, or mutable ref is required, but got a constant. */
-			[[nodiscard]] static bool is_invocable(const arg_data &a, const any &b) noexcept { return (!b.is_const() || (a.flags & (IS_CONST | IS_VALUE))) && b.type().compatible_with(a.type); }
-			/* Return false when types don't exactly match, or mutable ref is required, but got a constant. */
-			[[nodiscard]] static bool is_exact_invocable(const arg_data &a, const any &b) noexcept { return (!b.is_const() || (a.flags & (IS_CONST | IS_VALUE))) && b.type().name() == a.type; }
+			[[nodiscard]] static bool match_exact(const auto &a, const auto &b)
+			{
+				return std::ranges::equal(a, b, [](auto &&a, auto &&b) { return a == b; });
+			}
+			[[nodiscard]] static bool match_compatible(const auto &a, const auto &b, database_impl &db)
+			{
+				return std::ranges::equal(a, b, [&](auto &&a, auto &&b) { return a.compatible(b, db); });
+			}
 
 			constexpr arg_data() noexcept = default;
-			constexpr arg_data(std::string_view type, type_flags flags) noexcept : type(type), flags(flags) {}
+			template<typename T>
+			constexpr arg_data(std::in_place_type_t<T>) noexcept : type_name(type_name_v<std::decay_t<T>>), type(make_type_data<std::decay_t<T>>)
+			{
+				if constexpr (!std::is_lvalue_reference_v<T>) flags |= IS_VALUE;
+				if constexpr (std::is_const_v<std::remove_reference_t<T>>) flags |= IS_CONST;
+			}
 
-			[[nodiscard]] constexpr bool operator==(const arg_data &other) const noexcept { return type == other.type && flags == other.flags; }
+			[[nodiscard]] inline bool compatible(const any &other, database_impl &db) const;
+			[[nodiscard]] inline bool compatible(const arg_data &other, database_impl &db) const;
 
-			std::string_view type;
+			[[nodiscard]] friend constexpr bool operator==(const arg_data &a, const any &b) noexcept
+			{
+				return a.type_name == b.type().name() && static_cast<int>(a.flags) == ((b.is_ref() << 1) | b.is_const());
+			}
+			[[nodiscard]] friend constexpr bool operator==(const arg_data &a, const arg_data &b) noexcept
+			{
+				return a.type_name == b.type_name && a.flags == b.flags;
+			}
+
+			std::string_view type_name;
+			type_handle type = {};
 			type_flags flags = {};
 		};
 
 		template<typename T>
-		[[nodiscard]] constexpr static arg_data make_arg_data() noexcept
-		{
-			type_flags flags = {};
-			if constexpr (std::is_const_v<std::remove_reference_t<T>>) flags |= IS_CONST;
-			if constexpr (!std::is_reference_v<T>) flags |= IS_VALUE;
-			return {type_name_v<std::decay_t<T>>, flags};
-		}
-
+		[[nodiscard]] constexpr static arg_data make_arg_data() noexcept { return arg_data{std::in_place_type<T>}; }
 		template<typename... Ts>
-		struct arg_list { constexpr static auto value = std::array{make_arg_data<Ts>()...}; };
-		template<>
-		struct arg_list<> { constexpr static std::span<const arg_data> value = {}; };
+		[[nodiscard]] inline static std::span<const arg_data> make_arg_list() noexcept
+		{
+			if constexpr (sizeof...(Ts) != 0)
+			{
+				constinit static auto value = std::array{make_arg_data<Ts>()...};
+				return {value};
+			}
+			return {};
+		}
 
 		struct type_ctor
 		{
@@ -118,7 +140,7 @@ namespace reflex
 
 			type_ctor() noexcept = default;
 			template<typename T, typename... Ts, typename F>
-			type_ctor(std::in_place_type_t<T>, type_pack_t<Ts...>, F &&func) : args(arg_list<Ts...>::value)
+			type_ctor(std::in_place_type_t<T>, type_pack_t<Ts...>, F &&func) : args(make_arg_list<Ts...>())
 			{
 				this->func = [f = std::forward<F>(func)](std::span<any> any_args) -> any
 				{
@@ -126,8 +148,10 @@ namespace reflex
 				};
 			}
 
-			std::span<const arg_data> args;
+			[[nodiscard]] any operator()(std::span<any> arg_vals) const { return func(arg_vals); }
+
 			std::function<any(std::span<any>)> func;
+			std::span<const arg_data> args;
 		};
 
 		template<typename T, typename... Ts, typename F>
@@ -198,91 +222,25 @@ namespace reflex
 		/* Mutable type data initialized at runtime. Requires spinlock, as it can be modified at runtime. */
 		struct dynamic_type_data : shared_spinlock
 		{
-			[[nodiscard]] const void *find_facet(std::string_view type) const
-			{
-				if (auto iter = facets.find(type); iter != facets.end())
-					return iter->second;
-				else
-					return nullptr;
-			}
-			[[nodiscard]] const type_base *find_base(std::string_view type) const
-			{
-				if (auto iter = bases.find(type); iter != bases.end())
-					return &iter->second;
-				else
-					return nullptr;
-			}
-
-			[[nodiscard]] type_ctor *find_ctor(std::span<const arg_data> args)
-			{
-				for (auto &ctor: ctors) if (std::ranges::equal(ctor.args, args)) return &ctor;
-				return nullptr;
-			}
-			[[nodiscard]] const type_ctor *find_ctor(std::span<const arg_data> args) const
-			{
-				for (auto &ctor: ctors) if (std::ranges::equal(ctor.args, args)) return &ctor;
-				return nullptr;
-			}
-			[[nodiscard]] const type_ctor *find_ctor(std::span<const any> args) const
-			{
-				const auto exact_pred = [&](const type_ctor &ctor)
-				{
-					if (ctor.args.size() != args.size()) return false;
-					for (std::size_t i = 0; i < ctor.args.size() && i < args.size(); ++i)
-					{
-						if (!arg_data::is_exact_invocable(ctor.args[i], args[i]))
-							return false;
-					}
-					return true;
-				};
-				const auto compat_pred = [&](const type_ctor &ctor)
-				{
-					if (ctor.args.size() != args.size()) return false;
-					for (std::size_t i = 0; i < ctor.args.size() && i < args.size(); ++i)
-					{
-						if (!arg_data::is_invocable(ctor.args[i], args[i]))
-							return false;
-					}
-					return true;
-				};
-
-				/* First search for exact matches, then search for matches with conversion. */
-				for (const auto &ctor: ctors) if (exact_pred(ctor)) return &ctor;
-				for (const auto &ctor: ctors) if (compat_pred(ctor)) return &ctor;
-				return nullptr;
-			}
-
-			[[nodiscard]] const type_conv *find_conv(std::string_view type) const
-			{
-				if (auto iter = convs.find(type); iter != convs.end())
-					return &iter->second;
-				else
-					return nullptr;
-			}
-			[[nodiscard]] const type_cmp *find_cmp(std::string_view type) const
-			{
-				if (auto iter = cmps.find(type); iter != cmps.end())
-					return &iter->second;
-				else
-					return nullptr;
-			}
-
 			void clear()
 			{
-				facets.clear();
-				enums.clear();
+				attrs.clear();
+				vtabs.clear();
 				bases.clear();
+				enums.clear();
 				ctors.clear();
 				convs.clear();
 				cmps.clear();
 			}
 
+			/* Attribute constants. */
+			attr_table attrs;
 			/* Enumeration constants. */
 			enum_table enums;
+			/* Facet vtables. */
+			vtab_table vtabs;
 			/* Base types. */
 			base_table bases;
-			/* Facet vtables. */
-			facet_table facets;
 
 			/* Type constructors. */
 			std::list<type_ctor> ctors;
@@ -294,6 +252,9 @@ namespace reflex
 		/* Type data that can be constexpr-initialized. */
 		struct constant_type_data
 		{
+			template<typename T>
+			constexpr constant_type_data(std::in_place_type_t<T>) noexcept;
+
 			/* `type_data` initialization function. */
 			void (type_data::*init_func)(database_impl &) = nullptr;
 			/* `any` initialization functions. */
@@ -348,6 +309,138 @@ namespace reflex
 				}
 			}
 
+			bool walk_bases(database_impl &db, auto &&p) const { return std::ranges::any_of(bases, [&](auto &&e) { return p(e.second.type(db)); }); }
+
+			[[nodiscard]] any *find_attr(std::string_view name)
+			{
+				const auto pos = attrs.find(name);
+				return pos != attrs.end() ? &pos->second : nullptr;
+			}
+			[[nodiscard]] const any *find_attr(std::string_view name) const
+			{
+				const auto pos = attrs.find(name);
+				return pos != attrs.end() ? &pos->second : nullptr;
+			}
+
+			[[nodiscard]] const void *find_vtab(std::string_view name, database_impl &db) const
+			{
+				auto pos = vtabs.find(name);
+				if (pos != vtabs.end()) return pos->second;
+
+				const auto pred = [&](const auto *t) { return (pos = t->vtabs.find(name)) != t->vtabs.end(); };
+				return walk_bases(db, pred) ? pos->second : nullptr;
+			}
+
+			[[nodiscard]] type_base *find_base(std::string_view name, database_impl &db)
+			{
+				auto pos = bases.find(name);
+				if (pos != bases.end()) return &pos->second;
+
+				const auto pred = [&](auto *t) { return (pos = t->bases.find(name)) != t->bases.end(); };
+				return walk_bases(db, pred) ? &pos->second : nullptr;
+			}
+			[[nodiscard]] const type_base *find_base(std::string_view name, database_impl &db) const
+			{
+				auto pos = bases.find(name);
+				if (pos != bases.end()) return &pos->second;
+
+				const auto pred = [&](const auto *t) { return (pos = t->bases.find(name)) != t->bases.end(); };
+				return walk_bases(db, pred) ? &pos->second : nullptr;
+			}
+
+			[[nodiscard]] any *find_enum(const any &value)
+			{
+				const auto pos = std::ranges::find_if(enums, [&](auto &&e) { return e.second == value; });
+				return pos != enums.end() ? &pos->second : nullptr;
+			}
+			[[nodiscard]] const any *find_enum(const any &value) const
+			{
+				const auto pos = std::ranges::find_if(enums, [&](auto &&e) { return e.second == value; });
+				return pos != enums.end() ? &pos->second : nullptr;
+			}
+			[[nodiscard]] any *find_enum(std::string_view name)
+			{
+				const auto pos = enums.find(name);
+				return pos != enums.end() ? &pos->second : nullptr;
+			}
+			[[nodiscard]] const any *find_enum(std::string_view name) const
+			{
+				const auto pos = enums.find(name);
+				return pos != enums.end() ? &pos->second : nullptr;
+			}
+
+			[[nodiscard]] type_ctor *find_exact_ctor(const auto &args)
+			{
+				for (auto &ctor: ctors)
+				{
+					if (arg_data::match_exact(ctor.args, args))
+						return &ctor;
+				}
+				return nullptr;
+			}
+			[[nodiscard]] const type_ctor *find_exact_ctor(const auto &args) const
+			{
+				for (auto &ctor: ctors)
+				{
+					if (arg_data::match_exact(ctor.args, args))
+						return &ctor;
+				}
+				return nullptr;
+			}
+
+			[[nodiscard]] type_ctor *find_ctor(const auto &args, database_impl &db)
+			{
+				type_ctor *candidate = nullptr;
+				for (auto &ctor: ctors)
+				{
+					if (arg_data::match_exact(ctor.args, args))
+						return &ctor;
+					if (arg_data::match_compatible(ctor.args, args, db))
+						candidate = &ctor;
+				}
+				return candidate;
+			}
+			[[nodiscard]] const type_ctor *find_ctor(const auto &args, database_impl &db) const
+			{
+				const type_ctor *candidate = nullptr;
+				for (auto &ctor: ctors)
+				{
+					if (arg_data::match_exact(ctor.args, args))
+						return &ctor;
+					if (arg_data::match_compatible(ctor.args, args, db))
+						candidate = &ctor;
+				}
+				return candidate;
+			}
+
+			[[nodiscard]] type_conv *find_conv(std::string_view name, database_impl &db)
+			{
+				auto pos = convs.find(name);
+				if (pos != convs.end()) return &pos->second;
+
+				const auto pred = [&](auto *t) { return (pos = t->convs.find(name)) != t->convs.end(); };
+				return walk_bases(db, pred) ? &pos->second : nullptr;
+			}
+			[[nodiscard]] const type_conv *find_conv(std::string_view name, database_impl &db) const
+			{
+				auto pos = convs.find(name);
+				if (pos != convs.end()) return &pos->second;
+
+				const auto pred = [&](const auto *t) { return (pos = t->convs.find(name)) != t->convs.end(); };
+				return walk_bases(db, pred) ? &pos->second : nullptr;
+			}
+
+			[[nodiscard]] type_cmp *find_cmp(std::string_view name)
+			{
+				const auto pos = cmps.find(name);
+				return pos != cmps.end() ? &pos->second : nullptr;
+			}
+			[[nodiscard]] const type_cmp *find_cmp(std::string_view name) const
+			{
+				const auto pos = cmps.find(name);
+				return pos != cmps.end() ? &pos->second : nullptr;
+			}
+
 			type_data &init(database_impl &db)
 			{
 				(this->*init_func)(db);
@@ -362,49 +455,184 @@ namespace reflex
 			}
 		};
 
-		template<typename T>
-		[[nodiscard]] inline static const constant_type_data &make_constant_type_data() noexcept
+		bool arg_data::compatible(const any &other, database_impl &db) const
 		{
-			constinit static const constant_type_data value =  []()
+			if (const auto other_name = other.type().name(); type_name != other_name)
 			{
-				constant_type_data result;
-				result.init_func = &type_data::impl_init<T>;
-				result.any_funcs = make_any_funcs<T>();
-				result.name = type_name_v<T>;
+				const auto this_type = type(db);
+				if (!this_type->find_base(other_name, db) && !this_type->find_conv(other_name, db))
+					return false;
+			}
+			const auto a_mask = static_cast<int>(flags);
+			const auto b_mask = (other.is_ref() << 1) | other.is_const();
+			return a_mask >= b_mask;
+		}
+		bool arg_data::compatible(const arg_data &other, database_impl &db) const
+		{
+			if (const auto other_name = other.type_name; type_name != other_name)
+			{
+				const auto this_type = type(db);
+				if (!this_type->find_base(other_name, db) || !this_type->find_conv(other_name, db))
+					return false;
+			}
+			return flags >= other.flags;
+		}
 
-				if constexpr (std::same_as<T, void>)
-					result.flags |= type_flags::IS_VOID;
-				else
+		template<typename T>
+		constexpr constant_type_data::constant_type_data(std::in_place_type_t<T>) noexcept
+				: init_func(&type_data::impl_init<T>),
+				  any_funcs(make_any_funcs<T>()),
+				  name(type_name_v<T>)
+		{
+			if constexpr (std::same_as<T, void>)
+				flags |= type_flags::IS_VOID;
+			else
+			{
+				if constexpr (!std::is_empty_v<T>)
 				{
-					if constexpr (!std::is_empty_v<T>)
-					{
-						result.size = sizeof(T);
-						result.alignment = alignof(T);
-					}
-
-					if constexpr (std::is_enum_v<T>) result.flags |= type_flags::IS_ENUM;
-					if constexpr (std::is_class_v<T>) result.flags |= type_flags::IS_CLASS;
-					if constexpr (std::is_pointer_v<T>) result.flags |= type_flags::IS_POINTER;
-					if constexpr (std::is_abstract_v<T>) result.flags |= type_flags::IS_ABSTRACT;
-					if constexpr (std::is_null_pointer_v<T>) result.flags |= type_flags::IS_NULL;
-
-					if constexpr (std::is_arithmetic_v<T>) result.flags |= type_flags::IS_ARITHMETIC;
-					if constexpr (std::signed_integral<T>) result.flags |= type_flags::IS_SIGNED_INT;
-					if constexpr (std::unsigned_integral<T>) result.flags |= type_flags::IS_UNSIGNED_INT;
-
-					result.remove_pointer = make_type_data<std::decay_t<std::remove_pointer_t<T>>>;
-					result.remove_extent = make_type_data<std::decay_t<std::remove_extent_t<T>>>;
-					result.extent = std::extent_v<T>;
+					size = sizeof(T);
+					alignment = alignof(T);
 				}
-				return result;
-			}();
-			return value;
+
+				if constexpr (std::is_enum_v<T>) flags |= type_flags::IS_ENUM;
+				if constexpr (std::is_class_v<T>) flags |= type_flags::IS_CLASS;
+				if constexpr (std::is_pointer_v<T>) flags |= type_flags::IS_POINTER;
+				if constexpr (std::is_abstract_v<T>) flags |= type_flags::IS_ABSTRACT;
+				if constexpr (std::is_null_pointer_v<T>) flags |= type_flags::IS_NULL;
+
+				if constexpr (std::is_arithmetic_v<T>) flags |= type_flags::IS_ARITHMETIC;
+				if constexpr (std::signed_integral<T>) flags |= type_flags::IS_SIGNED_INT;
+				if constexpr (std::unsigned_integral<T>) flags |= type_flags::IS_UNSIGNED_INT;
+
+				remove_pointer = make_type_data<std::decay_t<std::remove_pointer_t<T>>>;
+				remove_extent = make_type_data<std::decay_t<std::remove_extent_t<T>>>;
+				extent = std::extent_v<T>;
+			}
 		}
 	}
 
+	constexpr bool arg_info::operator==(const reflex::arg_info &other) const noexcept
+	{
+		return m_data == other.m_data || (m_data && other.m_data && *m_data == *other.m_data);
+	}
+
+	template<typename... Args>
+	arg_list::arg_list(type_pack_t<Args...>, detail::database_impl *db) noexcept : m_data(detail::make_arg_list<Args...>()), m_db(db) {}
+
+	class arg_list::pointer
+	{
+		friend class iterator;
+
+		constexpr pointer(arg_info &&info) : m_value(std::forward<arg_info>(info)) {}
+
+	public:
+		using element_type = arg_info;
+
+	public:
+		pointer() = delete;
+
+		constexpr pointer(const pointer &) noexcept = default;
+		constexpr pointer(pointer &&) noexcept = default;
+		pointer &operator=(const pointer &) noexcept = default;
+		pointer &operator=(pointer &&) noexcept = default;
+
+		[[nodiscard]] constexpr const arg_info &operator*() const noexcept { return m_value; }
+		[[nodiscard]] constexpr const arg_info *operator->() const noexcept { return &m_value; }
+
+		[[nodiscard]] constexpr bool operator==(const pointer &) const noexcept = default;
+
+	private:
+		arg_info m_value;
+	};
+	class arg_list::iterator
+	{
+		friend class arg_list;
+
+		using iter_t = typename std::span<const detail::arg_data>::iterator;
+
+	public:
+		using value_type = arg_info;
+		using reference = arg_info;
+		using pointer = pointer;
+
+		using difference_type = std::ptrdiff_t;
+		using iterator_category = std::random_access_iterator_tag;
+
+	private:
+		constexpr iterator(iter_t iter, detail::database_impl *db) : m_iter(iter), m_db(db) {}
+
+	public:
+		constexpr iterator() noexcept = default;
+		constexpr iterator(const iterator &) noexcept = default;
+		constexpr iterator(iterator &&) noexcept = default;
+		iterator &operator=(const iterator &) noexcept = default;
+		iterator &operator=(iterator &&) noexcept = default;
+
+		constexpr iterator operator++(int) noexcept
+		{
+			auto tmp = *this;
+			operator++();
+			return tmp;
+		}
+		constexpr iterator &operator++() noexcept
+		{
+			++m_iter;
+			return *this;
+		}
+		constexpr iterator operator--(int) noexcept
+		{
+			auto tmp = *this;
+			operator--();
+			return tmp;
+		}
+		constexpr iterator &operator--() noexcept
+		{
+			--m_iter;
+			return *this;
+		}
+
+		constexpr iterator &operator+=(difference_type n) noexcept
+		{
+			m_iter += n;
+			return *this;
+		}
+		constexpr iterator &operator-=(difference_type n) noexcept
+		{
+			m_iter -= n;
+			return *this;
+		}
+
+		[[nodiscard]] constexpr iterator operator+(difference_type n) const noexcept { return {m_iter + n, m_db}; }
+		[[nodiscard]] constexpr iterator operator-(difference_type n) const noexcept { return {m_iter - n, m_db}; }
+		[[nodiscard]] constexpr difference_type operator-(const iterator &other) const noexcept { return m_iter - other.m_iter; }
+
+		[[nodiscard]] constexpr pointer operator->() const noexcept { return get(); }
+		[[nodiscard]] constexpr reference operator*() const noexcept { return *get(); }
+
+		[[nodiscard]] constexpr pointer get() const noexcept { return {arg_info{std::to_address(m_iter), m_db}}; }
+		[[nodiscard]] constexpr reference operator[](difference_type i) const noexcept { return *pointer{arg_info{&m_iter[i], m_db}}; }
+
+		[[nodiscard]] constexpr bool operator==(const iterator &other) const noexcept { return m_iter == other.m_iter; }
+		[[nodiscard]] constexpr auto operator<=>(const iterator &other) const noexcept { return m_iter <=> other.m_iter; }
+
+	private:
+		iter_t m_iter = {};
+		detail::database_impl *m_db = nullptr;
+	};
+
+	constexpr typename arg_list::iterator arg_list::begin() const noexcept { return {m_data.begin(), m_db}; }
+	constexpr typename arg_list::iterator arg_list::cbegin() const noexcept { return begin(); }
+	constexpr typename arg_list::iterator arg_list::end() const noexcept { return {m_data.end(), nullptr}; }
+	constexpr typename arg_list::iterator arg_list::cend() const noexcept { return end(); }
+
+	constexpr typename arg_list::value_type arg_list::front() const noexcept { return *begin(); }
+	constexpr typename arg_list::value_type arg_list::back() const noexcept { return *(end() - 1); }
+	constexpr typename arg_list::value_type arg_list::operator[](size_type i) const noexcept { return begin()[static_cast<difference_type>(i)]; }
+
 	constexpr std::string_view type_info::name() const noexcept { return valid() ? m_data->name : std::string_view{}; }
-	constexpr std::size_t type_info::extent() const noexcept { return valid() ? m_data->extent : 0; }
+
 	constexpr std::size_t type_info::size() const noexcept { return valid() ? m_data->size : 0; }
+	constexpr std::size_t type_info::extent() const noexcept { return valid() ? m_data->extent : 0; }
 	constexpr std::size_t type_info::alignment() const noexcept { return valid() ? m_data->alignment : 0; }
 
 	constexpr bool type_info::is_empty() const noexcept { return size() == 0; }
@@ -424,9 +652,6 @@ namespace reflex
 
 	type_info type_info::remove_extent() const noexcept { return valid() && m_data->remove_extent ? type_info{m_data->remove_extent, *m_db} : type_info{}; }
 	type_info type_info::remove_pointer() const noexcept { return valid() && m_data->remove_pointer ? type_info{m_data->remove_pointer, *m_db} : type_info{}; }
-
-	template<typename... Args>
-	bool type_info::constructible_from() const { return constructible_from(detail::arg_list<Args...>::value); }
 
 	template<typename T>
 	void any::copy_init(type_info type, T *ptr)

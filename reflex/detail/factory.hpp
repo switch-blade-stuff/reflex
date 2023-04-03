@@ -123,8 +123,8 @@ namespace reflex
 		{
 			const auto l = detail::scoped_lock{*m_data};
 
-			constexpr auto args_data = std::span{detail::arg_list<Ts...>::value};
-			if (auto existing = m_data->find_ctor(args_data); existing == nullptr)
+			const auto expected = detail::make_arg_list<Args...>();
+			if (auto existing = m_data->find_exact_ctor(expected); existing == nullptr)
 				m_data->ctors.emplace_back(detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...));
 			else
 				*existing = detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...);

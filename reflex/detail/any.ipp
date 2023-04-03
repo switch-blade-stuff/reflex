@@ -44,7 +44,7 @@ namespace reflex
 		const auto l = detail::shared_scoped_lock{*data};
 
 		/* If `type` is an immediate base of `this`, attempt to cast through that. */
-		if (const auto *base = data->find_base(base_name); base != nullptr)
+		if (const auto *base = data->find_base(base_name, *m_db); base != nullptr)
 			return const_cast<void *>(base->cast_func(cdata()));
 
 		/* Otherwise, recursively cast through a base type. */
@@ -63,8 +63,8 @@ namespace reflex
 		const auto l = detail::shared_scoped_lock{*data};
 
 		/* If `this` is directly convertible to `name`, use the existing conversion. */
-		if (const auto *conv = data->find_conv(base_name); conv != nullptr)
-			return conv->conv_func(cdata());
+		if (const auto *conv = data->find_conv(base_name, *m_db); conv != nullptr)
+			return (*conv)(cdata());
 
 		/* Otherwise, recursively convert through a base type. */
 		for (auto [_, base]: data->bases)

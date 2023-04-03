@@ -39,6 +39,10 @@ void test_object_info()
 	TEST_ASSERT(child_ti.inherits_from<reflex::object>());
 	TEST_ASSERT(child_ti.inherits_from<test_base>());
 	TEST_ASSERT(!child_ti.is_abstract());
+
+	const auto objects = reflex::type_info::query().inherits_from<reflex::object>().types();
+	TEST_ASSERT(objects.contains(base_ti));
+	TEST_ASSERT(objects.contains(child_ti));
 }
 
 void test_object_cast()
@@ -107,6 +111,11 @@ void test_exceptions()
 	do_test(reflex::facets::bad_facet_function("", ""));
 	do_test(reflex::bad_any_cast(test_ti, test_ti));
 	do_test(reflex::bad_any_copy(test_ti));
+
+	const auto objects = reflex::type_info::query().inherits_from<reflex::object>().types();
+	TEST_ASSERT(objects.contains(reflex::type_info::get<reflex::facets::bad_facet_function>()));
+	TEST_ASSERT(objects.contains(reflex::type_info::get<reflex::bad_any_cast>()));
+	TEST_ASSERT(objects.contains(reflex::type_info::get<reflex::bad_any_copy>()));
 }
 
 int main()

@@ -45,10 +45,14 @@ namespace reflex
 		template<typename T>
 		type_data *make_type_data(database_impl &db)
 		{
-			static type_data *data = db.insert(make_constant_type_data<T>());
+			constinit static const auto cdata = constant_type_data{std::in_place_type<T>};
+			static type_data *data = db.insert(cdata);
 			return data;
 		}
 	}
+
+	template<typename... Args>
+	arg_list::arg_list(type_pack_t<Args...> p) : arg_list(p, detail::database_impl::instance()) {}
 
 	template<typename T>
 	type_factory<T> type_info::reflect()
