@@ -102,8 +102,6 @@ namespace reflex
 	{
 		friend class type_info;
 
-		using iter_t = typename std::list<detail::type_ctor>::const_iterator;
-
 		constexpr constructor_view(const std::list<detail::type_ctor> *list, detail::database_impl *db) : m_view(list), m_db(db) {}
 
 	public:
