@@ -10,6 +10,15 @@
 
 namespace reflex
 {
+	bool constructor_info::is_invocable(argument_view args) const
+	{
+		return detail::arg_data::match_compatible(m_data->args, args, *m_db);
+	}
+	bool constructor_info::is_invocable(std::span<any> args) const
+	{
+		return detail::arg_data::match_compatible(m_data->args, args, *m_db);
+	}
+
 	detail::attr_map type_info::attributes() const
 	{
 		if (!valid()) [[unlikely]] return {};
@@ -85,12 +94,12 @@ namespace reflex
 		}
 		return {};
 	}
-	bool type_info::constructible_from(std::span<any> args) const
+	bool type_info::constructible_from(argument_view args) const
 	{
 		if (!valid()) [[unlikely]] return false;
 		return m_data->find_ctor(args, *m_db);
 	}
-	bool type_info::constructible_from(const argument_view &args) const
+	bool type_info::constructible_from(std::span<any> args) const
 	{
 		if (!valid()) [[unlikely]] return false;
 		return m_data->find_ctor(args, *m_db);

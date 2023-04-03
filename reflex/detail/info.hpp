@@ -157,6 +157,11 @@ namespace reflex
 		/** Returns argument list of the referenced constructor. */
 		[[nodiscard]] inline argument_view args() const noexcept;
 
+		/** Checks if the underlying constructor can be invoked with arguments \a args. */
+		[[nodiscard]] REFLEX_PUBLIC bool is_invocable(argument_view args) const;
+		/** @copydoc is_invocable */
+		[[nodiscard]] REFLEX_PUBLIC bool is_invocable(std::span<any> args) const;
+
 		/** Invokes the underlying constructor with arguments \a args. */
 		[[nodiscard]] inline any invoke(std::span<any> args) const;
 		/** @copydoc invoke */
@@ -336,9 +341,9 @@ namespace reflex
 		template<typename... Args>
 		[[nodiscard]] inline bool constructible_from() const { return constructible_from(argument_view{type_pack<Args...>}); }
 		/** Checks if the referenced type is constructible from arguments \a args. */
-		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(std::span<any> args) const;
+		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(argument_view args) const;
 		/** @copydoc constructible_from */
-		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(const argument_view &args) const;
+		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(std::span<any> args) const;
 
 		/** Returns a view of the referenced type's constructors. */
 		[[nodiscard]] constexpr constructor_view constructors() const noexcept;
