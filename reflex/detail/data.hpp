@@ -314,12 +314,12 @@ namespace reflex
 
 			bool walk_bases(database_impl &db, auto &&p) const { return std::any_of(bases.begin(), bases.end(), [&](auto &&e) { return p(e.second.type(db)); }); }
 
-			[[nodiscard]] any *find_attr(std::string_view name)
+			[[nodiscard]] any *find_attr(std::string_view name) noexcept
 			{
 				const auto pos = attrs.find(name);
 				return pos != attrs.end() ? &pos->second : nullptr;
 			}
-			[[nodiscard]] const any *find_attr(std::string_view name) const
+			[[nodiscard]] const any *find_attr(std::string_view name) const noexcept
 			{
 				const auto pos = attrs.find(name);
 				return pos != attrs.end() ? &pos->second : nullptr;
@@ -361,18 +361,18 @@ namespace reflex
 				const auto pos = std::ranges::find_if(enums, [&](auto &&e) { return e.second == value; });
 				return pos != enums.end() ? &pos->second : nullptr;
 			}
-			[[nodiscard]] any *find_enum(std::string_view name)
+			[[nodiscard]] any *find_enum(std::string_view name) noexcept
 			{
 				const auto pos = enums.find(name);
 				return pos != enums.end() ? &pos->second : nullptr;
 			}
-			[[nodiscard]] const any *find_enum(std::string_view name) const
+			[[nodiscard]] const any *find_enum(std::string_view name) const noexcept
 			{
 				const auto pos = enums.find(name);
 				return pos != enums.end() ? &pos->second : nullptr;
 			}
 
-			[[nodiscard]] type_ctor *find_exact_ctor(const auto &args)
+			[[nodiscard]] type_ctor *find_exact_ctor(const auto &args) noexcept
 			{
 				for (auto &ctor: ctors)
 				{
@@ -381,7 +381,7 @@ namespace reflex
 				}
 				return nullptr;
 			}
-			[[nodiscard]] const type_ctor *find_exact_ctor(const auto &args) const
+			[[nodiscard]] const type_ctor *find_exact_ctor(const auto &args) const noexcept
 			{
 				for (auto &ctor: ctors)
 				{
@@ -433,12 +433,12 @@ namespace reflex
 				return walk_bases(db, pred) ? &pos->second : nullptr;
 			}
 
-			[[nodiscard]] type_cmp *find_cmp(std::string_view name)
+			[[nodiscard]] type_cmp *find_cmp(std::string_view name) noexcept
 			{
 				const auto pos = cmps.find(name);
 				return pos != cmps.end() ? &pos->second : nullptr;
 			}
-			[[nodiscard]] const type_cmp *find_cmp(std::string_view name) const
+			[[nodiscard]] const type_cmp *find_cmp(std::string_view name) const noexcept
 			{
 				const auto pos = cmps.find(name);
 				return pos != cmps.end() ? &pos->second : nullptr;
