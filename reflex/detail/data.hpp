@@ -623,7 +623,7 @@ namespace reflex
 
 	constexpr typename argument_view::iterator argument_view::begin() const noexcept { return {m_data.begin(), m_db}; }
 	constexpr typename argument_view::iterator argument_view::cbegin() const noexcept { return begin(); }
-	constexpr typename argument_view::iterator argument_view::end() const noexcept { return {m_data.end(), nullptr}; }
+	constexpr typename argument_view::iterator argument_view::end() const noexcept { return {m_data.end(), m_db}; }
 	constexpr typename argument_view::iterator argument_view::cend() const noexcept { return end(); }
 
 	constexpr typename argument_view::value_type argument_view::front() const noexcept { return *begin(); }
@@ -718,6 +718,11 @@ namespace reflex
 		iter_t m_iter = {};
 		detail::database_impl *m_db = nullptr;
 	};
+
+	typename constructor_view::iterator constructor_view::begin() const noexcept { return {m_view->begin(), m_db}; }
+	typename constructor_view::iterator constructor_view::cbegin() const noexcept { return begin(); }
+	typename constructor_view::iterator constructor_view::end() const noexcept { return {m_view->end(), m_db}; }
+	typename constructor_view::iterator constructor_view::cend() const noexcept { return end(); }
 
 	constexpr std::string_view type_info::name() const noexcept { return valid() ? m_data->name : std::string_view{}; }
 
