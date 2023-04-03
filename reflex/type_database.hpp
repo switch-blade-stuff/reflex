@@ -26,10 +26,10 @@ namespace reflex
 		static type_database *instance(type_database *ptr) noexcept { return impl_cast(impl_t::instance(impl_cast(ptr))); }
 
 	public:
-		type_database() = default;
 		type_database(type_database &&) = default;
 		~type_database() = default;
 
+		type_database() = delete;
 		type_database(const type_database &) = delete;
 		type_database &operator=(const type_database &) = delete;
 		type_database &operator=(type_database &&) = delete;
