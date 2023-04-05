@@ -12,7 +12,7 @@ namespace reflex::detail
 	void shared_spinlock::lock()
 	{
 		auto expected = flags_t{};
-		for (std::size_t i = 0; !m_flags.compare_exchange_weak(expected, IS_WRITING); ++i)
+		for (std::size_t i = 0; !m_flags.compare_exchange_weak(expected, is_writing); ++i)
 			if (i >= spin_max) m_flags.wait(expected);
 	}
 	void shared_spinlock::unlock()
@@ -23,16 +23,16 @@ namespace reflex::detail
 	bool shared_spinlock::try_lock()
 	{
 		auto expected = flags_t{};
-		return m_flags.compare_exchange_weak(expected, IS_WRITING);
+		return m_flags.compare_exchange_weak(expected, is_writing);
 	}
 
 	void shared_spinlock::lock_shared() const
 	{
 		auto expected = flags_t{};
-		for (std::size_t i = 0; !m_flags.compare_exchange_weak(expected, IS_READING); ++i)
+		for (std::size_t i = 0; !m_flags.compare_exchange_weak(expected, is_reading); ++i)
 		{
 			/* Quit if the reader counter already reading. */
-			if (expected == IS_READING) break;
+			if (expected == is_reading) break;
 			if (i >= spin_max) m_flags.wait(expected);
 		}
 		m_reader_ctr++;
@@ -48,7 +48,7 @@ namespace reflex::detail
 	bool shared_spinlock::try_lock_shared() const
 	{
 		auto expected = flags_t{};
-		if (!m_flags.compare_exchange_weak(expected, IS_WRITING) && expected != IS_READING)
+		if (!m_flags.compare_exchange_weak(expected, is_writing) && expected != is_reading)
 			return false;
 
 		m_reader_ctr++;

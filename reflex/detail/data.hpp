@@ -91,8 +91,8 @@ namespace reflex
 			template<typename T>
 			constexpr arg_data(std::in_place_type_t<T>) noexcept : type_name(type_name_v<std::decay_t<T>>), type(make_type_data<std::decay_t<T>>)
 			{
-				if constexpr (!std::is_lvalue_reference_v<T>) flags |= IS_VALUE;
-				if constexpr (std::is_const_v<std::remove_reference_t<T>>) flags |= IS_CONST;
+				if constexpr (!std::is_lvalue_reference_v<T>) flags |= is_value;
+				if constexpr (std::is_const_v<std::remove_reference_t<T>>) flags |= is_const;
 			}
 
 			[[nodiscard]] inline bool compatible(const any &other, database_impl &db) const;
@@ -275,7 +275,7 @@ namespace reflex
 		};
 
 		/* Type data must be over-aligned since `any` uses bottom bits of its pointer for flags. */
-		struct alignas(detail::ANY_FAGS_MAX + 1) type_data : constant_type_data, dynamic_type_data
+		struct alignas(detail::any_flags_max + 1) type_data : constant_type_data, dynamic_type_data
 		{
 			type_data(const constant_type_data &cdata) : constant_type_data(cdata) {}
 
@@ -466,7 +466,7 @@ namespace reflex
 				if (!this_type->find_base(other_name, db) && !this_type->find_conv(other_name, db))
 					return false;
 			}
-			return flags >= other.is_const() ? IS_CONST : type_flags{};
+			return flags >= other.is_const() ? is_const : type_flags{};
 		}
 		bool arg_data::compatible(const arg_data &other, database_impl &db) const
 		{
@@ -476,7 +476,7 @@ namespace reflex
 				if (!this_type->find_base(other_name, db) || !this_type->find_conv(other_name, db))
 					return false;
 			}
-			return flags >= (other.flags & IS_CONST);
+			return flags >= (other.flags & is_const);
 		}
 
 		template<typename T>
@@ -486,7 +486,7 @@ namespace reflex
 				  name(type_name_v<T>)
 		{
 			if constexpr (std::same_as<T, void>)
-				flags |= type_flags::IS_VOID;
+				flags |= type_flags::is_void;
 			else
 			{
 				if constexpr (!std::is_empty_v<T>)
@@ -495,15 +495,15 @@ namespace reflex
 					alignment = alignof(T);
 				}
 
-				if constexpr (std::is_enum_v<T>) flags |= type_flags::IS_ENUM;
-				if constexpr (std::is_class_v<T>) flags |= type_flags::IS_CLASS;
-				if constexpr (std::is_pointer_v<T>) flags |= type_flags::IS_POINTER;
-				if constexpr (std::is_abstract_v<T>) flags |= type_flags::IS_ABSTRACT;
-				if constexpr (std::is_null_pointer_v<T>) flags |= type_flags::IS_NULL;
+				if constexpr (std::is_enum_v<T>) flags |= type_flags::is_enum;
+				if constexpr (std::is_class_v<T>) flags |= type_flags::is_class;
+				if constexpr (std::is_pointer_v<T>) flags |= type_flags::is_pointer;
+				if constexpr (std::is_abstract_v<T>) flags |= type_flags::is_abstract;
+				if constexpr (std::is_null_pointer_v<T>) flags |= type_flags::is_null;
 
-				if constexpr (std::is_arithmetic_v<T>) flags |= type_flags::IS_ARITHMETIC;
-				if constexpr (std::signed_integral<T>) flags |= type_flags::IS_SIGNED_INT;
-				if constexpr (std::unsigned_integral<T>) flags |= type_flags::IS_UNSIGNED_INT;
+				if constexpr (std::is_arithmetic_v<T>) flags |= type_flags::is_arithmetic;
+				if constexpr (std::signed_integral<T>) flags |= type_flags::is_signed_int;
+				if constexpr (std::unsigned_integral<T>) flags |= type_flags::is_unsigned_int;
 
 				remove_pointer = make_type_data<std::decay_t<std::remove_pointer_t<T>>>;
 				remove_extent = make_type_data<std::decay_t<std::remove_extent_t<T>>>;
@@ -731,19 +731,19 @@ namespace reflex
 	constexpr std::size_t type_info::alignment() const noexcept { return valid() ? m_data->alignment : 0; }
 
 	constexpr bool type_info::is_empty() const noexcept { return size() == 0; }
-	constexpr bool type_info::is_void() const noexcept { return valid() && (m_data->flags & detail::IS_VOID); }
-	constexpr bool type_info::is_nullptr() const noexcept { return valid() && (m_data->flags & detail::IS_NULL); }
+	constexpr bool type_info::is_void() const noexcept { return valid() && (m_data->flags & detail::is_void); }
+	constexpr bool type_info::is_nullptr() const noexcept { return valid() && (m_data->flags & detail::is_null); }
 
 	constexpr bool type_info::is_array() const noexcept { return extent() > 0; }
-	constexpr bool type_info::is_enum() const noexcept { return valid() && (m_data->flags & detail::IS_ENUM); }
-	constexpr bool type_info::is_class() const noexcept { return valid() && (m_data->flags & detail::IS_CLASS); }
-	constexpr bool type_info::is_abstract() const noexcept { return valid() && (m_data->flags & detail::IS_ABSTRACT); }
+	constexpr bool type_info::is_enum() const noexcept { return valid() && (m_data->flags & detail::is_enum); }
+	constexpr bool type_info::is_class() const noexcept { return valid() && (m_data->flags & detail::is_class); }
+	constexpr bool type_info::is_abstract() const noexcept { return valid() && (m_data->flags & detail::is_abstract); }
 
-	constexpr bool type_info::is_pointer() const noexcept { return valid() && (m_data->flags & detail::IS_POINTER); }
-	constexpr bool type_info::is_integral() const noexcept { return valid() && (m_data->flags & (detail::IS_SIGNED_INT | detail::IS_UNSIGNED_INT)); }
-	constexpr bool type_info::is_signed_integral() const noexcept { return valid() && (m_data->flags & detail::IS_SIGNED_INT); }
-	constexpr bool type_info::is_unsigned_integral() const noexcept { return valid() && (m_data->flags & detail::IS_UNSIGNED_INT); }
-	constexpr bool type_info::is_arithmetic() const noexcept { return valid() && (m_data->flags & detail::IS_ARITHMETIC); }
+	constexpr bool type_info::is_pointer() const noexcept { return valid() && (m_data->flags & detail::is_pointer); }
+	constexpr bool type_info::is_integral() const noexcept { return valid() && (m_data->flags & (detail::is_signed_int | detail::is_unsigned_int)); }
+	constexpr bool type_info::is_signed_integral() const noexcept { return valid() && (m_data->flags & detail::is_signed_int); }
+	constexpr bool type_info::is_unsigned_integral() const noexcept { return valid() && (m_data->flags & detail::is_unsigned_int); }
+	constexpr bool type_info::is_arithmetic() const noexcept { return valid() && (m_data->flags & detail::is_arithmetic); }
 
 	type_info type_info::remove_extent() const noexcept { return valid() && m_data->remove_extent ? type_info{m_data->remove_extent, *m_db} : type_info{}; }
 	type_info type_info::remove_pointer() const noexcept { return valid() && m_data->remove_pointer ? type_info{m_data->remove_pointer, *m_db} : type_info{}; }

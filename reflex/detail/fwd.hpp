@@ -82,24 +82,24 @@ namespace reflex
 		enum type_flags
 		{
 			/* Used by any, prop_data & arg_data */
-			IS_CONST = 0x1,
-			IS_VALUE = 0x2,
+			is_const = 0x1,
+			is_value = 0x2,
 
 			/* Used by any */
-			IS_OWNED = 0x4,
-			ANY_FAGS_MAX = 0x7,
+			is_owned = 0x4,
+			any_flags_max = 0x7,
 
 			/* Used by type_data */
-			IS_NULL = 0x8,
-			IS_VOID = 0x10,
-			IS_ENUM = 0x20,
-			IS_CLASS = 0x40,
-			IS_POINTER = 0x80,
-			IS_ABSTRACT = 0x100,
+			is_null = 0x8,
+			is_void = 0x10,
+			is_enum = 0x20,
+			is_class = 0x40,
+			is_pointer = 0x80,
+			is_abstract = 0x100,
 
-			IS_SIGNED_INT = 0x200,
-			IS_UNSIGNED_INT = 0x400,
-			IS_ARITHMETIC = 0x800,
+			is_signed_int = 0x200,
+			is_unsigned_int = 0x400,
+			is_arithmetic = 0x800,
 		};
 
 		constexpr type_flags operator~(const type_flags &x) noexcept { return static_cast<type_flags>(~static_cast<std::underlying_type_t<type_flags>>(x)); }

@@ -104,7 +104,7 @@ namespace reflex
 		{
 			this->type(type);
 			if constexpr (std::is_const_v<T>)
-				flags(detail::IS_CONST);
+				flags(detail::is_const);
 			external(std::addressof(ref));
 		}
 
@@ -132,7 +132,7 @@ namespace reflex
 		any(type_info type, std::in_place_t, T *ptr, Del &&del = Del{}) requires valid_deleter<Del>
 		{
 			this->type(type);
-			flags(detail::IS_OWNED | (std::is_const_v<T> ? detail::IS_CONST : detail::type_flags{}));
+			flags(detail::is_owned | (std::is_const_v<T> ? detail::is_const : detail::type_flags{}));
 			if constexpr (!(std::is_function_v<Del> && std::is_invocable_v<Del, void *>))
 				deleter(+[](void *ptr) { Del{}(detail::void_cast<T>(ptr)); });
 			else
@@ -150,7 +150,7 @@ namespace reflex
 		any(type_info type, const void *ptr) noexcept
 		{
 			this->type(type);
-			flags(detail::IS_CONST);
+			flags(detail::is_const);
 			external(ptr);
 		}
 
@@ -163,7 +163,7 @@ namespace reflex
 		any(type_info type, std::in_place_t, void *ptr, void (*del)(void *)) noexcept
 		{
 			this->type(type);
-			flags(detail::IS_OWNED);
+			flags(detail::is_owned);
 			deleter(del);
 			external(ptr);
 		}
@@ -171,7 +171,7 @@ namespace reflex
 		any(type_info type, std::in_place_t, const void *ptr, void (*del)(const void *)) noexcept
 		{
 			this->type(type);
-			flags(detail::IS_OWNED | detail::IS_CONST);
+			flags(detail::is_owned | detail::is_const);
 			deleter(reinterpret_cast<void (*)(void *)>(del));
 			external(ptr);
 		}
@@ -189,7 +189,7 @@ namespace reflex
 			destroy();
 			this->type(type);
 			if constexpr (std::is_const_v<T>)
-				flags(detail::IS_CONST);
+				flags(detail::is_const);
 			external(std::addressof(ref));
 			return *this;
 		}
@@ -228,21 +228,21 @@ namespace reflex
 		/** Checks if the `any` has a managed object (either value or reference). */
 		[[nodiscard]] bool empty() const noexcept { return type_data() == nullptr; }
 		/** Checks if the managed object is const-qualified. */
-		[[nodiscard]] bool is_const() const noexcept { return flags() & detail::IS_CONST; }
+		[[nodiscard]] bool is_const() const noexcept { return flags() & detail::is_const; }
 		/** Checks if the `any` contains a reference to an external object. */
-		[[nodiscard]] bool is_ref() const noexcept { return !(flags() & detail::IS_OWNED); }
+		[[nodiscard]] bool is_ref() const noexcept { return !(flags() & detail::is_owned); }
 
 		/** Returns a void pointer to the managed object.
 		 * @note If the managed object is const-qualified, returns `nullptr`. */
 		[[nodiscard]] void *data() noexcept
 		{
-			if (flags() & detail::IS_CONST) [[unlikely]] return nullptr;
-			return (flags() & detail::IS_VALUE) ? local() : external();
+			if (flags() & detail::is_const) [[unlikely]] return nullptr;
+			return (flags() & detail::is_value) ? local() : external();
 		}
 		/** Returns a const void pointer to the managed object. */
 		[[nodiscard]] const void *cdata() const noexcept
 		{
-			return (flags() & detail::IS_VALUE) ? local() : external();
+			return (flags() & detail::is_value) ? local() : external();
 		}
 		/** @copydoc cdata */
 		[[nodiscard]] const void *data() const noexcept { return cdata(); }
@@ -460,7 +460,7 @@ namespace reflex
 		void init_owned(type_info type, Args &&...args)
 		{
 			this->type(type);
-			auto flags = detail::IS_OWNED | (std::is_const_v<T> ? detail::IS_CONST : detail::type_flags{});
+			auto flags = detail::is_owned | (std::is_const_v<T> ? detail::is_const : detail::type_flags{});
 			if constexpr (!is_by_value < T >)
 			{
 				deleter(+[](void *ptr) { delete static_cast<std::remove_cv_t<T> *>(ptr); });
@@ -469,7 +469,7 @@ namespace reflex
 			else
 			{
 				std::construct_at(std::launder(static_cast<T *>(local())), std::forward<Args>(args)...);
-				flags |= detail::IS_VALUE;
+				flags |= detail::is_value;
 			}
 			this->flags(flags);
 		}
@@ -519,26 +519,26 @@ namespace reflex
 		/* Flags are stored within the type data pointer. */
 		const detail::type_data *type_data(const detail::type_data *ptr) noexcept
 		{
-			const auto old_value = m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX);
-			const auto old_flags = static_cast<std::uintptr_t>(m_data_ptr_flags & detail::ANY_FAGS_MAX);
+			const auto old_value = m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::any_flags_max);
+			const auto old_flags = static_cast<std::uintptr_t>(m_data_ptr_flags & detail::any_flags_max);
 			m_data_ptr_flags = std::bit_cast<std::uintptr_t>(ptr) | old_flags;
 			return std::bit_cast<const detail::type_data *>(old_value);
 		}
 		[[nodiscard]] const detail::type_data *type_data() const noexcept
 		{
-			return std::bit_cast<const detail::type_data *>(m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX));
+			return std::bit_cast<const detail::type_data *>(m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::any_flags_max));
 		}
 
 		detail::type_flags flags(detail::type_flags value) noexcept
 		{
-			const auto old_value = static_cast<detail::type_flags>(m_data_ptr_flags) & detail::ANY_FAGS_MAX;
-			const auto old_intptr = (m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::ANY_FAGS_MAX));
+			const auto old_value = static_cast<detail::type_flags>(m_data_ptr_flags) & detail::any_flags_max;
+			const auto old_intptr = (m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::any_flags_max));
 			m_data_ptr_flags = old_intptr | static_cast<std::uintptr_t>(value);
 			return old_value;
 		}
 		[[nodiscard]] detail::type_flags flags() const noexcept
 		{
-			return static_cast<detail::type_flags>(m_data_ptr_flags & detail::ANY_FAGS_MAX);
+			return static_cast<detail::type_flags>(m_data_ptr_flags & detail::any_flags_max);
 		}
 
 		std::uintptr_t m_data_ptr_flags = 0;

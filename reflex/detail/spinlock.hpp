@@ -17,8 +17,8 @@ namespace reflex::detail
 #ifndef REFLEX_NO_THREADS
 		enum flags_t
 		{
-			IS_READING = 1,
-			IS_WRITING = 2,
+			is_reading = 1,
+			is_writing = 2,
 		};
 
 		constexpr static std::size_t spin_max = 12;

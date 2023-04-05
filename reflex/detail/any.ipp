@@ -80,7 +80,7 @@ namespace reflex
 		/* Bail if empty or non-owning. */
 		if (empty() || is_ref()) return;
 
-		if (!(flags() & detail::IS_VALUE))
+		if (!(flags() & detail::is_value))
 			(*deleter())(external());
 	}
 
