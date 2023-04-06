@@ -519,10 +519,9 @@ namespace reflex
 		/* Flags are stored within the type data pointer. */
 		const detail::type_data *type_data(const detail::type_data *ptr) noexcept
 		{
-			const auto old_value = m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::any_flags_max);
 			const auto old_flags = static_cast<std::uintptr_t>(m_data_ptr_flags & detail::any_flags_max);
 			m_data_ptr_flags = std::bit_cast<std::uintptr_t>(ptr) | old_flags;
-			return std::bit_cast<const detail::type_data *>(old_value);
+			return ptr;
 		}
 		[[nodiscard]] const detail::type_data *type_data() const noexcept
 		{
@@ -531,10 +530,9 @@ namespace reflex
 
 		detail::type_flags flags(detail::type_flags value) noexcept
 		{
-			const auto old_value = static_cast<detail::type_flags>(m_data_ptr_flags) & detail::any_flags_max;
 			const auto old_intptr = (m_data_ptr_flags & ~static_cast<std::uintptr_t>(detail::any_flags_max));
 			m_data_ptr_flags = old_intptr | static_cast<std::uintptr_t>(value);
-			return old_value;
+			return value;
 		}
 		[[nodiscard]] detail::type_flags flags() const noexcept
 		{
@@ -543,10 +541,10 @@ namespace reflex
 
 		std::uintptr_t m_data_ptr_flags = 0;
 #else
-		const detail::type_data *type_data(const detail::type_data *ptr) noexcept { return std::exchange(m_type, ptr); }
+		const detail::type_data *type_data(const detail::type_data *ptr) noexcept { return m_type = ptr; }
 		[[nodiscard]] const detail::type_data *type_data() const noexcept { return m_type; }
 
-		detail::type_flags flags(detail::type_flags value) noexcept { return std::exchange(m_flags, value); }
+		detail::type_flags flags(detail::type_flags value) noexcept { return m_flags = value; }
 		[[nodiscard]] detail::type_flags flags() const noexcept { return m_flags; }
 
 		const detail::type_data *m_type = nullptr;

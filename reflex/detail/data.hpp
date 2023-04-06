@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <functional>
 #include <array>
 #include <list>
 
+#include "../delegate.hpp"
 #include "spinlock.hpp"
 #include "any.hpp"
 
@@ -60,7 +60,7 @@ namespace reflex
 
 			[[nodiscard]] any operator()(const void *data) const { return func(data); }
 
-			std::function<any(const void *)> func;
+			delegate<any(const void *)> func;
 		};
 
 		using conv_table = tpp::dense_map<std::string_view, type_conv>;
@@ -153,7 +153,7 @@ namespace reflex
 
 			[[nodiscard]] any operator()(std::span<any> arg_vals) const { return func(arg_vals); }
 
-			std::function<any(std::span<any>)> func;
+			delegate<any(std::span<any>)> func;
 			std::span<const arg_data> args;
 		};
 

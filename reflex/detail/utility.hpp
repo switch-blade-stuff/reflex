@@ -5,6 +5,7 @@
 #pragma once
 
 #include <type_traits>
+#include <concepts>
 #include <iterator>
 #include <utility>
 #include <memory>
