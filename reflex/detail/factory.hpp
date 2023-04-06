@@ -83,10 +83,11 @@ namespace reflex
 			return *this;
 		}
 		/** Makes the underlying type info constructible via factory function \a ctor_func.
-		 * \a ctor_func must be invocable with arguments \a Args and return an instance of `any`.
+		 * \a ctor_func must either be invocable with arguments \a Args and return an instance of `T`,
+		 * or invocable from with a span of `any` and return an instance of `any`.
 		 * @note Construction from the underlying type of enums is added by default when available. */
 		template<typename... Args, typename F>
-		type_factory &make_constructible(F &&ctor_func) requires std::is_invocable_r_v<any, F, Args...>
+		type_factory &make_constructible(F &&ctor_func) requires (std::is_invocable_r_v<T, F, Args...> || std::is_invocable_r_v<any, F, std::span<any>>)
 		{
 			add_ctor<Args...>(std::forward<F>(ctor_func));
 			return *this;
@@ -123,7 +124,7 @@ namespace reflex
 		template<typename... Ts, typename... Args>
 		void add_ctor(Args &&...args)
 		{
-			const auto expected = detail::make_argument_view<Args...>();
+			const auto expected = detail::make_argument_view<Ts...>();
 			if (auto existing = m_data->find_exact_ctor(expected); existing == nullptr)
 				m_data->ctors.emplace_back(detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...));
 			else
@@ -156,7 +157,7 @@ namespace reflex
 				if constexpr (!std::same_as<T, U>)
 				{
 					if constexpr (std::constructible_from<T, U>)
-						factory.template make_constructible<U>([](auto &&value) { return make_any<T>(static_cast<T>(value)); });
+						factory.template make_constructible<U>();
 					if constexpr (std::convertible_to<T, U>)
 						factory.template make_convertible<U>();
 					if constexpr (std::three_way_comparable_with<T, U>)

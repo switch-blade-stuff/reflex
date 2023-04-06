@@ -78,20 +78,24 @@ namespace reflex
 		/** Initializes an empty `any`. */
 		constexpr any() noexcept = default;
 
-		constexpr any(any &&) noexcept = default;
-		constexpr any &operator=(any &&other) noexcept
-		{
-			std::swap(m_storage, other.m_storage);
-			return *this;
-		}
-
 		/** Copies value of the managed object of \a other.
 		 * @throw bad_any_copy If the underlying type of \a other is not copy-constructible. */
 		any(const any &other) : any(other.type(), std::in_place, other.cdata()) {}
 		/** If types of `this` and \a other are the same and `this` is not a reference, copy-assigns the managed object.
 		 * Otherwise, destroys `this` and copy-constructs the managed object from \a other.
 		 * @throw bad_any_copy If the managed object cannot be copy-assigned and the underlying type of \a other is not copy-constructible. */
-		any &operator=(const any &other) { return assign(other.type(), std::in_place, other.cdata()); }
+		any &operator=(const any &other)
+		{
+			if (this != &other) assign(other.type(), std::in_place, other.cdata());
+			return *this;
+		}
+
+		constexpr any(any &&other) noexcept { swap(other); }
+		constexpr any &operator=(any &&other) noexcept
+		{
+			if (this != &other) swap(other);
+			return *this;
+		}
 
 		~any() { destroy(); }
 
@@ -418,6 +422,13 @@ namespace reflex
 		template<typename F>
 		[[nodiscard]] inline F facet() const;
 
+		/** Swaps contents of `this` and `other`. */
+		constexpr void swap(any &other) noexcept
+		{
+			swap_type(other);
+			std::swap(m_storage, other.m_storage);
+		}
+
 		/** If the managed object of `this` is equal to the managed object of \a other, or if `this` and \a other are empty,
 		 * returns `true`. Otherwise returns `false`. */
 		[[nodiscard]] REFLEX_PUBLIC bool operator==(const any &other) const;
@@ -539,6 +550,12 @@ namespace reflex
 			return static_cast<detail::type_flags>(m_data_ptr_flags & detail::any_flags_max);
 		}
 
+		constexpr void swap_type(any &other) noexcept
+		{
+			std::swap(m_data_ptr_flags, other.m_data_ptr_flags);
+			std::swap(m_db, other.m_db);
+		}
+
 		std::uintptr_t m_data_ptr_flags = 0;
 #else
 		const detail::type_data *type_data(const detail::type_data *ptr) noexcept { return m_type = ptr; }
@@ -547,6 +564,13 @@ namespace reflex
 		detail::type_flags flags(detail::type_flags value) noexcept { return m_flags = value; }
 		[[nodiscard]] detail::type_flags flags() const noexcept { return m_flags; }
 
+		constexpr void swap_type(any &other) noexcept
+		{
+			std::swap(m_type, other.m_type);
+			std::swap(m_flags, other.m_flags);
+			std::swap(m_db, other.m_db);
+		}
+
 		const detail::type_data *m_type = nullptr;
 		detail::type_flags m_flags = {};
 #endif
@@ -554,6 +578,8 @@ namespace reflex
 		detail::database_impl *m_db = nullptr;
 		storage_t m_storage;
 	};
+
+	constexpr void swap(any &a, any &b) noexcept { a.swap(b); }
 
 	/** Returns the type info of the object managed by \a value. Equivalent to `value.type()`. */
 	template<typename T>
@@ -569,9 +595,8 @@ namespace reflex
 	/** Returns an `any` containing a move-constructed instance of \a value. */
 	template<typename T>
 	[[nodiscard]] inline any forward_any(T &&value) { return any{std::forward<std::decay_t<T>>(value)}; }
-	/** Forwards \a value. */
-	template<typename T>
-	[[nodiscard]] inline any &&forward_any(any &&value) { return std::forward<any>(value); }
+	/** Forwards the value of \a other. */
+	[[nodiscard]] inline any forward_any(any &&other) { return any{std::forward<any>(other)}; }
 
 	/** Returns an `any` owning an instance of \a T constructed with arguments \a args. */
 	template<typename T, typename... Args>

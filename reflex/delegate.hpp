@@ -161,8 +161,7 @@ namespace reflex
 		delegate(delegate &&other) noexcept { swap(other); }
 		delegate &operator=(delegate &&other) noexcept
 		{
-			if (this != &other)
-				swap(other);
+			if (this != &other) swap(other);
 			return *this;
 		}
 

@@ -52,10 +52,10 @@ namespace reflex
 			template<typename From, typename To, typename F>
 			type_conv(std::in_place_type_t<From>, std::in_place_type_t<To>, F &&conv)
 			{
-				func = [f = std::forward<F>(conv)](const void *data)
-				{
-					return make_any<To>(std::invoke(f, *static_cast<const From *>(data)));
-				};
+				if constexpr (!std::is_invocable_r_v<any, F, const void *>)
+					func = [f = std::forward<F>(conv)](const void *data) { return make_any<To>(std::invoke(f, *static_cast<const From *>(data))); };
+				else
+					func = std::forward<F>(conv);
 			}
 
 			[[nodiscard]] any operator()(const void *data) const { return func(data); }
@@ -131,24 +131,31 @@ namespace reflex
 			using forward_arg_t = std::conditional_t<std::is_reference_v<T>, U, std::add_const_t<U>>;
 
 			template<typename T, typename... Ts, typename F, std::size_t... Is>
-			[[nodiscard]] inline static any construct(std::index_sequence<Is...>, F &&f, std::span<any> args)
+			[[nodiscard]] inline static decltype(auto) construct(std::index_sequence<Is...>, F &&f, std::span<any> args)
 			{
 				return std::invoke(f, (*args[Is].cast<Ts>().template try_get<forward_arg_t<Ts>>())...);
 			}
 			template<typename T, typename... Ts, typename F>
-			[[nodiscard]] inline static any construct(F &&f, std::span<any> args)
+			[[nodiscard]] inline static decltype(auto) construct(F &&f, std::span<any> args)
 			{
 				return construct<T, Ts...>(std::make_index_sequence<sizeof...(Ts)>{}, std::forward<F>(f), args);
 			}
 
 			type_ctor() noexcept = default;
 			template<typename T, typename... Ts, typename F>
-			type_ctor(std::in_place_type_t<T>, type_pack_t<Ts...>, F &&func) : args(make_argument_view<Ts...>())
+			type_ctor(std::in_place_type_t<T>, type_pack_t<Ts...>, F &&ctor) : args(make_argument_view<Ts...>())
 			{
-				this->func = [f = std::forward<F>(func)](std::span<any> any_args) -> any
-				{
-					return construct<T, Ts...>(f, any_args);
-				};
+				if constexpr (!std::is_invocable_r_v<any, F, std::span<any>>)
+					func = [f = std::forward<F>(ctor)](std::span<any> any_args)
+					{
+						auto result = construct<T, Ts...>(f, any_args);
+						if constexpr (!std::same_as<std::remove_cvref_t<decltype(result)>, any>)
+							return forward_any(result);
+						else
+							return result;
+					};
+				else
+					func = std::forward<F>(ctor);
 			}
 
 			[[nodiscard]] any operator()(std::span<any> arg_vals) const { return func(arg_vals); }
@@ -259,7 +266,7 @@ namespace reflex
 			constexpr constant_type_data(std::in_place_type_t<T>) noexcept;
 
 			/* `type_data` initialization function. */
-			void (type_data::*init_func)(database_impl &) = nullptr;
+			void (*init_func)(type_data &, database_impl &) = nullptr;
 			/* `any` initialization functions. */
 			any_funcs_t any_funcs;
 
@@ -280,34 +287,34 @@ namespace reflex
 			type_data(const constant_type_data &cdata) : constant_type_data(cdata) {}
 
 			template<typename T>
-			REFLEX_COLD void impl_init(database_impl &db)
+			REFLEX_COLD static void impl_init(type_data &data, database_impl &db)
 			{
 				/* Constructors, destructors & conversions are only created for object types. */
 				if constexpr (std::is_object_v<T>)
 				{
 					/* Add default & copy constructors. */
 					if constexpr (std::is_default_constructible_v<T>)
-						ctors.emplace_back(make_type_ctor<T>());
+						data.ctors.emplace_back(make_type_ctor<T>());
 					if constexpr (std::is_copy_constructible_v<T>)
-						ctors.emplace_back(make_type_ctor<T, std::add_const_t<T> &>());
+						data.ctors.emplace_back(make_type_ctor<T, std::add_const_t<T> &>());
 
 					/* Add comparisons. */
 					if constexpr (std::equality_comparable<T> || std::three_way_comparable<T>)
-						cmps.emplace(type_name_v<T>, make_type_cmp<T>());
+						data.cmps.emplace(type_name_v<T>, make_type_cmp<T>());
 
 					/* Add enum underlying type overloads. */
 					if constexpr (std::is_enum_v<T>)
 					{
-						ctors.emplace_back(make_type_ctor<T, std::underlying_type_t<T>>([](auto value) { return make_any<T>(static_cast<T>(value)); }));
-						convs.emplace(type_name_v<std::underlying_type_t<T>>, make_type_conv<T, std::underlying_type_t<T>>());
-						cmps.emplace(type_name_v<std::underlying_type_t<T>>, make_type_cmp<std::underlying_type_t<T>>());
+						data.ctors.emplace_back(make_type_ctor<T, std::underlying_type_t<T>>([](std::underlying_type_t<T> value) { return static_cast<T>(value); }));
+						data.convs.emplace(type_name_v<std::underlying_type_t<T>>, make_type_conv<T, std::underlying_type_t<T>>());
+						data.cmps.emplace(type_name_v<std::underlying_type_t<T>>, make_type_cmp<std::underlying_type_t<T>>());
 					}
 				}
 
 				/* Invoke user type initializer. */
 				if constexpr (requires(type_factory<T> f) { type_init<T>{}(f); })
 				{
-					type_factory<T> f{this, &db};
+					type_factory<T> f{&data, &db};
 					type_init<T>{}(f);
 				}
 			}
@@ -446,7 +453,7 @@ namespace reflex
 
 			type_data &init(database_impl &db)
 			{
-				(this->*init_func)(db);
+				init_func(*this, db);
 				return *this;
 			}
 			type_data &reset(database_impl &db)
