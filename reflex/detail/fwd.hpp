@@ -81,7 +81,7 @@ namespace reflex
 
 		enum type_flags
 		{
-			/* Used by any, prop_data & arg_data */
+			/* Used by any & arg_data */
 			is_const = 0x1,
 			is_value = 0x2,
 

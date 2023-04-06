@@ -469,9 +469,8 @@ namespace reflex
 		{
 			if (const auto other_name = other.type().name(); type_name != other_name)
 			{
-				const auto this_type = type(db);
-				if (!this_type->find_base(other_name, db) && !this_type->find_conv(other_name, db))
-					return false;
+				if (const auto this_type = type(db); !this_type->find_base(other_name, db))
+					return (flags >= is_const) && this_type->find_conv(other_name, db);
 			}
 			return flags >= other.is_const() ? is_const : type_flags{};
 		}
@@ -479,9 +478,8 @@ namespace reflex
 		{
 			if (const auto other_name = other.type_name; type_name != other_name)
 			{
-				const auto this_type = type(db);
-				if (!this_type->find_base(other_name, db) || !this_type->find_conv(other_name, db))
-					return false;
+				if (const auto this_type = type(db); !this_type->find_base(other_name, db))
+					return (flags >= is_const) && this_type->find_conv(other_name, db);
 			}
 			return flags >= (other.flags & is_const);
 		}
