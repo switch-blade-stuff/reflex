@@ -294,7 +294,7 @@ namespace reflex
 			{
 				void *new_data;
 				if (!(new_flags & is_local))
-					new_data = static_cast<heap_storage<void> *>(data())->copy();
+					new_data = static_cast<heap_storage<void> *>(other.data())->copy();
 				else
 					new_data = storage_t::data();
 				m_data_flags = std::bit_cast<std::uintptr_t>(new_data) | new_flags;
