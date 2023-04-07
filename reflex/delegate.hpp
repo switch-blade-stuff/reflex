@@ -321,8 +321,8 @@ namespace reflex
 		std::uintptr_t m_data_flags = {};
 	};
 
-	template<typename F>
-	void swap(delegate<F> &a, delegate<F> &b) noexcept { a.swap(b); }
+	template<typename F, std::size_t N>
+	void swap(delegate<F, N> &a, delegate<F, N> &b) noexcept { a.swap(b); }
 
 	template<typename R, typename... Args>
 	delegate(R (*)(Args...)) -> delegate<R(Args...)>;
@@ -335,8 +335,8 @@ namespace reflex
 	delegate(bind_member_t<Mem>, T &&) -> delegate<typename detail::deduce_signature<decltype(Mem)>::type>;
 
 	/** Creates a delegate from a member pointer and an object instance pointer. */
-	template<auto Mem, typename T>
-	[[nodiscard]] inline auto member_delegate(T &&instance) -> delegate<typename detail::deduce_signature<decltype(Mem)>::type>
+	template<auto Mem, std::size_t LocalBytes = sizeof(std::uintptr_t) * 2, typename T>
+	[[nodiscard]] inline auto member_delegate(T &&instance) -> delegate<typename detail::deduce_signature<decltype(Mem)>::type, LocalBytes>
 	{
 		return {bind_member<Mem>, std::forward<T>(instance)};
 	}
