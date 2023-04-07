@@ -40,8 +40,8 @@ int main()
 	struct test_struct { int value; };
 	auto s = std::make_shared<test_struct>();
 
-	TEST_ASSERT(f0 = reflex::member_delegate<&test_struct::value>(s.get()));
+	TEST_ASSERT(f0 = reflex::delegate(reflex::bind_member<&test_struct::value>, s.get()));
 	TEST_ASSERT(f0() == s->value);
-	TEST_ASSERT(f0 = reflex::member_delegate<&test_struct::value>(s));
+	TEST_ASSERT(f0 = reflex::delegate(reflex::bind_member<&test_struct::value>, s));
 	TEST_ASSERT(f0() == s->value);
 }

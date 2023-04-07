@@ -100,7 +100,7 @@ namespace reflex
 
 			[[nodiscard]] friend constexpr bool operator==(const arg_data &a, const any &b) noexcept
 			{
-				return a.type_name == b.type().name() && static_cast<int>(a.flags) == ((b.is_ref() << 1) | b.is_const());
+				return a.type_name == b.type().name() && static_cast<int>(a.flags) == ((b.is_ref() << 1) | int{b.is_const()});
 			}
 			[[nodiscard]] friend constexpr bool operator==(const arg_data &a, const arg_data &b) noexcept
 			{
@@ -472,7 +472,7 @@ namespace reflex
 				if (const auto this_type = type(db); !this_type->find_base(other_name, db))
 					return (flags >= is_const) && this_type->find_conv(other_name, db);
 			}
-			return flags >= other.is_const() ? is_const : type_flags{};
+			return flags >= int{other.is_const()} ? is_const : type_flags{};
 		}
 		bool arg_data::compatible(const arg_data &other, database_impl &db) const
 		{
@@ -701,12 +701,12 @@ namespace reflex
 			operator--();
 			return tmp;
 		}
-		constexpr iterator &operator++() noexcept
+		iterator &operator++() noexcept
 		{
 			++m_iter;
 			return *this;
 		}
-		constexpr iterator &operator--() noexcept
+		iterator &operator--() noexcept
 		{
 			--m_iter;
 			return *this;
@@ -717,7 +717,7 @@ namespace reflex
 
 		[[nodiscard]] constexpr pointer get() const noexcept { return {constructor_info{std::to_address(m_iter), m_db}}; }
 
-		[[nodiscard]] constexpr bool operator==(const iterator &other) const noexcept { return m_iter == other.m_iter; }
+		[[nodiscard]] bool operator==(const iterator &other) const noexcept { return m_iter == other.m_iter; }
 
 	private:
 		iter_t m_iter = {};

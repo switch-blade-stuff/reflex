@@ -157,7 +157,7 @@ namespace reflex
 				if constexpr (!std::same_as<T, U>)
 				{
 					if constexpr (std::constructible_from<T, U>)
-						factory.template make_constructible<U>();
+						factory.template make_constructible<U>([](U x) { return static_cast<T>(x); });
 					if constexpr (std::convertible_to<T, U>)
 						factory.template make_convertible<U>();
 					if constexpr (std::three_way_comparable_with<T, U>)

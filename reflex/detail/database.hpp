@@ -45,7 +45,7 @@ namespace reflex
 		template<typename T>
 		type_data *make_type_data(database_impl &db)
 		{
-			constinit static const auto cdata = constant_type_data{std::in_place_type<T>};
+			static const auto cdata = constant_type_data{std::in_place_type<T>};
 			static type_data *data = db.insert(cdata);
 			return data;
 		}
