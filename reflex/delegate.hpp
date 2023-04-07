@@ -179,8 +179,11 @@ namespace reflex
 		template<typename T>
 		delegate(T &func) requires (!std::same_as<std::decay_t<T>, delegate> && !std::is_function_v<T>) { init_ref(typename traits_t::arg_types{}, func); }
 		/** Initializes the delegate with an in-place constructed functor. */
-		template<typename T>
-		delegate(T &&func) requires (!std::same_as<std::decay_t<T>, delegate> && !std::is_function_v<T>) { init_value(typename traits_t::arg_types{}, std::forward<T>(func)); }
+		template<typename T, typename U = std::decay_t<T>>
+		delegate(T &&func) requires (!std::same_as<U, delegate> && !std::is_function_v<U>) { init_value<U>(typename traits_t::arg_types{}, std::forward<T>(func)); }
+		/** Initializes the delegate with functor of type \a F constructed in-place from \a args. */
+		template<typename T, typename... Args>
+		delegate(std::in_place_type_t<T>, Args &&...args) { init_value<T>(typename traits_t::arg_types{}, std::forward<Args>(args)...); }
 
 		/** Initializes the delegate from a function pointer. */
 		template<typename R, typename... Args>
@@ -241,27 +244,27 @@ namespace reflex
 			m_data_flags = std::bit_cast<std::uintptr_t>(func);
 		}
 
-		template<typename... Args, typename T, typename U = std::decay_t<T>>
-		void init_ref(type_pack_t<Args...>, T &func) requires traits_t::template is_invocable<U>
+		template<typename T, typename... Args>
+		void init_ref(type_pack_t<Args...>, T &func) requires traits_t::template is_invocable<T>
 		{
-			m_invoke = [](void *ptr, Args ...args) -> typename traits_t::return_type { return std::invoke(*static_cast<U *>(ptr), args...); };
+			m_invoke = [](void *ptr, Args ...args) -> typename traits_t::return_type { return std::invoke(*static_cast<T *>(ptr), args...); };
 			m_data_flags = std::bit_cast<std::uintptr_t>(&func);
 		}
-		template<typename... Args, typename T, typename U = std::decay_t<T>>
-		void init_value(type_pack_t<Args...>, T &&func) requires traits_t::template is_invocable<U>
+		template< typename T, typename... Args, typename... TArgs>
+		void init_value(type_pack_t<Args...>, TArgs &&...args) requires traits_t::template is_invocable<T> && std::constructible_from<T, TArgs...>
 		{
-			if constexpr (is_by_value<U> && traits_t::template is_const_invocable<U>)
+			if constexpr (is_by_value<T> && traits_t::template is_const_invocable<T>)
 			{
-				const auto ptr = static_cast<U *>(storage_t::data());
-				new(std::launder(ptr)) U(std::forward<T>(func));
+				const auto ptr = static_cast<T *>(storage_t::data());
+				new(std::launder(ptr)) T(std::forward<TArgs>(args)...);
 
-				m_invoke = [](void *ptr, Args ...args) -> typename traits_t::return_type { return std::invoke(*static_cast<const U *>(ptr), args...); };
+				m_invoke = [](void *ptr, Args ...args) -> typename traits_t::return_type { return std::invoke(*static_cast<const T *>(ptr), args...); };
 				m_data_flags = std::bit_cast<std::uintptr_t>(ptr) | is_owned | is_local;
 			}
 			else
 			{
-				const auto ptr = new heap_storage<U>(std::forward<T>(func));
-				m_invoke = [](void *ptr, Args ...args) -> typename traits_t::return_type { return std::invoke(static_cast<const heap_storage<U> *>(ptr)->value, args...); };
+				const auto ptr = new heap_storage<T>(std::forward<TArgs>(args)...);
+				m_invoke = [](void *ptr, Args ...args) -> typename traits_t::return_type { return std::invoke(static_cast<const heap_storage<T> *>(ptr)->value, args...); };
 				m_data_flags = std::bit_cast<std::uintptr_t>(ptr) | is_owned;
 			}
 		}
