@@ -120,9 +120,9 @@ namespace reflex
 		constructor_view &operator=(constructor_view &&) noexcept = default;
 
 		/** Checks if the constructor list is empty. */
-		[[nodiscard]] constexpr bool empty() const noexcept { return m_view->empty(); }
+		[[nodiscard]] bool empty() const noexcept { return m_view->empty(); }
 		/** Returns total amount of constructors in the constructor list. */
-		[[nodiscard]] constexpr size_type size() const noexcept { return m_view->size(); }
+		[[nodiscard]] size_type size() const noexcept { return m_view->size(); }
 
 		/** Returns iterator to the first argument of the list. */
 		[[nodiscard]] inline iterator begin() const noexcept;

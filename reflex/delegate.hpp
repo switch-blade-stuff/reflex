@@ -59,19 +59,27 @@ namespace reflex
 		struct deduce_signature;
 		template<typename R, typename T>
 		struct deduce_signature<R T::*> { using type = R(); };
-		template<typename R, typename T, typename... Args, bool E>
-		struct deduce_signature<R (T::*)(Args...) noexcept(E)> { using type = R(Args...); };
-		template<typename R, typename T, typename... Args, bool E>
-		struct deduce_signature<R (T::*)(Args...) &noexcept(E)> { using type = R(Args...); };
-		template<typename R, typename T, typename... Args, bool E>
-		struct deduce_signature<R (T::*)(Args...) const noexcept(E)> { using type = R(Args...); };
-		template<typename R, typename T, typename... Args, bool E>
-		struct deduce_signature<R (T::*)(Args...) const &noexcept(E)> { using type = R(Args...); };
+		template<typename R, typename T, typename... Args>
+		struct deduce_signature<R (T::*)(Args...)> { using type = R(Args...); };
+		template<typename R, typename T, typename... Args>
+		struct deduce_signature<R (T::*)(Args...) &> { using type = R(Args...); };
+		template<typename R, typename T, typename... Args>
+		struct deduce_signature<R (T::*)(Args...) const> { using type = R(Args...); };
+		template<typename R, typename T, typename... Args>
+		struct deduce_signature<R (T::*)(Args...) const &> { using type = R(Args...); };
+		template<typename R, typename T, typename... Args>
+		struct deduce_signature<R (T::*)(Args...) noexcept> { using type = R(Args...); };
+		template<typename R, typename T, typename... Args>
+		struct deduce_signature<R (T::*)(Args...) &noexcept> { using type = R(Args...); };
+		template<typename R, typename T, typename... Args>
+		struct deduce_signature<R (T::*)(Args...) const noexcept> { using type = R(Args...); };
+		template<typename R, typename T, typename... Args>
+		struct deduce_signature<R (T::*)(Args...) const &noexcept> { using type = R(Args...); };
 
 		template<typename, typename, auto>
 		struct check_member : std::false_type {};
-		template<typename R, typename... Args, typename T, typename I, auto I::*F> requires std::is_member_pointer_v<decltype(F)>
-		struct check_member<R(Args...), T, F> : std::bool_constant<requires(const T &i, Args...args){ std::invoke(F, i, args...); }> {};
+		template<typename R, typename... Args, typename T, auto F> requires std::is_member_pointer_v<decltype(F)>
+		struct check_member<R(Args...), T, F> : std::bool_constant<requires(T i, Args...args){ std::invoke(F, i, args...); }> {};
 	}
 
 	/** Utility used to specify a member function pointer for construction of `delegate`. */
@@ -180,8 +188,8 @@ namespace reflex
 		/** Initializes the delegate from an invoker callback and a data pointer. */
 		delegate(native_function_t invoke, void *data) noexcept : m_invoke(invoke), m_data_flags(std::bit_cast<std::uintptr_t>(data)) {}
 		/** Initializes the delegate from a member function and instance pointers. */
-		template<typename T, typename I, auto I::*Mem>
-		delegate(bind_member_t<Mem>, T &&instance) requires (!std::same_as<std::remove_cv_t<T>, I>) { init_obj_mem<Mem>(typename traits_t::arg_types{}, std::forward<T>(instance)); }
+		template<typename T, auto Mem>
+		delegate(bind_member_t<Mem>, T &&instance) { init_obj_mem<Mem>(typename traits_t::arg_types{}, std::forward<T>(instance)); }
 
 		/** Checks if the delegate is empty. */
 		[[nodiscard]] constexpr operator bool() const noexcept { return m_invoke != nullptr; }
@@ -327,6 +335,9 @@ namespace reflex
 	delegate(bind_member_t<Mem>, T &&) -> delegate<typename detail::deduce_signature<decltype(Mem)>::type>;
 
 	/** Creates a delegate from a member pointer and an object instance pointer. */
-	template<auto Member, typename T>
-	[[nodiscard]] inline auto member_delegate(T &&instance) { return delegate{bind_member<Member>, std::forward<T>(instance)}; }
+	template<auto Mem, typename T>
+	[[nodiscard]] inline auto member_delegate(T &&instance) -> delegate<typename detail::deduce_signature<decltype(Mem)>::type>
+	{
+		return {bind_member<Mem>, std::forward<T>(instance)};
+	}
 }

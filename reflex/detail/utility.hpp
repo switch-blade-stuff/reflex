@@ -59,7 +59,7 @@ namespace reflex
 	template<typename T>
 	concept pointer_like = std::is_pointer_v<T> || requires(T v)
 	{
-		typename std::pointer_traits<T>::element_type;
+		typename std::pointer_traits<T>;
 		{ *v } -> std::common_reference_with<typename std::pointer_traits<T>::element_type>;
 		std::to_address(v);
 	};
