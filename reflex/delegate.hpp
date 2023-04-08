@@ -6,7 +6,7 @@
 
 #include <functional>
 
-#include "detail/utility.hpp"
+#include "utility.hpp"
 
 namespace reflex
 {

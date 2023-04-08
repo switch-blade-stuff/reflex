@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "detail/utility.hpp"
 #include "const_string.hpp"
+#include "utility.hpp"
 
 namespace reflex
 {

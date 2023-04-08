@@ -2,7 +2,6 @@
 list(APPEND REFLEX_PUBLIC_SOURCES
         ${CMAKE_CURRENT_LIST_DIR}/api.hpp
         ${CMAKE_CURRENT_LIST_DIR}/define.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/utility.hpp
         ${CMAKE_CURRENT_LIST_DIR}/spinlock.hpp
         ${CMAKE_CURRENT_LIST_DIR}/spinlock.ipp
         ${CMAKE_CURRENT_LIST_DIR}/fwd.hpp

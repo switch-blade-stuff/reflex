@@ -10,7 +10,7 @@
 #include <utility>
 #include <memory>
 
-#include "define.hpp"
+#include "detail/define.hpp"
 
 namespace reflex
 {

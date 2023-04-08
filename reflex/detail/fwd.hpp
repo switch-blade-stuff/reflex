@@ -15,7 +15,6 @@
 #include <tpp/stl_hash.hpp>
 
 #include "../type_name.hpp"
-#include "utility.hpp"
 
 namespace reflex
 {
