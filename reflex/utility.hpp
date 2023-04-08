@@ -55,13 +55,19 @@ namespace reflex
 		get<1>(v);
 	};
 
+	namespace detail
+	{
+		template<typename T>
+		concept has_to_address = requires(const T &p) { p.operator->; } || requires(const T &p) { std::pointer_traits<T>::to_address(p); };
+	}
+
 	/** Concept used to check if a type is pointer or pointer-like. */
 	template<typename T>
-	concept pointer_like = std::is_pointer_v<T> || requires(T v)
+	concept pointer_like = std::is_pointer_v<T> || requires
 	{
 		typename std::pointer_traits<T>;
-		{ *v } -> std::common_reference_with<typename std::pointer_traits<T>::element_type>;
-		std::to_address(v);
+		typename std::pointer_traits<T>::element_type;
+		detail::has_to_address<T>;
 	};
 
 	namespace detail
