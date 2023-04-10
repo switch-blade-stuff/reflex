@@ -152,14 +152,20 @@ namespace reflex
 		};
 
 		template<typename, template<typename...> typename>
-		struct template_instance_impl : std::false_type {};
+		struct instance_of_impl : std::false_type {};
 		template<template<typename...> typename T, typename... Ts>
-		struct template_instance_impl<T<Ts...>, T> : std::true_type {};
+		struct instance_of_impl<T<Ts...>, T> : std::true_type {};
 	}
 
+	/** Metaprogramming utility used to check if \a I is an instance of template \a T. */
+	template<typename I, template<typename...> typename T>
+	using is_instance_of = detail::instance_of_impl<I, T>;
+	/** Alias for `is_instance_of<I, T>::value` */
+	template<typename I, template<typename...> typename T>
+	inline constexpr auto is_instance_of_v = is_instance_of<I, T>{};
 	/** Concept used to check if \a I is an instance of template \a T. */
 	template<typename I, template<typename...> typename T>
-	concept template_instance = detail::template_instance_impl<I, T>::value;
+	concept instance_of = is_instance_of_v<I, T>;
 
 	/** Metaprogramming utility used to group a pack of types \a Ts. */
 	template<typename... Ts>

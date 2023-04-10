@@ -299,7 +299,7 @@ namespace reflex
 		[[nodiscard]] REFLEX_PUBLIC any enumerate(std::string_view name) const;
 
 		/** Checks if the referenced type implements all facets in facet group \a G. */
-		template<template_instance<facets::facet_group> G>
+		template<instance_of<facets::facet_group> G>
 		[[nodiscard]] inline bool implements_facet() const;
 		/** Checks if the referenced type implements a facet type \a F. */
 		template<typename F>
@@ -312,10 +312,10 @@ namespace reflex
 		[[nodiscard]] REFLEX_PUBLIC bool implements_facet(std::string_view name) const;
 
 		/** Returns facet group of type \a G for object instance \a obj. */
-		template<template_instance<facets::facet_group> G>
+		template<instance_of<facets::facet_group> G>
 		[[nodiscard]] inline G facet(const any &obj) const;
 		/** @copydoc facet */
-		template<template_instance<facets::facet_group> G>
+		template<instance_of<facets::facet_group> G>
 		[[nodiscard]] inline G facet(any &&obj) const;
 		/** Returns facet of type \a F for object instance \a obj. */
 		template<typename F>
