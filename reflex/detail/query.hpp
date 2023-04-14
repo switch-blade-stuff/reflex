@@ -102,7 +102,7 @@ namespace reflex
 		/** Filters the query for types constructible from arguments \a args. */
 		inline auto constructible_from(std::span<any> args) &&;
 		/** @copydoc constructible_from */
-		inline auto constructible_from(argument_list args) &&;
+		inline auto constructible_from(const argument_list &args) &&;
 
 		/** Filters the query for types convertible to type \a T. */
 		template<typename T>
@@ -229,7 +229,7 @@ namespace reflex
 	auto type_query<Filters...>::inherits_from() && { return std::move(*this).satisfies([](auto t) { return t.template inherits_from<T>(); }); }
 
 	template<typename... Filters>
-	auto type_query<Filters...>::constructible_from(argument_list args) && { return std::move(*this).satisfies([=](auto t) { return t.constructible_from(args); }); }
+	auto type_query<Filters...>::constructible_from(const argument_list &args) && { return std::move(*this).satisfies([=](auto t) { return t.constructible_from(args); }); }
 	template<typename... Filters>
 	auto type_query<Filters...>::constructible_from(std::span<any> args) && { return std::move(*this).satisfies([=](auto t) { return t.constructible_from(args); }); }
 	template<typename... Filters>

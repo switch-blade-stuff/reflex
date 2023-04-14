@@ -646,7 +646,7 @@ namespace reflex
 	constexpr typename argument_list::value_type argument_list::operator[](size_type i) const noexcept { return begin()[static_cast<difference_type>(i)]; }
 
 	argument_list constructor_info::args() const noexcept { return {m_data->args, m_db}; }
-	bool constructor_info::is_invocable(argument_list args) const { return is_invocable(args.m_data); }
+	bool constructor_info::is_invocable(const argument_list &args) const { return is_invocable(args.m_data); }
 
 	any constructor_info::invoke(std::span<any> args) const { return m_data->operator()(args); }
 	any constructor_info::operator()(std::span<any> args) const { return invoke(args); }
@@ -779,7 +779,7 @@ namespace reflex
 		else
 			return constructible_from(span_t{});
 	}
-	bool type_info::constructible_from(argument_list args) const { return constructible_from(args.m_data); }
+	bool type_info::constructible_from(const argument_list &args) const { return constructible_from(args.m_data); }
 
 	template<typename T>
 	void any::copy_init(type_info type, T *ptr)
