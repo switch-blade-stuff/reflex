@@ -100,16 +100,17 @@ namespace reflex
 
 			[[nodiscard]] friend constexpr bool operator==(const arg_data &a, const any &b) noexcept
 			{
-				return a.type_name == b.type().name() && static_cast<int>(a.flags) == ((b.is_ref() << 1) | int{b.is_const()});
+				return static_cast<int>(a.flags) == ((b.is_ref() << 1) | int{b.is_const()}) && a.type_name == b.type().name();
 			}
 			[[nodiscard]] friend constexpr bool operator==(const arg_data &a, const arg_data &b) noexcept
 			{
-				return a.type_name == b.type_name && a.flags == b.flags;
+				return a.flags == b.flags && a.type_name == b.type_name;
 			}
 
+			/* Type name is cached separately in order to enable quick comparisons. */
 			std::string_view type_name;
-			type_handle type = {};
 			type_flags flags = {};
+			type_handle type = {};
 		};
 
 		template<typename T>
@@ -467,21 +468,27 @@ namespace reflex
 
 		bool arg_data::compatible(const any &other, database_impl &db) const
 		{
+			if (flags < int{other.is_const()} ? is_const : type_flags{})
+				return false;
+
 			if (const auto other_name = other.type().name(); type_name != other_name)
 			{
 				if (const auto this_type = type(db); !this_type->find_base(other_name, db))
 					return (flags >= is_const) && this_type->find_conv(other_name, db);
 			}
-			return flags >= int{other.is_const()} ? is_const : type_flags{};
+			return true;
 		}
 		bool arg_data::compatible(const arg_data &other, database_impl &db) const
 		{
+			if (flags < (other.flags & is_const))
+				return false;
+
 			if (const auto other_name = other.type_name; type_name != other_name)
 			{
 				if (const auto this_type = type(db); !this_type->find_base(other_name, db))
 					return (flags >= is_const) && this_type->find_conv(other_name, db);
 			}
-			return flags >= (other.flags & is_const);
+			return true;
 		}
 
 		template<typename T>

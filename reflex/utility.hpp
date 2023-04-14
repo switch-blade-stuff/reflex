@@ -162,7 +162,7 @@ namespace reflex
 	using is_instance_of = detail::instance_of_impl<I, T>;
 	/** Alias for `is_instance_of<I, T>::value` */
 	template<typename I, template<typename...> typename T>
-	inline constexpr auto is_instance_of_v = is_instance_of<I, T>{};
+	inline constexpr auto is_instance_of_v = is_instance_of<I, T>::value;
 	/** Concept used to check if \a I is an instance of template \a T. */
 	template<typename I, template<typename...> typename T>
 	concept instance_of = is_instance_of_v<I, T>;
