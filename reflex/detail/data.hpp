@@ -43,7 +43,7 @@ namespace reflex
 				auto *base = static_cast<std::add_const_t<B> *>(static_cast<std::add_const_t<T> *>(ptr));
 				return static_cast<const void *>(base);
 			};
-			return {make_type_data<B>, cast};
+			return {data_factory<B>, cast};
 		}
 
 		struct type_conv
@@ -89,7 +89,7 @@ namespace reflex
 
 			constexpr arg_data() noexcept = default;
 			template<typename T>
-			constexpr arg_data(std::in_place_type_t<T>) noexcept : type_name(type_name_v<std::decay_t<T>>), type(make_type_data<std::decay_t<T>>)
+			constexpr arg_data(std::in_place_type_t<T>) noexcept : type_name(type_name_v<std::decay_t<T>>), type(data_factory<std::decay_t<T>>)
 			{
 				if constexpr (!std::is_lvalue_reference_v<T>) flags |= is_value;
 				if constexpr (std::is_const_v<std::remove_reference_t<T>>) flags |= is_const;
@@ -113,13 +113,13 @@ namespace reflex
 		};
 
 		template<typename T>
-		[[nodiscard]] constexpr static arg_data make_arg_data() noexcept { return arg_data{std::in_place_type<T>}; }
+		[[nodiscard]] static arg_data make_arg_data() noexcept { return arg_data{std::in_place_type<T>}; }
 		template<typename... Ts>
 		[[nodiscard]] inline static std::span<const arg_data> make_argument_view() noexcept
 		{
 			if constexpr (sizeof...(Ts) != 0)
 			{
-				constinit static auto value = std::array{make_arg_data<Ts>()...};
+				static auto value = std::array{make_arg_data<Ts>()...};
 				return {value};
 			}
 			return {};
@@ -276,8 +276,8 @@ namespace reflex
 			std::size_t size = 0;
 			std::size_t alignment = 0;
 
-			type_handle remove_pointer = nullptr;
-			type_handle remove_extent = nullptr;
+			type_handle remove_pointer = {};
+			type_handle remove_extent = {};
 			std::size_t extent = 0;
 		};
 
@@ -510,8 +510,8 @@ namespace reflex
 				if constexpr (std::signed_integral<T>) flags |= type_flags::is_signed_int;
 				if constexpr (std::unsigned_integral<T>) flags |= type_flags::is_unsigned_int;
 
-				remove_pointer = make_type_data<std::decay_t<std::remove_pointer_t<T>>>;
-				remove_extent = make_type_data<std::decay_t<std::remove_extent_t<T>>>;
+				remove_pointer = data_factory<std::decay_t<std::remove_pointer_t<T>>>;
+				remove_extent = data_factory<std::decay_t<std::remove_extent_t<T>>>;
 				extent = std::extent_v<T>;
 			}
 		}

@@ -272,8 +272,6 @@ namespace reflex
 		[[nodiscard]] bool has_attribute() const noexcept { return has_attribute(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type has an attribute of type \a type. */
 		[[nodiscard]] bool has_attribute(type_info type) const noexcept { return type.valid() && has_attribute(type.name()); }
-		/** Checks if the referenced type has an attribute of type with name \a name. */
-		[[nodiscard]] REFLEX_PUBLIC bool has_attribute(std::string_view name) const noexcept;
 
 		/** Returns a map of the referenced type's attributes. */
 		[[nodiscard]] REFLEX_PUBLIC detail::attr_map attributes() const;
@@ -307,9 +305,6 @@ namespace reflex
 		/** Checks if the referenced type implements a facet type \a type.
 		 * @note \a type must not be type of a facet group. */
 		[[nodiscard]] inline bool implements_facet(type_info type) const { return implements_facet(type.name()); }
-		/** Checks if the referenced type implements a facet type with name \a name.
-		 * @note \a name must not be name of a facet group. */
-		[[nodiscard]] REFLEX_PUBLIC bool implements_facet(std::string_view name) const;
 
 		/** Returns facet group of type \a G for object instance \a obj. */
 		template<instance_of<facets::facet_group> G>
@@ -329,8 +324,6 @@ namespace reflex
 		[[nodiscard]] bool inherits_from() const { return inherits_from(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type inherits from a base type \a type. */
 		[[nodiscard]] bool inherits_from(type_info type) const { return type.valid() && inherits_from(type.name()); }
-		/** Checks if the referenced type inherits from a base type with name \a name. */
-		[[nodiscard]] REFLEX_PUBLIC bool inherits_from(std::string_view name) const;
 
 		/** Returns a set of the referenced type's parents (including the parents' parents). */
 		[[nodiscard]] REFLEX_PUBLIC detail::type_set parents() const;
@@ -360,64 +353,48 @@ namespace reflex
 		[[nodiscard]] bool convertible_to() const { return convertible_to(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is convertible to type \a type, or inherits from a type convertible to \a type. */
 		[[nodiscard]] bool convertible_to(type_info type) const { return type.valid() && convertible_to(type.name()); }
-		/** Checks if the referenced type is convertible to type with name \a name, or inherits from a type convertible to \a name. */
-		[[nodiscard]] REFLEX_PUBLIC bool convertible_to(std::string_view name) const;
 
 		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type \a T. */
 		template<typename T>
 		[[nodiscard]] bool compatible_with() const { return compatible_with(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type \a type. */
 		[[nodiscard]] bool compatible_with(type_info type) const { return *this == type || inherits_from(type) || convertible_to(type); }
-		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type with name \a name. */
-		[[nodiscard]] bool compatible_with(std::string_view name) const { return this->name() == name || inherits_from(name) || convertible_to(name); }
 
 		/** Checks if the referenced type is directly (without conversion) comparable (using any comparison operator) with type \a T. */
 		template<typename T>
 		[[nodiscard]] bool comparable_with() const { return comparable_with(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is directly (without conversion) comparable (using any comparison operator) with type \a type. */
 		[[nodiscard]] bool comparable_with(type_info type) const noexcept { return comparable_with(type.name()); }
-		/** Checks if the referenced type is directly (without conversion) comparable (using any comparison operator) with type with name \a name. */
-		[[nodiscard]] REFLEX_PUBLIC bool comparable_with(std::string_view name) const noexcept;
 
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator==` and `operator!=`. */
 		template<typename T>
 		[[nodiscard]] bool eq_comparable_with() const { return eq_comparable_with(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator==` and `operator!=`. */
 		[[nodiscard]] bool eq_comparable_with(type_info type) const noexcept { return eq_comparable_with(type.name()); }
-		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator==` and `operator!=`. */
-		[[nodiscard]] REFLEX_PUBLIC bool eq_comparable_with(std::string_view name) const noexcept;
 
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator>=`. */
 		template<typename T>
 		[[nodiscard]] bool ge_comparable_with() const { return ge_comparable_with(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator>=`. */
 		[[nodiscard]] bool ge_comparable_with(type_info type) const noexcept { return ge_comparable_with(type.name()); }
-		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator>=`. */
-		[[nodiscard]] REFLEX_PUBLIC bool ge_comparable_with(std::string_view name) const noexcept;
 
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator<=`. */
 		template<typename T>
 		[[nodiscard]] bool le_comparable_with() const { return le_comparable_with(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator<=`. */
 		[[nodiscard]] bool le_comparable_with(type_info type) const noexcept { return le_comparable_with(type.name()); }
-		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator<=`. */
-		[[nodiscard]] REFLEX_PUBLIC bool le_comparable_with(std::string_view name) const noexcept;
 
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator>`. */
 		template<typename T>
 		[[nodiscard]] bool gt_comparable_with() const { return gt_comparable_with(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator>`. */
 		[[nodiscard]] bool gt_comparable_with(type_info type) const noexcept { return gt_comparable_with(type.name()); }
-		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator>`. */
-		[[nodiscard]] REFLEX_PUBLIC bool gt_comparable_with(std::string_view name) const noexcept;
 
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator<`. */
 		template<typename T>
 		[[nodiscard]] bool lt_comparable_with() const { return lt_comparable_with(type_name_v<std::decay_t<T>>); }
 		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator<`. */
 		[[nodiscard]] bool lt_comparable_with(type_info type) const noexcept { return lt_comparable_with(type.name()); }
-		/** Checks if the referenced type is directly (without conversion) comparable with type with name \a name using `operator<`. */
-		[[nodiscard]] REFLEX_PUBLIC bool lt_comparable_with(std::string_view name) const noexcept;
 
 		[[nodiscard]] constexpr bool operator==(const type_info &other) const noexcept = default;
 		[[nodiscard]] constexpr bool operator!=(const type_info &other) const noexcept = default;
@@ -425,6 +402,19 @@ namespace reflex
 	private:
 		/* Convenience operator for access to underlying type_data. */
 		[[nodiscard]] constexpr const detail::type_data *operator->() const noexcept { return m_data; }
+
+		[[nodiscard]] REFLEX_PUBLIC bool has_attribute(std::string_view name) const noexcept;
+
+		[[nodiscard]] REFLEX_PUBLIC bool implements_facet(std::string_view name) const;
+		[[nodiscard]] REFLEX_PUBLIC bool inherits_from(std::string_view name) const;
+		[[nodiscard]] REFLEX_PUBLIC bool convertible_to(std::string_view name) const;
+
+		[[nodiscard]] REFLEX_PUBLIC bool comparable_with(std::string_view name) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool eq_comparable_with(std::string_view name) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool ge_comparable_with(std::string_view name) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool le_comparable_with(std::string_view name) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool gt_comparable_with(std::string_view name) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool lt_comparable_with(std::string_view name) const noexcept;
 
 		[[nodiscard]] REFLEX_PUBLIC const void *get_vtab(std::string_view name) const;
 

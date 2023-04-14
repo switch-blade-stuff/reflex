@@ -43,7 +43,7 @@ namespace reflex
 		};
 
 		template<typename T>
-		type_data *make_type_data(database_impl &db)
+		type_data *data_factory(database_impl &db)
 		{
 			static const auto cdata = constant_type_data{std::in_place_type<T>};
 			static type_data *data = db.insert(cdata);
@@ -58,7 +58,7 @@ namespace reflex
 	type_factory<T> type_info::reflect()
 	{
 		auto *db = detail::database_impl::instance();
-		return {detail::make_type_data<std::decay_t<T>>, *db};
+		return {detail::data_factory<std::decay_t<T>>, *db};
 	}
 
 	type_info type_info::get(std::string_view name)
@@ -70,7 +70,7 @@ namespace reflex
 	type_info type_info::get()
 	{
 		auto *db = detail::database_impl::instance();
-		return {detail::make_type_data<std::decay_t<T>>, *db};
+		return {detail::data_factory<std::decay_t<T>>, *db};
 	}
 
 	void type_info::reset(std::string_view name) { detail::database_impl::instance()->reset(name); }

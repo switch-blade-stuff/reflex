@@ -240,7 +240,7 @@ namespace reflex
 		template<typename... Args, typename FR, typename... FArgs>
 		void init_func(type_pack_t<Args...>, FR (*func)(FArgs...)) requires traits_t::template is_invocable<FR (*)(FArgs...)>
 		{
-			m_invoke = [](void *ptr, Args ...args) -> typename traits_t::return_type { return static_cast<FR (*)(FArgs...)>(ptr)(args...); };
+			m_invoke = [](void *ptr, Args ...args) -> typename traits_t::return_type { return reinterpret_cast<FR (*)(FArgs...)>(ptr)(args...); };
 			m_data_flags = std::bit_cast<std::uintptr_t>(func);
 		}
 
@@ -250,7 +250,7 @@ namespace reflex
 			m_invoke = [](void *ptr, Args ...args) -> typename traits_t::return_type { return std::invoke(*static_cast<T *>(ptr), args...); };
 			m_data_flags = std::bit_cast<std::uintptr_t>(&func);
 		}
-		template< typename T, typename... Args, typename... TArgs>
+		template<typename T, typename... Args, typename... TArgs>
 		void init_value(type_pack_t<Args...>, TArgs &&...args) requires traits_t::template is_invocable<T> && std::constructible_from<T, TArgs...>
 		{
 			if constexpr (is_by_value<T> && traits_t::template is_const_invocable<T>)

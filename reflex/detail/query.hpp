@@ -77,8 +77,6 @@ namespace reflex
 		inline auto has_attribute() &&;
 		/** Filters the query for types that have an attribute of type \a type. */
 		inline auto has_attribute(type_info type) &&;
-		/** Filters the query for types that have an attribute of type with name \a name. */
-		inline auto has_attribute(std::string_view name) &&;
 
 		/** Filters the query for types that have an enumeration with value \a value. */
 		template<typename T>
@@ -91,16 +89,12 @@ namespace reflex
 		inline auto implements_facet() &&;
 		/** Filters the query for types that implement facet of type \a type. */
 		inline auto implements_facet(type_info type) &&;
-		/** Filters the query for types that implement facet of type with name \a name. */
-		inline auto implements_facet(std::string_view name) &&;
 
 		/** Filters the query for types that inherit from type \a T. */
 		template<typename T>
 		inline auto inherits_from() &&;
 		/** Filters the query for types that inherit from type \a type. */
 		inline auto inherits_from(type_info type) &&;
-		/** Filters the query for types that inherit from type with name \a name. */
-		inline auto inherits_from(std::string_view name) &&;
 
 		/** Filters the query for types constructible from arguments \a Args. */
 		template<typename... Args>
@@ -115,64 +109,48 @@ namespace reflex
 		inline auto convertible_to() &&;
 		/** Filters the query for types convertible to type \a type. */
 		inline auto convertible_to(type_info type) &&;
-		/** Filters the query for types convertible to type with name \a name. */
-		inline auto convertible_to(std::string_view name) &&;
 
 		/** Filters the query for types compatible with type \a T. */
 		template<typename T>
 		inline auto compatible_with() &&;
 		/** Filters the query for types compatible with type \a type. */
 		inline auto compatible_with(type_info type) &&;
-		/** Filters the query for types compatible with type with name \a name. */
-		inline auto compatible_with(std::string_view name) &&;
 
 		/** Filters the query for types directly (without conversion) comparable (using any comparison operator) with type \a T. */
 		template<typename T>
 		inline auto comparable_with() &&;
 		/** Filters the query for types directly (without conversion) comparable (using any comparison operator) with type \a type. */
 		inline auto comparable_with(type_info type) &&;
-		/** Filters the query for types directly (without conversion) comparable (using any comparison operator) with type with name \a name. */
-		inline auto comparable_with(std::string_view name) &&;
 
 		/** Filters the query for types directly (without conversion) comparable with type \a T using `operator==` and `operator!=`. */
 		template<typename T>
 		inline auto eq_comparable_with() &&;
 		/** Filters the query for types directly (without conversion) comparable with type \a type using `operator==` and `operator!=`. */
 		inline auto eq_comparable_with(type_info type) &&;
-		/** Filters the query for types directly (without conversion) comparable with type with name \a name using `operator==` and `operator!=`. */
-		inline auto eq_comparable_with(std::string_view name) &&;
 
 		/** Filters the query for types directly (without conversion) comparable with type \a T using `operator>=`. */
 		template<typename T>
 		inline auto ge_comparable_with() &&;
 		/** Filters the query for types directly (without conversion) comparable with type \a type using `operator>=`. */
 		inline auto ge_comparable_with(type_info type) &&;
-		/** Filters the query for types directly (without conversion) comparable with type with name \a name using `operator>=`. */
-		inline auto ge_comparable_with(std::string_view name) &&;
 
 		/** Filters the query for types directly (without conversion) comparable with type \a T using `operator<=`. */
 		template<typename T>
 		inline auto le_comparable_with() &&;
 		/** Filters the query for types directly (without conversion) comparable with type \a type using `operator<=`. */
 		inline auto le_comparable_with(type_info type) &&;
-		/** Filters the query for types directly (without conversion) comparable with type with name \a name using `operator<=`. */
-		inline auto le_comparable_with(std::string_view name) &&;
 
 		/** Filters the query for types directly (without conversion) comparable with type \a T using `operator>`. */
 		template<typename T>
 		inline auto gt_comparable_with() &&;
 		/** Filters the query for types directly (without conversion) comparable with type \a type using `operator>`. */
 		inline auto gt_comparable_with(type_info type) &&;
-		/** Filters the query for types directly (without conversion) comparable with type with name \a name using `operator>`. */
-		inline auto gt_comparable_with(std::string_view name) &&;
 
 		/** Filters the query for types directly (without conversion) comparable with type \a T using `operator<`. */
 		template<typename T>
 		inline auto lt_comparable_with() &&;
 		/** Filters the query for types directly (without conversion) comparable with type \a type using `operator<`. */
 		inline auto lt_comparable_with(type_info type) &&;
-		/** Filters the query for types directly (without conversion) comparable with type with name \a name using `operator<`. */
-		inline auto lt_comparable_with(std::string_view name) &&;
 
 		/** Returns a set of `type_info`s matched by the query. */
 		[[nodiscard]] detail::type_set types() const { return filter(std::array{proxy<Filters>...}); }
@@ -227,12 +205,10 @@ namespace reflex
 	auto type_query<Filters...>::is_array() && { return std::move(*this).satisfies([](auto t) { return t.is_array(); }); }
 
 	template<typename... Filters>
-	auto type_query<Filters...>::has_attribute(std::string_view name) && { return std::move(*this).satisfies([=](auto t) { return t.has_attribute(name); }); }
-	template<typename... Filters>
-	auto type_query<Filters...>::has_attribute(type_info type) && { return std::move(*this).has_attribute(type.name()); }
+	auto type_query<Filters...>::has_attribute(type_info type) && { return std::move(*this).satisfies([=](auto t) { return t.has_attribute(type); }); }
 	template<typename... Filters>
 	template<typename T>
-	auto type_query<Filters...>::has_attribute() && { return std::move(*this).has_attribute(type_name_v<T>); }
+	auto type_query<Filters...>::has_attribute() && { return std::move(*this).satisfies([](auto t) { return t.template has_attribute<T>(); }); }
 
 	template<typename... Filters>
 	auto type_query<Filters...>::has_enumeration(std::string_view name) && { return std::move(*this).satisfies([=](auto t) { return t.has_enumeration(name); }); }
@@ -241,20 +217,16 @@ namespace reflex
 	auto type_query<Filters...>::has_enumeration(T &&value) && { return std::move(*this).satisfies([v = forward_any(value)](auto t) { return t.has_enumeration(v); }); }
 
 	template<typename... Filters>
-	auto type_query<Filters...>::implements_facet(std::string_view name) && { return std::move(*this).satisfies([=](auto t) { return t.implements_facet(name); }); }
-	template<typename... Filters>
-	auto type_query<Filters...>::implements_facet(type_info type) && { return std::move(*this).implements_facet(type.name()); }
+	auto type_query<Filters...>::implements_facet(type_info type) && { return std::move(*this).satisfies([=](auto t) { return t.implements_facet(type); }); }
 	template<typename... Filters>
 	template<typename T>
 	auto type_query<Filters...>::implements_facet() && { return std::move(*this).satisfies([](auto t) { return t.template implements_facet<T>(); }); }
 
 	template<typename... Filters>
-	auto type_query<Filters...>::inherits_from(std::string_view name) && { return std::move(*this).satisfies([=](auto t) { return t.inherits_from(name); }); }
-	template<typename... Filters>
-	auto type_query<Filters...>::inherits_from(type_info type) && { return std::move(*this).inherits_from(type.name()); }
+	auto type_query<Filters...>::inherits_from(type_info type) && { return std::move(*this).satisfies([=](auto t) { return t.inherits_from(type); }); }
 	template<typename... Filters>
 	template<typename T>
-	auto type_query<Filters...>::inherits_from() && { return std::move(*this).inherits_from(type_name_v<T>); }
+	auto type_query<Filters...>::inherits_from() && { return std::move(*this).satisfies([](auto t) { return t.template inherits_from<T>(); }); }
 
 	template<typename... Filters>
 	auto type_query<Filters...>::constructible_from(argument_view args) && { return std::move(*this).satisfies([=](auto t) { return t.constructible_from(args); }); }
@@ -265,66 +237,50 @@ namespace reflex
 	auto type_query<Filters...>::constructible_from() && { return std::move(*this).constructible_from(argument_view{type_pack<Args...>}); }
 
 	template<typename... Filters>
-	auto type_query<Filters...>::convertible_to(std::string_view name) && { return std::move(*this).satisfies([=](auto t) { return t.convertible_to(name); }); }
-	template<typename... Filters>
-	auto type_query<Filters...>::convertible_to(type_info type) && { return std::move(*this).convertible_to(type.name()); }
+	auto type_query<Filters...>::convertible_to(type_info type) && { return std::move(*this).satisfies([=](auto t) { return t.convertible_to(type); }); }
 	template<typename... Filters>
 	template<typename T>
-	auto type_query<Filters...>::convertible_to() && { return std::move(*this).convertible_to(type_name_v<T>); }
+	auto type_query<Filters...>::convertible_to() && { return std::move(*this).satisfies([](auto t) { return t.template convertible_to<T>(); }); }
 
 	template<typename... Filters>
-	auto type_query<Filters...>::compatible_with(std::string_view name) && { return std::move(*this).satisfies([=](auto t) { return t.compatible_with(name); }); }
-	template<typename... Filters>
-	auto type_query<Filters...>::compatible_with(type_info type) && { return std::move(*this).compatible_with(type.name()); }
+	auto type_query<Filters...>::compatible_with(type_info type) && { return std::move(*this).satisfies([=](auto t) { return t.compatible_with(type); }); }
 	template<typename... Filters>
 	template<typename T>
-	auto type_query<Filters...>::compatible_with() && { return std::move(*this).compatible_with(type_name_v<T>); }
+	auto type_query<Filters...>::compatible_with() && { return std::move(*this).satisfies([](auto t) { return t.template compatible_with<T>(); }); }
 
 	template<typename... Filters>
-	auto type_query<Filters...>::comparable_with(std::string_view name) && { return std::move(*this).satisfies([=](auto t) { return t.comparable_with(name); }); }
-	template<typename... Filters>
-	auto type_query<Filters...>::comparable_with(type_info type) && { return std::move(*this).comparable_with(type.name()); }
+	auto type_query<Filters...>::comparable_with(type_info type) && { return std::move(*this).satisfies([=](auto t) { return t.comparable_with(type); }); }
 	template<typename... Filters>
 	template<typename T>
-	auto type_query<Filters...>::comparable_with() && { return std::move(*this).comparable_with(type_name_v<T>); }
+	auto type_query<Filters...>::comparable_with() && { return std::move(*this).satisfies([](auto t) { return t.template comparable_with<T>(); }); }
 
 	template<typename... Filters>
-	auto type_query<Filters...>::eq_comparable_with(std::string_view name) && { return std::move(*this).satisfies([=](auto t) { return t.eq_comparable_with(name); }); }
-	template<typename... Filters>
-	auto type_query<Filters...>::eq_comparable_with(type_info type) && { return std::move(*this).eq_comparable_with(type.name()); }
+	auto type_query<Filters...>::eq_comparable_with(type_info type) && { return std::move(*this).satisfies([=](auto t) { return t.eq_comparable_with(type); }); }
 	template<typename... Filters>
 	template<typename T>
-	auto type_query<Filters...>::eq_comparable_with() && { return std::move(*this).eq_comparable_with(type_name_v<T>); }
+	auto type_query<Filters...>::eq_comparable_with() && { return std::move(*this).satisfies([](auto t) { return t.template eq_comparable_with<T>(); }); }
 
 	template<typename... Filters>
-	auto type_query<Filters...>::ge_comparable_with(std::string_view name) && { return std::move(*this).satisfies([=](auto t) { return t.ge_comparable_with(name); }); }
-	template<typename... Filters>
-	auto type_query<Filters...>::ge_comparable_with(type_info type) && { return std::move(*this).ge_comparable_with(type.name()); }
+	auto type_query<Filters...>::ge_comparable_with(type_info type) && { return std::move(*this).satisfies([=](auto t) { return t.ge_comparable_with(type); }); }
 	template<typename... Filters>
 	template<typename T>
-	auto type_query<Filters...>::ge_comparable_with() && { return std::move(*this).ge_comparable_with(type_name_v<T>); }
+	auto type_query<Filters...>::ge_comparable_with() && { return std::move(*this).satisfies([](auto t) { return t.template ge_comparable_with<T>(); }); }
 
 	template<typename... Filters>
-	auto type_query<Filters...>::le_comparable_with(std::string_view name) && { return std::move(*this).satisfies([=](auto t) { return t.le_comparable_with(name); }); }
-	template<typename... Filters>
-	auto type_query<Filters...>::le_comparable_with(type_info type) && { return std::move(*this).le_comparable_with(type.name()); }
+	auto type_query<Filters...>::le_comparable_with(type_info type) && { return std::move(*this).satisfies([=](auto t) { return t.le_comparable_with(type); }); }
 	template<typename... Filters>
 	template<typename T>
-	auto type_query<Filters...>::le_comparable_with() && { return std::move(*this).le_comparable_with(type_name_v<T>); }
+	auto type_query<Filters...>::le_comparable_with() && { return std::move(*this).satisfies([](auto t) { return t.template le_comparable_with<T>(); }); }
 
 	template<typename... Filters>
-	auto type_query<Filters...>::gt_comparable_with(std::string_view name) && { return std::move(*this).satisfies([=](auto t) { return t.gt_comparable_with(name); }); }
-	template<typename... Filters>
-	auto type_query<Filters...>::gt_comparable_with(type_info type) && { return std::move(*this).gt_comparable_with(type.name()); }
+	auto type_query<Filters...>::gt_comparable_with(type_info type) && { return std::move(*this).satisfies([=](auto t) { return t.gt_comparable_with(type); }); }
 	template<typename... Filters>
 	template<typename T>
-	auto type_query<Filters...>::gt_comparable_with() && { return std::move(*this).gt_comparable_with(type_name_v<T>); }
+	auto type_query<Filters...>::gt_comparable_with() && { return std::move(*this).satisfies([](auto t) { return t.template gt_comparable_with<T>(); }); }
 
 	template<typename... Filters>
-	auto type_query<Filters...>::lt_comparable_with(std::string_view name) && { return std::move(*this).satisfies([=](auto t) { return t.lt_comparable_with(name); }); }
-	template<typename... Filters>
-	auto type_query<Filters...>::lt_comparable_with(type_info type) && { return std::move(*this).lt_comparable_with(type.name()); }
+	auto type_query<Filters...>::lt_comparable_with(type_info type) && { return std::move(*this).satisfies([=](auto t) { return t.lt_comparable_with(type); }); }
 	template<typename... Filters>
 	template<typename T>
-	auto type_query<Filters...>::lt_comparable_with() && { return std::move(*this).lt_comparable_with(type_name_v<T>); }
+	auto type_query<Filters...>::lt_comparable_with() && { return std::move(*this).satisfies([](auto t) { return t.template lt_comparable_with<T>(); }); }
 }

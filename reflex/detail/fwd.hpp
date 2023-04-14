@@ -117,13 +117,14 @@ namespace reflex
 		struct type_conv;
 		struct type_data;
 
+		using type_handle = delegate<type_data *(database_impl &)>;
 		using base_cast = const void *(*)(const void *) noexcept;
-		using type_handle = type_data *(*)(database_impl &);
 
 		template<typename T>
 		[[nodiscard]] constexpr static any_funcs_t make_any_funcs() noexcept;
+
 		template<typename T>
-		[[nodiscard]] inline static type_data *make_type_data(database_impl &);
+		[[nodiscard]] inline static type_data *data_factory(database_impl &);
 	}
 }
 
