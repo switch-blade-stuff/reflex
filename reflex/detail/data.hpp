@@ -87,9 +87,11 @@ namespace reflex
 				return std::ranges::equal(a, b, [&](auto &&a, auto &&b) { return a.compatible(b, db); });
 			}
 
-			constexpr arg_data() noexcept = default;
+			arg_data() noexcept = default;
+			template<typename F>
+			arg_data(std::string_view name, F &&type, type_flags flags) : name(name), type(std::forward<F>(type)), flags(flags) {}
 			template<typename T>
-			constexpr arg_data(std::in_place_type_t<T>) noexcept : type_name(type_name_v<std::decay_t<T>>), type(data_factory<std::decay_t<T>>)
+			arg_data(std::in_place_type_t<T>) noexcept : name(type_name_v<std::decay_t<T>>), type(data_factory<std::decay_t<T>>)
 			{
 				if constexpr (!std::is_lvalue_reference_v<T>) flags |= is_value;
 				if constexpr (std::is_const_v<std::remove_reference_t<T>>) flags |= is_const;
@@ -100,31 +102,21 @@ namespace reflex
 
 			[[nodiscard]] friend constexpr bool operator==(const arg_data &a, const any &b) noexcept
 			{
-				return static_cast<int>(a.flags) == ((b.is_ref() << 1) | int{b.is_const()}) && a.type_name == b.type().name();
+				return static_cast<int>(a.flags) == ((b.is_ref() << 1) | int{b.is_const()}) && a.name == b.type().name();
 			}
 			[[nodiscard]] friend constexpr bool operator==(const arg_data &a, const arg_data &b) noexcept
 			{
-				return a.flags == b.flags && a.type_name == b.type_name;
+				return a.flags == b.flags && a.name == b.name;
 			}
 
 			/* Type name is cached separately in order to enable quick comparisons. */
-			std::string_view type_name;
-			type_flags flags = {};
+			std::string_view name;
 			type_handle type = {};
+			type_flags flags = {};
 		};
 
 		template<typename T>
 		[[nodiscard]] static arg_data make_arg_data() noexcept { return arg_data{std::in_place_type<T>}; }
-		template<typename... Ts>
-		[[nodiscard]] inline static std::span<const arg_data> make_argument_view() noexcept
-		{
-			if constexpr (sizeof...(Ts) != 0)
-			{
-				static auto value = std::array{make_arg_data<Ts>()...};
-				return {value};
-			}
-			return {};
-		}
 
 		struct type_ctor
 		{
@@ -144,7 +136,7 @@ namespace reflex
 
 			type_ctor() noexcept = default;
 			template<typename T, typename... Ts, typename F>
-			type_ctor(std::in_place_type_t<T>, type_pack_t<Ts...>, F &&ctor) : args(make_argument_view<Ts...>())
+			type_ctor(std::in_place_type_t<T>, type_pack_t<Ts...>, F &&ctor) : args{make_arg_data<Ts>()...}
 			{
 				if constexpr (!std::is_invocable_r_v<any, F, std::span<any>>)
 					func = [f = std::forward<F>(ctor)](std::span<any> any_args)
@@ -161,8 +153,8 @@ namespace reflex
 
 			[[nodiscard]] any operator()(std::span<any> arg_vals) const { return func(arg_vals); }
 
+			std::vector<arg_data> args;
 			delegate<any(std::span<any>)> func;
-			std::span<const arg_data> args;
 		};
 
 		template<typename T, typename... Ts, typename F>
@@ -471,7 +463,7 @@ namespace reflex
 			if (flags < int{other.is_const()} ? is_const : type_flags{})
 				return false;
 
-			if (const auto other_name = other.type().name(); type_name != other_name)
+			if (const auto other_name = other.type().name(); name != other_name)
 			{
 				if (const auto this_type = type(db); !this_type->find_base(other_name, db))
 					return (flags >= is_const) && this_type->find_conv(other_name, db);
@@ -483,10 +475,10 @@ namespace reflex
 			if (flags < (other.flags & is_const))
 				return false;
 
-			if (const auto other_name = other.type_name; type_name != other_name)
+			if (name != other.name)
 			{
-				if (const auto this_type = type(db); !this_type->find_base(other_name, db))
-					return (flags >= is_const) && this_type->find_conv(other_name, db);
+				if (const auto this_type = type(db); !this_type->find_base(other.name, db))
+					return (flags >= is_const) && this_type->find_conv(other.name, db);
 			}
 			return true;
 		}
@@ -527,9 +519,20 @@ namespace reflex
 	}
 
 	template<typename... Args>
-	argument_view::argument_view(type_pack_t<Args...>, detail::database_impl *db) noexcept : m_data(detail::make_argument_view<Args...>()), m_db(db) {}
+	argument_list::argument_list(type_pack_t<Args...>, detail::database_impl *db) : m_data{detail::make_arg_data<Args>()...}, m_db(db) {}
+	argument_list::argument_list(std::span<const detail::arg_data> data, detail::database_impl *db) : m_data(data.begin(), data.end()), m_db(db) {}
 
-	class argument_view::pointer
+	argument_list::argument_list(std::initializer_list<std::pair<type_info, detail::argument_flags>> args)
+	{
+		m_data.reserve(args.size());
+		for (auto [type, flags]: args)
+		{
+			m_data.emplace_back(type.name(), [data = type.m_data](auto &&) { return data; }, static_cast<detail::type_flags>(flags));
+			m_db = type.m_db;
+		}
+	}
+
+	class argument_list::pointer
 	{
 		friend class iterator;
 
@@ -554,11 +557,11 @@ namespace reflex
 	private:
 		argument_info m_value;
 	};
-	class argument_view::iterator
+	class argument_list::iterator
 	{
-		friend class argument_view;
+		friend class argument_list;
 
-		using iter_t = typename std::span<const detail::arg_data>::iterator;
+		using iter_t = typename std::vector<detail::arg_data>::const_iterator;
 
 	public:
 		using value_type = argument_info;
@@ -630,16 +633,19 @@ namespace reflex
 		detail::database_impl *m_db = nullptr;
 	};
 
-	constexpr typename argument_view::iterator argument_view::begin() const noexcept { return {m_data.begin(), m_db}; }
-	constexpr typename argument_view::iterator argument_view::cbegin() const noexcept { return begin(); }
-	constexpr typename argument_view::iterator argument_view::end() const noexcept { return {m_data.end(), m_db}; }
-	constexpr typename argument_view::iterator argument_view::cend() const noexcept { return end(); }
+	constexpr bool argument_list::empty() const noexcept { return m_data.empty(); }
+	constexpr typename argument_list::size_type argument_list::size() const noexcept { return m_data.size(); }
 
-	constexpr typename argument_view::value_type argument_view::front() const noexcept { return *begin(); }
-	constexpr typename argument_view::value_type argument_view::back() const noexcept { return *(end() - 1); }
-	constexpr typename argument_view::value_type argument_view::operator[](size_type i) const noexcept { return begin()[static_cast<difference_type>(i)]; }
+	constexpr typename argument_list::iterator argument_list::begin() const noexcept { return {m_data.cbegin(), m_db}; }
+	constexpr typename argument_list::iterator argument_list::cbegin() const noexcept { return begin(); }
+	constexpr typename argument_list::iterator argument_list::end() const noexcept { return {m_data.cend(), m_db}; }
+	constexpr typename argument_list::iterator argument_list::cend() const noexcept { return end(); }
 
-	argument_view constructor_info::args() const noexcept { return {m_data->args, m_db}; }
+	constexpr typename argument_list::value_type argument_list::front() const noexcept { return *begin(); }
+	constexpr typename argument_list::value_type argument_list::back() const noexcept { return *(end() - 1); }
+	constexpr typename argument_list::value_type argument_list::operator[](size_type i) const noexcept { return begin()[static_cast<difference_type>(i)]; }
+
+	argument_list constructor_info::args() const noexcept { return {m_data->args, m_db}; }
 	any constructor_info::invoke(std::span<any> args) const { return m_data->operator()(args); }
 	any constructor_info::operator()(std::span<any> args) const { return invoke(args); }
 	constexpr bool constructor_info::operator==(const constructor_info &other) const noexcept { return m_data == other.m_data; }

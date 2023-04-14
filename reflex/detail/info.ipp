@@ -10,7 +10,7 @@
 
 namespace reflex
 {
-	bool constructor_info::is_invocable(argument_view args) const
+	bool constructor_info::is_invocable(argument_list args) const
 	{
 		return detail::arg_data::match_compatible(m_data->args, args, *m_db);
 	}
@@ -94,7 +94,7 @@ namespace reflex
 		}
 		return {};
 	}
-	bool type_info::constructible_from(argument_view args) const
+	bool type_info::constructible_from(argument_list args) const
 	{
 		if (!valid()) [[unlikely]] return false;
 		return m_data->find_ctor(args, *m_db);

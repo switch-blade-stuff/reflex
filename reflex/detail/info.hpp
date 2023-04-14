@@ -10,14 +10,33 @@
 
 namespace reflex
 {
-	/** Structure representing a view of argument infos. */
-	class argument_view
+	namespace detail
+	{
+		enum class argument_flags : int
+		{
+			/** Argument is const-qualified. */
+			is_const = type_flags::is_const,
+			/** Argument is passed by value. */
+			is_value = type_flags::is_value
+		};
+
+		constexpr argument_flags operator~(const argument_flags &x) noexcept { return static_cast<argument_flags>(~static_cast<int>(x)); }
+		constexpr argument_flags operator&(const argument_flags &a, const argument_flags &b) noexcept { return static_cast<argument_flags>(static_cast<int>(a) & static_cast<int>(b)); }
+		constexpr argument_flags operator|(const argument_flags &a, const argument_flags &b) noexcept { return static_cast<argument_flags>(static_cast<int>(a) | static_cast<int>(b)); }
+		constexpr argument_flags operator^(const argument_flags &a, const argument_flags &b) noexcept { return static_cast<argument_flags>(static_cast<int>(a) ^ static_cast<int>(b)); }
+		constexpr argument_flags &operator&=(argument_flags &a, int b) noexcept { return a = static_cast<argument_flags>(static_cast<int>(a) & static_cast<int>(b)); }
+		constexpr argument_flags &operator|=(argument_flags &a, int b) noexcept { return a = static_cast<argument_flags>(static_cast<int>(a) | static_cast<int>(b)); }
+		constexpr argument_flags &operator^=(argument_flags &a, int b) noexcept { return a = static_cast<argument_flags>(static_cast<int>(a) ^ static_cast<int>(b)); }
+	}
+
+	/** Structure representing a sequence of arguments. */
+	class argument_list
 	{
 		friend class constructor_info;
 
 		template<typename... Args>
-		inline argument_view(type_pack_t<Args...>, detail::database_impl *) noexcept;
-		constexpr argument_view(std::span<const detail::arg_data> data, detail::database_impl *db) noexcept : m_data(data), m_db(db) {}
+		inline argument_list(type_pack_t<Args...>, detail::database_impl *);
+		inline argument_list(std::span<const detail::arg_data> data, detail::database_impl *db);
 
 	public:
 		using value_type = argument_info;
@@ -30,20 +49,22 @@ namespace reflex
 		using size_type = std::size_t;
 
 	public:
-		constexpr argument_view() noexcept = default;
-		constexpr argument_view(const argument_view &) noexcept = default;
-		constexpr argument_view(argument_view &&) noexcept = default;
-		argument_view &operator=(const argument_view &) noexcept = default;
-		argument_view &operator=(argument_view &&) noexcept = default;
+		constexpr argument_list() noexcept = default;
+		constexpr argument_list(const argument_list &) noexcept = default;
+		constexpr argument_list(argument_list &&) noexcept = default;
+		argument_list &operator=(const argument_list &) noexcept = default;
+		argument_list &operator=(argument_list &&) noexcept = default;
 
 		/** Creates argument list for argument types \a Args. */
 		template<typename... Args>
-		inline argument_view(type_pack_t<Args...>);
+		inline argument_list(type_pack_t<Args...>);
+		/** Creates argument list from initializer list of pairs \a args where `first` is the type of the argument and `second` is the flags bitmask. */
+		inline argument_list(std::initializer_list<std::pair<type_info, detail::argument_flags>> args);
 
 		/** Checks if the argument list is empty. */
-		[[nodiscard]] constexpr bool empty() const noexcept { return m_data.empty(); }
+		[[nodiscard]] constexpr bool empty() const noexcept;
 		/** Returns total amount of arguments in the argument list. */
-		[[nodiscard]] constexpr size_type size() const noexcept { return m_data.size(); }
+		[[nodiscard]] constexpr size_type size() const noexcept;
 
 		/** Returns iterator to the first argument of the list. */
 		[[nodiscard]] constexpr iterator begin() const noexcept;
@@ -62,15 +83,18 @@ namespace reflex
 		[[nodiscard]] constexpr value_type operator[](size_type i) const noexcept;
 
 	private:
-		std::span<const detail::arg_data> m_data;
+		std::vector<detail::arg_data> m_data;
 		detail::database_impl *m_db = nullptr;
 	};
 	/** Structure containing information about an argument of an argument list. */
 	class argument_info
 	{
-		friend class argument_view::iterator;
+		friend class argument_list::iterator;
 
 		constexpr argument_info(const detail::arg_data *data, detail::database_impl *db) noexcept : m_data(data), m_db(db) {}
+
+	public:
+		using flags_type = detail::argument_flags;
 
 	public:
 		argument_info() = delete;
@@ -79,6 +103,9 @@ namespace reflex
 		constexpr argument_info(argument_info &&) noexcept = default;
 		constexpr argument_info &operator=(const argument_info &) noexcept = default;
 		constexpr argument_info &operator=(argument_info &&) noexcept = default;
+
+		/** Returns flags of the argument info. */
+		[[nodiscard]] constexpr flags_type flags() const noexcept;
 
 		/** Checks if the argument type is a reference. */
 		[[nodiscard]] inline bool is_ref() const noexcept;
@@ -153,10 +180,10 @@ namespace reflex
 		constexpr constructor_info &operator=(constructor_info &&) noexcept = default;
 
 		/** Returns argument list of the referenced constructor. */
-		[[nodiscard]] inline argument_view args() const noexcept;
+		[[nodiscard]] inline argument_list args() const noexcept;
 
 		/** Checks if the underlying constructor can be invoked with arguments \a args. */
-		[[nodiscard]] REFLEX_PUBLIC bool is_invocable(argument_view args) const;
+		[[nodiscard]] REFLEX_PUBLIC bool is_invocable(argument_list args) const;
 		/** @copydoc is_invocable */
 		[[nodiscard]] REFLEX_PUBLIC bool is_invocable(std::span<any> args) const;
 
@@ -179,6 +206,8 @@ namespace reflex
 		friend class type_factory;
 		template<typename...>
 		friend class type_query;
+
+		friend class argument_list;
 		friend class argument_info;
 		friend class any;
 
@@ -207,7 +236,7 @@ namespace reflex
 
 	private:
 		type_info(detail::type_handle handle, detail::database_impl &db) : m_data(handle(db)), m_db(&db) {}
-		constexpr type_info(const detail::type_data *data, detail::database_impl *db) noexcept : m_data(data), m_db(db) {}
+		constexpr type_info(detail::type_data *data, detail::database_impl *db) noexcept : m_data(data), m_db(db) {}
 
 	public:
 		/** Initializes an invalid type info. */
@@ -330,9 +359,9 @@ namespace reflex
 
 		/** Checks if the referenced type is constructible from arguments \a Args. */
 		template<typename... Args>
-		[[nodiscard]] inline bool constructible_from() const { return constructible_from(argument_view{type_pack<Args...>}); }
+		[[nodiscard]] inline bool constructible_from() const { return constructible_from(argument_list{type_pack<Args...>}); }
 		/** Checks if the referenced type is constructible from arguments \a args. */
-		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(argument_view args) const;
+		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(argument_list args) const;
 		/** @copydoc constructible_from */
 		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(std::span<any> args) const;
 
@@ -401,7 +430,7 @@ namespace reflex
 
 	private:
 		/* Convenience operator for access to underlying type_data. */
-		[[nodiscard]] constexpr const detail::type_data *operator->() const noexcept { return m_data; }
+		[[nodiscard]] constexpr detail::type_data *operator->() const noexcept { return m_data; }
 
 		[[nodiscard]] REFLEX_PUBLIC bool has_attribute(std::string_view name) const noexcept;
 
@@ -425,7 +454,7 @@ namespace reflex
 
 		inline void fill_parents(detail::type_set &result) const;
 
-		const detail::type_data *m_data = nullptr;
+		detail::type_data *m_data = nullptr;
 		detail::database_impl *m_db = nullptr;
 	};
 

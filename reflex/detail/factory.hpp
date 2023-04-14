@@ -124,7 +124,7 @@ namespace reflex
 		template<typename... Ts, typename... Args>
 		void add_ctor(Args &&...args)
 		{
-			const auto expected = detail::make_argument_view<Ts...>();
+			const auto expected = std::array{detail::make_arg_data<Ts>()...};
 			if (auto existing = m_data->find_exact_ctor(expected); existing == nullptr)
 				m_data->ctors.emplace_back(detail::make_type_ctor<T, Ts...>(std::forward<Args>(args)...));
 			else

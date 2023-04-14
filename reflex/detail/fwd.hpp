@@ -43,7 +43,7 @@ namespace reflex
 	class constructor_view;
 	class constructor_info;
 	class argument_info;
-	class argument_view;
+	class argument_list;
 	class type_info;
 	class object;
 	class any;

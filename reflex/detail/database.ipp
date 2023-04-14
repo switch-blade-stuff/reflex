@@ -34,7 +34,7 @@ namespace reflex::detail
 			[[likely]] reset(iter->second);
 	}
 
-	const type_data *database_impl::find(std::string_view name) const
+	type_data *database_impl::find(std::string_view name)
 	{
 		const auto l = detail::shared_scoped_lock{*this};
 		if (const auto iter = m_types.find(name); iter != m_types.end())
@@ -42,7 +42,6 @@ namespace reflex::detail
 		else
 			return nullptr;
 	}
-
 	type_data *database_impl::insert(std::string_view name, const constant_type_data &data)
 	{
 		const auto l = detail::scoped_lock{*this};

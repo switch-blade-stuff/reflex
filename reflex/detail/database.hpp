@@ -34,8 +34,7 @@ namespace reflex
 			REFLEX_PUBLIC void reset(type_data &data);
 			REFLEX_PUBLIC void reset(std::string_view name);
 
-			REFLEX_PUBLIC const type_data *find(std::string_view name) const;
-
+			REFLEX_PUBLIC type_data *find(std::string_view name);
 			REFLEX_PUBLIC REFLEX_COLD type_data *insert(std::string_view name, const constant_type_data &data);
 
 			/* stable_map is used to allow type_info to be a simple pointer to type_data. */
@@ -52,7 +51,7 @@ namespace reflex
 	}
 
 	template<typename... Args>
-	argument_view::argument_view(type_pack_t<Args...> p) : argument_view(p, detail::database_impl::instance()) {}
+	argument_list::argument_list(type_pack_t<Args...> p) : argument_list(p, detail::database_impl::instance()) {}
 
 	template<typename T>
 	type_factory<T> type_info::reflect()

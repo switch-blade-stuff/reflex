@@ -6,16 +6,23 @@
 
 int main()
 {
+	using arg_flags = reflex::argument_info::flags_type;
+
 	constexpr auto str_val = std::string_view{"hello, world"};
 	const auto str_ti = reflex::type_info::get<std::string>();
 
 	TEST_ASSERT(str_ti.implements_facet<reflex::facets::string>());
 	TEST_ASSERT(str_ti.implements_facet<reflex::facets::range>());
 
+	TEST_ASSERT((str_ti.constructible_from({{reflex::type_info::get<const char *>(), arg_flags::is_value}, {reflex::type_info::get<std::size_t>(), arg_flags::is_value}})));
 	TEST_ASSERT((str_ti.constructible_from<const char *, std::size_t>()));
+
+	TEST_ASSERT((str_ti.constructible_from({{reflex::type_info::get<const char *>(), arg_flags::is_value}})));
 	TEST_ASSERT((str_ti.constructible_from<const char *>()));
 
+	TEST_ASSERT((str_ti.constructible_from({{reflex::type_info::get<std::string_view>(), arg_flags::is_value}})));
 	TEST_ASSERT((str_ti.constructible_from<std::string_view>()));
+
 	TEST_ASSERT((str_ti.convertible_to<std::string_view>()));
 
 	const auto str0 = str_ti.construct(str_val);
