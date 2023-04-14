@@ -33,6 +33,7 @@ namespace reflex
 	class argument_list
 	{
 		friend class constructor_info;
+		friend class type_info;
 
 		template<typename... Args>
 		inline argument_list(type_pack_t<Args...>, detail::database_impl *);
@@ -114,9 +115,6 @@ namespace reflex
 		/** Returns type of the argument. */
 		[[nodiscard]] inline type_info type() const noexcept;
 
-		/** @warning Internal use only! */
-		[[nodiscard]] constexpr operator const detail::arg_data &() const noexcept { return *m_data; }
-
 		[[nodiscard]] constexpr bool operator==(const argument_info &other) const noexcept;
 
 	private:
@@ -183,7 +181,7 @@ namespace reflex
 		[[nodiscard]] inline argument_list args() const noexcept;
 
 		/** Checks if the underlying constructor can be invoked with arguments \a args. */
-		[[nodiscard]] REFLEX_PUBLIC bool is_invocable(argument_list args) const;
+		[[nodiscard]] inline bool is_invocable(argument_list args) const;
 		/** @copydoc is_invocable */
 		[[nodiscard]] REFLEX_PUBLIC bool is_invocable(std::span<any> args) const;
 
@@ -195,6 +193,8 @@ namespace reflex
 		[[nodiscard]] constexpr bool operator==(const constructor_info &other) const noexcept;
 
 	private:
+		[[nodiscard]] REFLEX_PUBLIC bool is_invocable(std::span<const detail::arg_data> args) const;
+
 		const detail::type_ctor *m_data = nullptr;
 		detail::database_impl *m_db = nullptr;
 	};
@@ -203,9 +203,11 @@ namespace reflex
 	class type_info
 	{
 		template<typename>
-		friend class type_factory;
+		friend
+		class type_factory;
 		template<typename...>
-		friend class type_query;
+		friend
+		class type_query;
 
 		friend class argument_list;
 		friend class argument_info;
@@ -359,9 +361,9 @@ namespace reflex
 
 		/** Checks if the referenced type is constructible from arguments \a Args. */
 		template<typename... Args>
-		[[nodiscard]] inline bool constructible_from() const { return constructible_from(argument_list{type_pack<Args...>}); }
+		[[nodiscard]] inline bool constructible_from() const;
 		/** Checks if the referenced type is constructible from arguments \a args. */
-		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(argument_list args) const;
+		[[nodiscard]] inline bool constructible_from(argument_list args) const;
 		/** @copydoc constructible_from */
 		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(std::span<any> args) const;
 
@@ -432,20 +434,22 @@ namespace reflex
 		/* Convenience operator for access to underlying type_data. */
 		[[nodiscard]] constexpr detail::type_data *operator->() const noexcept { return m_data; }
 
-		[[nodiscard]] REFLEX_PUBLIC bool has_attribute(std::string_view name) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool has_attribute(std::string_view) const noexcept;
 
-		[[nodiscard]] REFLEX_PUBLIC bool implements_facet(std::string_view name) const;
-		[[nodiscard]] REFLEX_PUBLIC bool inherits_from(std::string_view name) const;
-		[[nodiscard]] REFLEX_PUBLIC bool convertible_to(std::string_view name) const;
+		[[nodiscard]] REFLEX_PUBLIC bool implements_facet(std::string_view) const;
+		[[nodiscard]] REFLEX_PUBLIC bool inherits_from(std::string_view) const;
 
-		[[nodiscard]] REFLEX_PUBLIC bool comparable_with(std::string_view name) const noexcept;
-		[[nodiscard]] REFLEX_PUBLIC bool eq_comparable_with(std::string_view name) const noexcept;
-		[[nodiscard]] REFLEX_PUBLIC bool ge_comparable_with(std::string_view name) const noexcept;
-		[[nodiscard]] REFLEX_PUBLIC bool le_comparable_with(std::string_view name) const noexcept;
-		[[nodiscard]] REFLEX_PUBLIC bool gt_comparable_with(std::string_view name) const noexcept;
-		[[nodiscard]] REFLEX_PUBLIC bool lt_comparable_with(std::string_view name) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool constructible_from(std::span<const detail::arg_data>) const;
+		[[nodiscard]] REFLEX_PUBLIC bool convertible_to(std::string_view) const;
 
-		[[nodiscard]] REFLEX_PUBLIC const void *get_vtab(std::string_view name) const;
+		[[nodiscard]] REFLEX_PUBLIC bool comparable_with(std::string_view) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool eq_comparable_with(std::string_view) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool ge_comparable_with(std::string_view) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool le_comparable_with(std::string_view) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool gt_comparable_with(std::string_view) const noexcept;
+		[[nodiscard]] REFLEX_PUBLIC bool lt_comparable_with(std::string_view) const noexcept;
+
+		[[nodiscard]] REFLEX_PUBLIC const void *get_vtab(std::string_view) const;
 
 		template<typename T>
 		[[nodiscard]] auto get_vtab() const { return static_cast<const typename T::vtable_type *>(get_vtab(type_name_v<T>)); }

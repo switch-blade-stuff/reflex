@@ -646,6 +646,8 @@ namespace reflex
 	constexpr typename argument_list::value_type argument_list::operator[](size_type i) const noexcept { return begin()[static_cast<difference_type>(i)]; }
 
 	argument_list constructor_info::args() const noexcept { return {m_data->args, m_db}; }
+	bool constructor_info::is_invocable(argument_list args) const { return is_invocable(args.m_data); }
+
 	any constructor_info::invoke(std::span<any> args) const { return m_data->operator()(args); }
 	any constructor_info::operator()(std::span<any> args) const { return invoke(args); }
 	constexpr bool constructor_info::operator==(const constructor_info &other) const noexcept { return m_data == other.m_data; }
@@ -764,6 +766,20 @@ namespace reflex
 	type_info type_info::remove_pointer() const noexcept { return valid() && m_data->remove_pointer ? type_info{m_data->remove_pointer, *m_db} : type_info{}; }
 
 	constexpr constructor_view type_info::constructors() const noexcept { return valid() ? constructor_view{&m_data->ctors, m_db} : constructor_view{}; }
+
+	template<typename ...Args>
+	bool type_info::constructible_from() const
+	{
+		using span_t = std::span<const detail::arg_data>;
+		if constexpr (sizeof...(Args) != 0)
+		{
+			const auto args_data = std::array{detail::make_arg_data<Args>()...};
+			return constructible_from(span_t{args_data});
+		}
+		else
+			return constructible_from(span_t{});
+	}
+	bool type_info::constructible_from(argument_list args) const { return constructible_from(args.m_data); }
 
 	template<typename T>
 	void any::copy_init(type_info type, T *ptr)
