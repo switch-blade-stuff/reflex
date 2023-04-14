@@ -36,17 +36,17 @@ namespace reflex
 
 			REFLEX_PUBLIC const type_data *find(std::string_view name) const;
 
-			REFLEX_PUBLIC REFLEX_COLD type_data *insert(const constant_type_data &data);
+			REFLEX_PUBLIC REFLEX_COLD type_data *insert(std::string_view name, const constant_type_data &data);
 
 			/* stable_map is used to allow type_info to be a simple pointer to type_data. */
-			tpp::stable_map<std::string_view, type_data> m_types;
+			tpp::stable_map<std::string, type_data, type_hash, type_eq> m_types;
 		};
 
 		template<typename T>
 		type_data *data_factory(database_impl &db)
 		{
 			static const auto cdata = constant_type_data{std::in_place_type<T>};
-			static type_data *data = db.insert(cdata);
+			static type_data *data = db.insert(type_name_v<T>, cdata);
 			return data;
 		}
 	}

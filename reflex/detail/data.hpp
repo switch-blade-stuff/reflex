@@ -236,9 +236,9 @@ namespace reflex
 			void clear()
 			{
 				attrs.clear();
+				enums.clear();
 				vtabs.clear();
 				bases.clear();
-				enums.clear();
 				ctors.clear();
 				convs.clear();
 				cmps.clear();
@@ -492,10 +492,7 @@ namespace reflex
 		}
 
 		template<typename T>
-		constexpr constant_type_data::constant_type_data(std::in_place_type_t<T>) noexcept
-				: init_func(&type_data::impl_init<T>),
-				  any_funcs(make_any_funcs<T>()),
-				  name(type_name_v<T>)
+		constexpr constant_type_data::constant_type_data(std::in_place_type_t<T>) noexcept : init_func(&type_data::impl_init<T>), any_funcs(make_any_funcs<T>())
 		{
 			if constexpr (std::same_as<T, void>)
 				flags |= type_flags::is_void;

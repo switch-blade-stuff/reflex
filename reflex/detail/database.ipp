@@ -43,9 +43,14 @@ namespace reflex::detail
 			return nullptr;
 	}
 
-	type_data *database_impl::insert(const constant_type_data &data)
+	type_data *database_impl::insert(std::string_view name, const constant_type_data &data)
 	{
 		const auto l = detail::scoped_lock{*this};
-		return &m_types.emplace(data.name, data).first->second.init(*this);
+
+		/* Type name must be copied into the database, and the entry must be post-initialized. */
+		auto &[name_str, entry] = *m_types.emplace(name, data).first;
+		entry.name = name_str;
+		entry.init(*this);
+		return &entry;
 	}
 }
