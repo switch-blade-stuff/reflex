@@ -29,11 +29,16 @@ namespace reflex
 		/** Returns the underlying type initialized by this type factory. */
 		[[nodiscard]] constexpr type_info type() const noexcept { return {m_data, m_db}; }
 
-		/** Adds an attribute of type \a A constructed from arguments \a args to the underlying type info. */
+		/** Adds an attribute of type \a A constructed from arguments \a args to the underlying type info. If attribute
+		 * type \a A is constructible from `type_factory, Args...`, injects the type factory instance as the first argument.
+		 * This can be used to inject dynamic type metadata on a per-attribute, rather than per-type basis. */
 		template<typename A, typename... Args>
-		type_factory &attribute(Args &&...args) requires (std::same_as<std::decay_t<A>, A> && std::constructible_from<A, Args...>)
+		type_factory &attribute(Args &&...args) requires (std::same_as<std::decay_t<A>, A> && (std::constructible_from<A, Args...> || std::constructible_from<A, type_factory &, Args...>))
 		{
-			m_data->attrs.emplace_or_replace(type_name_v<A>, type(), std::in_place_type<T>, std::forward<Args>(args)...);
+			if constexpr (std::constructible_from<A, type_factory &, Args...>)
+				m_data->attrs.emplace_or_replace(type_name_v<A>, type(), std::in_place_type<T>, *this, std::forward<Args>(args)...);
+			else
+				m_data->attrs.emplace_or_replace(type_name_v<A>, type(), std::in_place_type<T>, std::forward<Args>(args)...);
 			return *this;
 		}
 		/** Adds enumeration constant named \a name constructed from arguments \a args to the underlying type info. */
