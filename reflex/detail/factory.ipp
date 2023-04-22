@@ -5,6 +5,7 @@
 #pragma once
 
 #include "database.hpp"
+#include "facets/compare.hpp"
 
 namespace reflex::detail
 {
@@ -20,8 +21,6 @@ namespace reflex::detail
 					factory.template make_constructible<U>([](U x) { return static_cast<T>(x); });
 				if constexpr (std::convertible_to<T, U>)
 					factory.template make_convertible<U>();
-				if constexpr (std::three_way_comparable_with<T, U>)
-					factory.template make_comparable<U>();
 			}
 		};
 		const auto init_unwrap = [&]<typename... Ts>(type_pack_t<Ts...>) { (init_metadata(std::in_place_type<Ts>), ...); };

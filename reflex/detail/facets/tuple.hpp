@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "facet.hpp"
+#include "../facet.hpp"
 
 namespace reflex::facets
 {
@@ -32,12 +32,12 @@ namespace reflex::facets
 		/** Returns size of the underlying tuple object as if via `std::tuple_size`. */
 		[[nodiscard]] std::size_t size() const noexcept { return base_t::vtable()->size; }
 		/** Returns type of the `n`th element of the tuple. If \a n is greater than tuple size, returns invalid type info. */
-		[[nodiscard]] type_info tuple_element(std::size_t n) const { return base_t::vtable()->tuple_element(n); }
+		[[nodiscard]] type_info tuple_element(std::size_t n) const { return base_t::checked_invoke<&vtable_type::tuple_element, "type_info tuple_element(size_type) const">(n); }
 
 		/** Returns `n`th element of the tuple. If \a n is greater than tuple size, returns an empty `any`. */
-		[[nodiscard]] any get(std::size_t n) { return base_t::vtable()->get(instance(), n); }
+		[[nodiscard]] any get(std::size_t n) { return base_t::checked_invoke<&vtable_type::get, "reference get(size_type)">(instance(), n); }
 		/** @copydoc get */
-		[[nodiscard]] any get(std::size_t n) const { return base_t::vtable()->get_const(instance(), n); }
+		[[nodiscard]] any get(std::size_t n) const { return base_t::checked_invoke<&vtable_type::get_const, "const_reference get(size_type) const">(instance(), n); }
 
 		/** Checks if the tuple has size of 2. */
 		[[nodiscard]] bool is_pair() const noexcept { return size() == 2; }

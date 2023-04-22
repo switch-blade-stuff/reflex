@@ -3,6 +3,7 @@
  */
 
 #include "database.hpp"
+#include "facets/compare.hpp"
 
 namespace reflex
 {
@@ -86,94 +87,32 @@ namespace reflex
 
 	bool any::operator==(const any &other) const
 	{
-		const auto other_type = other.type();
-		const auto this_type = type();
-
-		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
-		{
-			if (cmp->cmp_eq != nullptr)
-				return cmp->cmp_eq(data(), other.data());
-			else if (cmp->cmp_ne != nullptr)
-				return !cmp->cmp_ne(data(), other.data());
-		}
-		return empty() == other.empty();
+		const auto cmp = facet<facets::compare>();
+		return empty() == other.empty() || (cmp.vtable() && cmp.cmp_eq(other));
 	}
 	bool any::operator!=(const any &other) const
 	{
-		const auto other_type = other.type();
-		const auto this_type = type();
-
-		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
-		{
-			if (cmp->cmp_ne != nullptr)
-				return cmp->cmp_ne(data(), other.data());
-			else if (cmp->cmp_eq != nullptr)
-				return !cmp->cmp_eq(data(), other.data());
-		}
-		return empty() != other.empty();
+		const auto cmp = facet<facets::compare>();
+		return empty() != other.empty() || (cmp.vtable() && cmp.cmp_ne(other));
 	}
 	bool any::operator>=(const any &other) const
 	{
-		const auto other_type = other.type();
-		const auto this_type = type();
-
-		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
-		{
-			if (cmp->cmp_ge != nullptr)
-				return cmp->cmp_ge(data(), other.data());
-			else if (cmp->cmp_gt != nullptr && cmp->cmp_eq != nullptr)
-				return cmp->cmp_gt(data(), other.data()) || cmp->cmp_eq(data(), other.data());
-			else if (cmp->cmp_lt != nullptr)
-				return !cmp->cmp_lt(data(), other.data());
-		}
-		return empty() <= other.empty();
+		const auto cmp = facet<facets::compare>();
+		return empty() <= other.empty() || (cmp.vtable() && cmp.cmp_ge(other));
 	}
 	bool any::operator<=(const any &other) const
 	{
-		const auto other_type = other.type();
-		const auto this_type = type();
-
-		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
-		{
-			if (cmp->cmp_le != nullptr)
-				return cmp->cmp_le(data(), other.data());
-			else if (cmp->cmp_lt != nullptr && cmp->cmp_eq != nullptr)
-				return cmp->cmp_lt(data(), other.data()) || cmp->cmp_eq(data(), other.data());
-			else if (cmp->cmp_gt != nullptr)
-				return !cmp->cmp_gt(data(), other.data());
-		}
-		return empty() >= other.empty();
+		const auto cmp = facet<facets::compare>();
+		return empty() <= other.empty() || (cmp.vtable() && cmp.cmp_le(other));
 	}
 	bool any::operator>(const any &other) const
 	{
-		const auto other_type = other.type();
-		const auto this_type = type();
-
-		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
-		{
-			if (cmp->cmp_gt != nullptr)
-				return cmp->cmp_gt(data(), other.data());
-			else if (cmp->cmp_le != nullptr)
-				return !cmp->cmp_le(data(), other.data());
-			else if (cmp->cmp_lt != nullptr && cmp->cmp_eq != nullptr)
-				return !cmp->cmp_lt(data(), other.data()) && !cmp->cmp_eq(data(), other.data());
-		}
-		return !empty() && other.empty();
+		const auto cmp = facet<facets::compare>();
+		return (!empty() && other.empty()) || (cmp.vtable() && cmp.cmp_gt(other));
 	}
 	bool any::operator<(const any &other) const
 	{
-		const auto other_type = other.type();
-		const auto this_type = type();
-
-		if (const auto *cmp = this_type->find_cmp(other_type.name()); cmp != nullptr)
-		{
-			if (cmp->cmp_lt != nullptr)
-				return cmp->cmp_lt(data(), other.data());
-			else if (cmp->cmp_ge != nullptr)
-				return !cmp->cmp_ge(data(), other.data());
-			else if (cmp->cmp_gt != nullptr && cmp->cmp_eq != nullptr)
-				return !cmp->cmp_gt(data(), other.data()) && !cmp->cmp_eq(data(), other.data());
-		}
-		return empty() && !other.empty();
+		const auto cmp = facet<facets::compare>();
+		return (empty() && !other.empty()) || (cmp.vtable() && cmp.cmp_lt(other));
 	}
 }

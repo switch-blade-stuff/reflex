@@ -33,6 +33,7 @@ namespace reflex
 	class argument_list
 	{
 		friend class constructor_info;
+		friend class type_factory<>;
 		friend class type_info;
 
 		template<typename... Args>
@@ -332,10 +333,7 @@ namespace reflex
 		[[nodiscard]] inline bool implements_facet() const;
 		/** Checks if the referenced type implements a facet type \a F. */
 		template<typename F>
-		[[nodiscard]] inline bool implements_facet() const { return implements_facet(type_name_v<F>); }
-		/** Checks if the referenced type implements a facet type \a type.
-		 * @note \a type must not be type of a facet group. */
-		[[nodiscard]] inline bool implements_facet(type_info type) const { return implements_facet(type.name()); }
+		[[nodiscard]] inline bool implements_facet() const { return implements_facet(type_name_v<typename F::vtable_type>); }
 
 		/** Returns facet group of type \a G for object instance \a obj. */
 		template<instance_of<facets::facet_group> G>
@@ -391,42 +389,6 @@ namespace reflex
 		/** Checks if the referenced type is same as, inherits from, or can be type-cast to type \a type. */
 		[[nodiscard]] bool compatible_with(type_info type) const { return *this == type || inherits_from(type) || convertible_to(type); }
 
-		/** Checks if the referenced type is directly (without conversion) comparable (using any comparison operator) with type \a T. */
-		template<typename T>
-		[[nodiscard]] bool comparable_with() const { return comparable_with(type_name_v<std::decay_t<T>>); }
-		/** Checks if the referenced type is directly (without conversion) comparable (using any comparison operator) with type \a type. */
-		[[nodiscard]] bool comparable_with(type_info type) const noexcept { return comparable_with(type.name()); }
-
-		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator==` and `operator!=`. */
-		template<typename T>
-		[[nodiscard]] bool eq_comparable_with() const { return eq_comparable_with(type_name_v<std::decay_t<T>>); }
-		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator==` and `operator!=`. */
-		[[nodiscard]] bool eq_comparable_with(type_info type) const noexcept { return eq_comparable_with(type.name()); }
-
-		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator>=`. */
-		template<typename T>
-		[[nodiscard]] bool ge_comparable_with() const { return ge_comparable_with(type_name_v<std::decay_t<T>>); }
-		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator>=`. */
-		[[nodiscard]] bool ge_comparable_with(type_info type) const noexcept { return ge_comparable_with(type.name()); }
-
-		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator<=`. */
-		template<typename T>
-		[[nodiscard]] bool le_comparable_with() const { return le_comparable_with(type_name_v<std::decay_t<T>>); }
-		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator<=`. */
-		[[nodiscard]] bool le_comparable_with(type_info type) const noexcept { return le_comparable_with(type.name()); }
-
-		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator>`. */
-		template<typename T>
-		[[nodiscard]] bool gt_comparable_with() const { return gt_comparable_with(type_name_v<std::decay_t<T>>); }
-		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator>`. */
-		[[nodiscard]] bool gt_comparable_with(type_info type) const noexcept { return gt_comparable_with(type.name()); }
-
-		/** Checks if the referenced type is directly (without conversion) comparable with type \a T using `operator<`. */
-		template<typename T>
-		[[nodiscard]] bool lt_comparable_with() const { return lt_comparable_with(type_name_v<std::decay_t<T>>); }
-		/** Checks if the referenced type is directly (without conversion) comparable with type \a type using `operator<`. */
-		[[nodiscard]] bool lt_comparable_with(type_info type) const noexcept { return lt_comparable_with(type.name()); }
-
 		[[nodiscard]] constexpr bool operator==(const type_info &other) const noexcept = default;
 		[[nodiscard]] constexpr bool operator!=(const type_info &other) const noexcept = default;
 
@@ -452,7 +414,7 @@ namespace reflex
 		[[nodiscard]] REFLEX_PUBLIC const void *get_vtab(std::string_view) const;
 
 		template<typename T>
-		[[nodiscard]] auto get_vtab() const { return static_cast<const typename T::vtable_type *>(get_vtab(type_name_v<T>)); }
+		[[nodiscard]] auto get_vtab() const { return static_cast<const typename T::vtable_type *>(get_vtab(type_name_v<typename T::vtable_type>)); }
 		template<typename... Ts>
 		[[nodiscard]] auto get_vtab(type_pack_t<Ts...>) const { return std::forward_as_tuple(get_vtab<Ts>()...); }
 

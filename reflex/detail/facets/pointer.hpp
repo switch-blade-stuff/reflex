@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "facet.hpp"
+#include "../facet.hpp"
 
 namespace reflex::facets
 {
@@ -12,14 +12,14 @@ namespace reflex::facets
 	{
 		struct pointer_vtable
 		{
-			type_info (*element_type)();
+			type_info (*element_type)() = {};
 
-			bool (*empty)(const any &);
+			bool (*empty)(const any &) = {};
 
-			any (*get)(const any &);
-			const void *(*data)(const any &);
+			any (*get)(const any &) = {};
+			const void *(*data)(const any &) = {};
 
-			any (*deref)(const any &);
+			any (*deref)(const any &) = {};
 		};
 	}
 
@@ -33,15 +33,15 @@ namespace reflex::facets
 		using base_t::operator=;
 
 		/** Checks if the underlying pointer is empty. */
-		[[nodiscard]] bool empty() const { return base_t::vtable()->empty(base_t::instance()); }
+		[[nodiscard]] bool empty() const { return base_t::checked_invoke<&vtable_type::empty, "bool empty() const">(base_t::instance()); }
 
 		/** Returns the result of `std::to_address` invoked on the underlying pointer. */
-		[[nodiscard]] any get() const { return base_t::vtable()->get(base_t::instance()); }
+		[[nodiscard]] any get() const { return base_t::checked_invoke<&vtable_type::get, "pointer get() const">(base_t::instance()); }
 		/** Returns void pointer to the object pointed to by the underlying pointer. */
-		[[nodiscard]] const void *data() const { return base_t::vtable()->data(base_t::instance()); }
+		[[nodiscard]] const void *data() const { return base_t::checked_invoke<&vtable_type::data, "const void *data() const">(base_t::instance()); }
 
 		/** Dereferences the underlying pointer. If the pointer is not dereferenceable, returns an empty `any`. */
-		[[nodiscard]] any deref() const { return base_t::vtable()->deref(base_t::instance()); }
+		[[nodiscard]] any deref() const { return base_t::checked_invoke<&vtable_type::deref, "reference deref() const">(base_t::instance()); }
 	};
 
 	template<pointer_like P>

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "range_facet.hpp"
+#include "range.hpp"
 
 namespace reflex::facets
 {
@@ -95,7 +95,6 @@ struct reflex::type_init<std::basic_string<C, T, A>>
 
 		f.template make_constructible<std::string_view>();
 		f.template make_convertible<std::string_view>();
-		f.template make_comparable<std::string_view>();
 	}
 };
 /** Type initializer overload for STL string views. */

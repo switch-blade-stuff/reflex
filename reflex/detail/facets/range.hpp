@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "facet.hpp"
+#include "../facet.hpp"
 
 namespace reflex::facets
 {
@@ -210,7 +210,7 @@ namespace reflex::facets
 		[[nodiscard]] const_iterator end() const { return cend(); }
 
 		/** Checks if the underlying range is empty. */
-		[[nodiscard]] bool empty() const { return vtable()->empty(instance()); }
+		[[nodiscard]] bool empty() const { return base_t::checked_invoke<&vtable_type::empty, "bool empty() const">(instance()); }
 		/** Returns size of the underlying range.
 		 * @throw bad_facet_function If the underlying range type is not a sized range. */
 		[[nodiscard]] size_type size() const { return base_t::checked_invoke<&vtable_type::size, "size_type size() const">(instance()); }

@@ -32,7 +32,9 @@ namespace reflex
 
 	class type_database;
 
-	template<typename T>
+	namespace detail { struct synthetic; }
+
+	template<typename T = detail::synthetic>
 	class type_factory;
 	template<typename T>
 	struct type_init;

@@ -3,6 +3,7 @@
  */
 
 #include "object.hpp"
+#include "facets/compare.hpp"
 
 namespace reflex
 {

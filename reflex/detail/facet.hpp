@@ -232,34 +232,31 @@ namespace reflex
 #endif
 	}
 
-	template<typename T>
-	template<typename F>
-	type_factory<T> &type_factory<T>::implement_facet() { return implement_facet<F>(facets::impl_facet_v<F, T>); }
-	template<typename T>
-	template<typename F>
-	type_factory<T> &type_factory<T>::implement_facet(const typename F::vtable_type &vtab)
+	template<typename... Vs>
+	void type_factory<>::add_facet(const std::tuple<const Vs *...> &vt)
 	{
-		add_facet(type_pack<F>, std::make_tuple(&vtab));
+		(m_data->vtabs.emplace_or_replace(type_name_v<Vs>, std::get<const Vs *>(vt)), ...);
+	}
+
+	template<typename F>
+	type_factory<> &type_factory<>::implement_facet(const typename F::vtable_type &vtab)
+	{
+		add_facet(std::make_tuple(&vtab));
+		return *this;
+	}
+	template<instance_of<facets::facet_group> G>
+	type_factory<> &type_factory<>::implement_facet(const typename G::vtable_type &vtab)
+	{
+		add_facet(vtab);
 		return *this;
 	}
 
 	template<typename T>
-	template<instance_of<facets::facet_group> G>
-	type_factory<T> &type_factory<T>::implement_facet() { return implement_facet<G>(facets::impl_facet_v<G, T>); }
+	template<typename F>
+	type_factory<T> &type_factory<T>::implement_facet() { return (implement_facet<F>(facets::impl_facet_v<F, T>), *this); }
 	template<typename T>
 	template<instance_of<facets::facet_group> G>
-	type_factory<T> &type_factory<T>::implement_facet(const typename G::vtable_type &vtab)
-	{
-		add_facet(template_pack<G>, vtab);
-		return *this;
-	}
-
-	template<typename T>
-	template<typename... Ts>
-	void type_factory<T>::add_facet(type_pack_t<Ts...>, const std::tuple<const typename Ts::vtable_type *...> &vt)
-	{
-		(m_data->vtabs.emplace_or_replace(type_name_v<Ts>, std::get<const typename Ts::vtable_type *>(vt)), ...);
-	}
+	type_factory<T> &type_factory<T>::implement_facet() { return (implement_facet<G>(facets::impl_facet_v<G, T>), *this); }
 
 	template<typename F>
 	F type_info::facet(const any &obj) const { return F{obj, get_vtab<F>()}; }
@@ -271,14 +268,7 @@ namespace reflex
 	G type_info::facet(any &&obj) const { return G{std::move(obj), get_vtab(template_pack<G>)}; }
 
 	template<instance_of<facets::facet_group> G>
-	bool type_info::implements_facet() const
-	{
-		const auto check_vtabs = [&]<typename... Ts>(type_pack_t<Ts...>)
-		{
-			return (implements_facet<Ts>() && ...);
-		};
-		return check_vtabs(template_pack<typename G::vtable_type>);
-	}
+	bool type_info::implements_facet() const { return [&]<typename... Ts>(type_pack_t<Ts...>) { return (implements_facet<Ts>() && ...); } (template_pack<G>); }
 
 	template<typename F>
 	F any::facet() { return type().facet<F>(ref()); }

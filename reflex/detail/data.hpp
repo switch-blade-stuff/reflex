@@ -49,6 +49,8 @@ namespace reflex
 		struct type_conv
 		{
 			type_conv() noexcept = default;
+			template<typename F>
+			explicit type_conv(F &&conv) : func(std::forward<F>(conv)) {}
 			template<typename From, typename To, typename F>
 			type_conv(std::in_place_type_t<From>, std::in_place_type_t<To>, F &&conv)
 			{
@@ -123,30 +125,40 @@ namespace reflex
 			template<typename T, typename U = std::remove_reference_t<T>>
 			using forward_arg_t = std::conditional_t<std::is_reference_v<T>, U, std::add_const_t<U>>;
 
-			template<typename T, typename... Ts, typename F, std::size_t... Is>
+			template<typename... Ts, typename F, std::size_t... Is>
 			[[nodiscard]] inline static decltype(auto) construct(std::index_sequence<Is...>, F &&f, std::span<any> args)
 			{
 				return std::invoke(f, (*args[Is].cast<Ts>().template try_get<forward_arg_t<Ts>>())...);
 			}
-			template<typename T, typename... Ts, typename F>
+			template<typename... Ts, typename F>
 			[[nodiscard]] inline static decltype(auto) construct(F &&f, std::span<any> args)
 			{
-				return construct<T, Ts...>(std::make_index_sequence<sizeof...(Ts)>{}, std::forward<F>(f), args);
+				return construct<Ts...>(std::make_index_sequence<sizeof...(Ts)>{}, std::forward<F>(f), args);
 			}
 
 			type_ctor() noexcept = default;
-			template<typename T, typename... Ts, typename F>
-			type_ctor(std::in_place_type_t<T>, type_pack_t<Ts...>, F &&ctor) : args{make_arg_data<Ts>()...}
+			template<typename... Ts, typename F> requires (std::invocable<F, std::span<any>> || std::invocable<F, Ts...>)
+			type_ctor(type_pack_t<Ts...>, F &&ctor) : args{make_arg_data<Ts>()...}
 			{
-				if constexpr (!std::is_invocable_r_v<any, F, std::span<any>>)
+				if constexpr (std::is_invocable_r_v<any, F, std::span<any>>)
+					func = std::forward<F>(ctor);
+				else if constexpr (std::is_invocable_v<F, std::span<any>>)
+					func = [f = std::forward<F>(ctor)](std::span<any> any_args) { return forward_any(std::invoke(f, any_args)); };
+				else
 					func = [f = std::forward<F>(ctor)](std::span<any> any_args)
 					{
-						auto result = construct<T, Ts...>(f, any_args);
-						if constexpr (!std::same_as<std::remove_cvref_t<decltype(result)>, any>)
-							return forward_any(result);
+						using result_t = decltype(construct<Ts...>(f, any_args));
+						if constexpr (!std::same_as<std::remove_cvref_t<result_t>, any>)
+							return forward_any(construct<Ts...>(f, any_args));
 						else
-							return result;
+							return construct<Ts...>(f, any_args);
 					};
+			}
+			template<typename F> requires std::invocable<F, std::span<any>>
+			type_ctor(std::span<const arg_data> args, F &&ctor) : args{args.begin(), args.end()}
+			{
+				if constexpr (!std::is_invocable_r_v<any, F, std::span<any>>)
+					func = [f = std::forward<F>(ctor)](std::span<any> any_args) { return forward_any(std::invoke(f, any_args)); };
 				else
 					func = std::forward<F>(ctor);
 			}
@@ -157,55 +169,11 @@ namespace reflex
 			delegate<any(std::span<any>)> func;
 		};
 
-		template<typename T, typename... Ts, typename F>
-		[[nodiscard]] inline static type_ctor make_type_ctor(F &&func)
-		{
-			return {std::in_place_type<T>, type_pack<Ts...>, std::forward<F>(func)};
-		}
 		template<typename T, typename... Ts>
 		[[nodiscard]] inline static type_ctor make_type_ctor() noexcept
 		{
-			return make_type_ctor<T, Ts...>([](Ts ...as) -> any { return make_any<T>(as...); });
+			return {type_pack<Ts...>, [](Ts ...args) -> any { return make_any<T>(args...); }};
 		}
-
-		struct type_cmp
-		{
-			bool (*cmp_eq)(const void *, const void *) = nullptr;
-			bool (*cmp_ne)(const void *, const void *) = nullptr;
-			bool (*cmp_ge)(const void *, const void *) = nullptr;
-			bool (*cmp_le)(const void *, const void *) = nullptr;
-			bool (*cmp_gt)(const void *, const void *) = nullptr;
-			bool (*cmp_lt)(const void *, const void *) = nullptr;
-		};
-
-		using cmp_table = tpp::dense_map<std::string_view, type_cmp>;
-
-#ifdef _MSC_VER
-		/* Allow signed/unsigned comparison. */
-#pragma warning(push)
-#pragma warning(disable : 4018)
-#endif
-		template<typename T, typename U = T>
-		[[nodiscard]] inline static type_cmp make_type_cmp() noexcept
-		{
-			type_cmp result;
-			if constexpr (requires(const T &a, const U &b){ a == b; })
-				result.cmp_eq = +[](const void *a, const void *b) { return *static_cast<const T *>(a) == *static_cast<const U *>(b); };
-			if constexpr (requires(const T &a, const U &b){ a != b; })
-				result.cmp_ne = +[](const void *a, const void *b) { return *static_cast<const T *>(a) != *static_cast<const U *>(b); };
-			if constexpr (requires(const T &a, const U &b){ a >= b; })
-				result.cmp_ge = +[](const void *a, const void *b) { return *static_cast<const T *>(a) >= *static_cast<const U *>(b); };
-			if constexpr (requires(const T &a, const U &b){ a <= b; })
-				result.cmp_le = +[](const void *a, const void *b) { return *static_cast<const T *>(a) <= *static_cast<const U *>(b); };
-			if constexpr (requires(const T &a, const U &b){ a > b; })
-				result.cmp_gt = +[](const void *a, const void *b) { return *static_cast<const T *>(a) > *static_cast<const U *>(b); };
-			if constexpr (requires(const T &a, const U &b){ a < b; })
-				result.cmp_lt = +[](const void *a, const void *b) { return *static_cast<const T *>(a) < *static_cast<const U *>(b); };
-			return result;
-		}
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 		struct any_funcs_t
 		{
@@ -233,7 +201,6 @@ namespace reflex
 				bases.clear();
 				ctors.clear();
 				convs.clear();
-				cmps.clear();
 			}
 
 			/* Attribute constants. */
@@ -249,8 +216,6 @@ namespace reflex
 			std::list<type_ctor> ctors;
 			/* Type conversions. */
 			conv_table convs;
-			/* Comparison functions. */
-			cmp_table cmps;
 		};
 		/* Type data that can be constexpr-initialized. */
 		struct constant_type_data
@@ -280,6 +245,9 @@ namespace reflex
 			type_data(const constant_type_data &cdata) : constant_type_data(cdata) {}
 
 			template<typename T>
+			inline static void init_cmp_vtable(type_data &data);
+
+			template<typename T>
 			REFLEX_COLD static void impl_init(type_data &data, database_impl &db)
 			{
 				/* Constructors, destructors & conversions are only created for object types. */
@@ -291,17 +259,15 @@ namespace reflex
 					if constexpr (std::is_copy_constructible_v<T>)
 						data.ctors.emplace_back(make_type_ctor<T, std::add_const_t<T> &>());
 
-					/* Add comparisons. */
-					if constexpr (std::equality_comparable<T> || std::three_way_comparable<T>)
-						data.cmps.emplace(type_name_v<T>, make_type_cmp<T>());
-
-					/* Add enum underlying type overloads. */
+					/* Add overloads for underlying type of enum. */
 					if constexpr (std::is_enum_v<T>)
 					{
-						data.ctors.emplace_back(make_type_ctor<T, std::underlying_type_t<T>>([](std::underlying_type_t<T> value) { return static_cast<T>(value); }));
+						data.ctors.emplace_back(type_pack<std::underlying_type_t<T>>, [](std::underlying_type_t<T> value) { return static_cast<T>(value); });
 						data.convs.emplace(type_name_v<std::underlying_type_t<T>>, make_type_conv<T, std::underlying_type_t<T>>());
-						data.cmps.emplace(type_name_v<std::underlying_type_t<T>>, make_type_cmp<std::underlying_type_t<T>>());
 					}
+
+					/* Add comparisons. */
+					init_cmp_vtable<T>(data);
 				}
 
 				/* Invoke user type initializer. */
@@ -431,17 +397,6 @@ namespace reflex
 
 				const auto pred = [&](const auto *t) { return (pos = t->convs.find(name)) != t->convs.end(); };
 				return walk_bases(db, pred) ? &pos->second : nullptr;
-			}
-
-			[[nodiscard]] type_cmp *find_cmp(std::string_view name) noexcept
-			{
-				const auto pos = cmps.find(name);
-				return pos != cmps.end() ? &pos->second : nullptr;
-			}
-			[[nodiscard]] const type_cmp *find_cmp(std::string_view name) const noexcept
-			{
-				const auto pos = cmps.find(name);
-				return pos != cmps.end() ? &pos->second : nullptr;
 			}
 
 			type_data &init(database_impl &db)
