@@ -10,8 +10,23 @@
 
 namespace reflex::detail
 {
-	database_impl *database_impl::instance() noexcept { return global_ptr(); }
-	database_impl *database_impl::instance(database_impl *ptr) noexcept { return global_ptr().exchange(ptr); }
+	database_impl *database_impl::instance() noexcept
+	{
+		for (auto ptr = global_ptr().load();;)
+		{
+			/* If the global pointer is set, return the existing pointer. */
+			if (ptr != nullptr)
+				return ptr;
+
+			/* If the global pointer is not set, initialize from the local instance. */
+			if (const auto new_ptr = local_ptr(); global_ptr().compare_exchange_weak(ptr, new_ptr))
+				return new_ptr;
+		}
+	}
+	database_impl *database_impl::instance(database_impl *ptr) noexcept
+	{
+		return global_ptr().exchange(ptr);
+	}
 
 	database_impl::database_impl() = default;
 	database_impl::database_impl(database_impl &&other)

@@ -12,14 +12,14 @@ namespace reflex
 	{
 		struct database_impl : shared_spinlock
 		{
-			static database_impl *local_ptr() noexcept
+			static auto *local_ptr() noexcept
 			{
 				static database_impl value;
 				return &value;
 			}
-			static std::atomic<database_impl *> &global_ptr() noexcept
+			static auto &global_ptr() noexcept
 			{
-				static std::atomic<database_impl *> value = local_ptr();
+				static std::atomic<database_impl *> value = {};
 				return value;
 			}
 
